@@ -87,7 +87,53 @@ vercel --prod
 
 ---
 
-## Troubleshooting
+## 404 NOT_FOUND fix (Root Directory set hone ke baad bhi)
+
+Agar aapne Root Directory sahi set kiya hai phir bhi **404: NOT_FOUND** aa raha hai, to ye karein:
+
+### 1. Build logs zaroor dekhein
+
+- Vercel Dashboard → apna project → **Deployments** tab.
+- Latest deployment pe click karein → **Building** / **Logs** open karein.
+- **Agar build fail (red) hai** → 404 isliye aa raha hai (dist banta hi nahi). Log me error dikhega (e.g. `npm install` fail, ya `vite build` error). Us error ko fix karein.
+- **Agar build pass (green) hai** → Step 2.
+
+### 2. Root Directory path exact hona chahiye
+
+Vercel → **Settings** → **General** → **Root Directory**:
+
+- Ye **exactly** hona chahiye (copy-paste karein, spaces exact):
+  ```text
+  ERP_Final - - Without_React2/ERP_Final - - Without_React/sakura-erp-migration/frontend
+  ```
+- **Na** leading slash (`/`), **na** trailing slash.
+- **Save** karein, phir **Redeploy** (Deployments → ... → Redeploy).
+
+### 3. Build & Output force karein
+
+**Settings** → **Build & Development Settings** (Override):
+
+| Setting | Value |
+|--------|--------|
+| **Build Command** | `npm run build` |
+| **Output Directory** | `dist` |
+| **Install Command** | `npm install` |
+
+Save → Redeploy.
+
+### 4. GitHub pe ye path exist karta hai?
+
+- GitHub repo open karein → **Code** → folders dekhein.
+- Ye path **zaroor** hona chahiye: `ERP_Final - - Without_React2` → `ERP_Final - - Without_React` → `sakura-erp-migration` → `frontend` (isme `package.json` aur `index.html` hon).
+- Agar ye folders GitHub pe **nahi dikhen** (e.g. unhe commit/push nahi kiya), to Vercel ko wo folder milta hi nahi → 404. In folders ko commit karke push karein, phir Vercel se **Redeploy** karein.
+
+### 5. Ab frontend me `vercel.json` update hai
+
+`frontend/vercel.json` me ab **buildCommand** aur **outputDirectory** explicitly set hain. Is se Vercel ko pata chal jata hai ke `npm run build` chalao aur output `dist` se lo. Commit + push karke ek baar phir **Redeploy** karein.
+
+---
+
+## Troubleshooting (baaki)
 
 | Issue | Solution |
 |-------|----------|
