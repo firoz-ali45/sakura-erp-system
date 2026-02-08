@@ -14,11 +14,20 @@ Error: Command "npm run build" exited with 126
 
 **Reason:** Path me spaces (`ERP_Final - - Without_React2`) ki wajah se Linux/Vercel par `.bin/vite` execute nahi hota.
 
-**Fix (already done):** `frontend/package.json` me build script ab ye hai:
-```json
-"build": "node node_modules/vite/bin/vite.js build"
-```
-Isse `vite` directly `node` se chalega, `.bin/vite` permission ki zaroorat nahi. **Is change ko commit + push karein, phir Vercel se Redeploy karein.**
+**Fix (do BOTH):**
+
+1. **Vercel override (sabse tez — abhi karein):**  
+   **Settings** → **Build and Deployment** → **Build Command** → **Override** on karein, value daalein:
+   ```bash
+   node node_modules/vite/bin/vite.js build
+   ```
+   Save → **Deployments** → latest → **Redeploy**. Isse GitHub bina push kiye build pass ho sakti hai.
+
+2. **Repo fix (baad me):** `frontend/package.json` me build script:
+   ```json
+   "build": "node node_modules/vite/bin/vite.js build"
+   ```
+   Is change ko commit + push karein taake future deploys bhi theek rahein.
 
 ---
 
