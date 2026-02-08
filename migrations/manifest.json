@@ -1,0 +1,4 @@
+{
+  "description": "Sakura ERP migration manifest. Apply SQL files in timestamp order.",
+  "migrations": []
+}

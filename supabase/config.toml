@@ -1,0 +1,40 @@
+# Sakura ERP — Supabase CLI configuration
+# Run from project root: supabase link --project-ref <ref>, supabase db push, supabase functions deploy
+
+[project]
+id = "kexwnurwavszvmlpifsf"
+
+[api]
+enabled = true
+port = 54321
+schemas = ["public", "erp"]
+extra_search_path = ["public", "extensions"]
+max_rows = 1000
+
+[db]
+port = 54322
+shadow_port = 54320
+major_version = 15
+
+[db.migrations]
+# Canonical migrations live in repo root: /migrations
+# For CLI (supabase db push), copy or symlink from /migrations into this folder, or run SQL from /migrations manually in Dashboard.
+
+[studio]
+enabled = true
+port = 54323
+
+[inbucket]
+enabled = true
+port = 54324
+
+[storage]
+enabled = true
+
+[auth]
+enabled = true
+site_url = "http://localhost:5173"
+
+[functions]
+# Edge Functions: add entries per function when deploying
+# verify_jwt = true by default
