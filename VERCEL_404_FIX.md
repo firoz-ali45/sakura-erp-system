@@ -4,6 +4,24 @@ Root Directory set hone ke baad bhi **404: NOT_FOUND** aa raha ho to ye steps fo
 
 ---
 
+## Permission denied (vite: Permission denied) — FIX APPLIED
+
+Agar build log me ye error aaye:
+```text
+sh: line 1: .../node_modules/.bin/vite: Permission denied
+Error: Command "npm run build" exited with 126
+```
+
+**Reason:** Path me spaces (`ERP_Final - - Without_React2`) ki wajah se Linux/Vercel par `.bin/vite` execute nahi hota.
+
+**Fix (already done):** `frontend/package.json` me build script ab ye hai:
+```json
+"build": "node node_modules/vite/bin/vite.js build"
+```
+Isse `vite` directly `node` se chalega, `.bin/vite` permission ki zaroorat nahi. **Is change ko commit + push karein, phir Vercel se Redeploy karein.**
+
+---
+
 ## Step 1: Build logs dekhein
 
 1. **Vercel Dashboard** → apna project **sakura-erp-system**.
