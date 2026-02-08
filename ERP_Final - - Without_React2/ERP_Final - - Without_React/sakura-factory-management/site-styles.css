@@ -1,0 +1,16 @@
+
+/* Factory Management Custom Styles */
+:root {
+    --site-primary: #059669;
+    --site-secondary: #10b981;
+    --site-accent: #6ee7b7;
+}
+
+.site-branding::before {
+    content: "🏭 ";
+}
+
+.page-header h1::before {
+    content: "Factory Management ";
+    color: var(--site-primary);
+}

@@ -1,0 +1,624 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Inventory Categories - Sakura Portal</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Font Awesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Supabase SDK -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
+    <style>
+        body {
+            font-family: 'Cairo', sans-serif;
+            background-color: #f0e1cd;
+            margin: 0;
+            padding: 0;
+        }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            animation: fadeIn 0.3s ease;
+        }
+        
+        .modal.show {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .modal-content {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+            max-width: 500px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+            animation: slideIn 0.3s ease;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        @keyframes slideIn {
+            from { transform: translateY(-50px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        
+        .category-row {
+            transition: background-color 0.2s;
+            cursor: pointer;
+        }
+        
+        .category-row:hover {
+            background-color: #f9fafb;
+        }
+    </style>
+</head>
+<body>
+    <!-- Main Container -->
+    <div class="container mx-auto px-6 py-6">
+        <!-- Header -->
+        <div class="flex justify-between items-center mb-6">
+            <div class="flex items-center gap-4">
+                <button onclick="goBack()" class="text-blue-600 hover:text-blue-800 flex items-center gap-2">
+                    <i class="fas fa-arrow-left"></i>
+                    <span>Back</span>
+                </button>
+                <div class="flex items-center gap-2">
+                    <h1 class="text-3xl font-bold text-gray-800">Inventory Categories</h1>
+                    <i class="fas fa-question-circle text-gray-400 cursor-help" title="Manage inventory categories"></i>
+                </div>
+            </div>
+            <button onclick="openCreateCategoryModal()" class="px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 flex items-center gap-2">
+                <i class="fas fa-plus"></i>
+                <span>Create Category</span>
+            </button>
+        </div>
+
+        <!-- Tabs and Filter -->
+        <div class="bg-white rounded-lg shadow-md p-4 mb-4">
+            <div class="flex justify-between items-center">
+                <div class="flex gap-6 border-b border-gray-200">
+                    <button onclick="switchTab('all')" class="tab-button active px-4 py-2 text-gray-700 border-b-2 border-purple-600" data-tab="all">
+                        All
+                    </button>
+                    <button onclick="switchTab('deleted')" class="tab-button px-4 py-2 text-gray-700" data-tab="deleted">
+                        Deleted
+                    </button>
+                </div>
+                <button onclick="openFilter()" class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center gap-2">
+                    <i class="fas fa-filter"></i>
+                    <span>Filter</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Categories Table -->
+        <div class="bg-white rounded-lg shadow-md overflow-hidden">
+            <div class="overflow-x-auto">
+                <table class="w-full">
+                    <thead class="bg-[#284b44] text-white">
+                        <tr>
+                            <th class="px-6 py-4 text-left">
+                                <input type="checkbox" id="select-all-categories" onchange="toggleSelectAllCategories()" class="rounded">
+                            </th>
+                            <th class="px-6 py-4 text-left font-semibold">Name</th>
+                            <th class="px-6 py-4 text-left font-semibold">Reference</th>
+                            <th class="px-6 py-4 text-left font-semibold">Created</th>
+                        </tr>
+                    </thead>
+                    <tbody id="categories-table-body" class="bg-white divide-y divide-gray-200">
+                        <!-- Categories will be loaded here -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Create Category Modal -->
+    <div id="create-category-modal" class="modal">
+        <div class="modal-content">
+            <div class="p-6">
+                <!-- Modal Header -->
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-2xl font-bold text-gray-800">Create category</h2>
+                    <button onclick="closeCreateCategoryModal()" class="text-gray-500 hover:text-gray-700 text-2xl">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+
+                <!-- Modal Body -->
+                <form id="create-category-form" onsubmit="event.preventDefault(); saveCategory();">
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">
+                                Name <span class="text-red-500">*</span>
+                                <i class="fas fa-info-circle text-gray-400 ml-1" title="Enter the category name"></i>
+                            </label>
+                            <input type="text" id="category-name" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500" required>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">
+                                Name Localized
+                                <i class="fas fa-info-circle text-gray-400 ml-1" title="Enter the localized name (e.g., Arabic)"></i>
+                            </label>
+                            <input type="text" id="category-name-localized" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">
+                                Reference
+                                <i class="fas fa-info-circle text-gray-400 ml-1" title="Enter a reference code for the category"></i>
+                            </label>
+                            <input type="text" id="category-reference" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
+                        </div>
+                    </div>
+
+                    <!-- Modal Footer -->
+                    <div class="flex justify-end gap-3 pt-4 border-t border-gray-200 mt-6">
+                        <button type="button" onclick="closeCreateCategoryModal()" class="px-6 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">
+                            Close
+                        </button>
+                        <button type="submit" class="px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700">
+                            Save
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Category Modal -->
+    <div id="edit-category-modal" class="modal">
+        <div class="modal-content">
+            <div class="p-6">
+                <!-- Modal Header -->
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-2xl font-bold text-gray-800">Edit category</h2>
+                    <button onclick="closeEditCategoryModal()" class="text-gray-500 hover:text-gray-700 text-2xl">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+
+                <!-- Modal Body -->
+                <form id="edit-category-form" onsubmit="event.preventDefault(); updateCategory();">
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">
+                                Name <span class="text-red-500">*</span>
+                                <i class="fas fa-info-circle text-gray-400 ml-1" title="Enter the category name"></i>
+                            </label>
+                            <input type="text" id="edit-category-name" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500" required>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">
+                                Name Localized
+                                <i class="fas fa-info-circle text-gray-400 ml-1" title="Enter the localized name (e.g., Arabic)"></i>
+                            </label>
+                            <input type="text" id="edit-category-name-localized" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">
+                                Reference
+                                <i class="fas fa-info-circle text-gray-400 ml-1" title="Enter a reference code for the category"></i>
+                            </label>
+                            <input type="text" id="edit-category-reference" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
+                        </div>
+                    </div>
+
+                    <!-- Modal Footer -->
+                    <div class="flex justify-between items-center pt-4 border-t border-gray-200 mt-6">
+                        <button type="button" onclick="deleteCategoryFromModal()" class="text-red-600 hover:text-red-800">
+                            Delete Category
+                        </button>
+                        <div class="flex gap-3">
+                            <button type="button" onclick="closeEditCategoryModal()" class="px-6 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">
+                                Close
+                            </button>
+                            <button type="submit" class="px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700">
+                                Save
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentCategoryId = null;
+        let currentTab = 'all';
+
+        // Supabase Configuration
+        const SUPABASE_URL = 'https://kexwnurwavszvmlpifsf.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtleHdudXJ3YXZzenZtbHBpZnNmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjUyNzk5OTksImV4cCI6MjA4MDg1NTk5OX0.w7RlFdXVFdKtqJJ99L0Q1ofzUiwillyy-g1ASEj1q-U';
+        
+        // Initialize Supabase Client
+        let supabaseClient = null;
+        if (typeof supabase !== 'undefined') {
+            try {
+                supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+                console.log('✅ Supabase initialized for Categories');
+            } catch (error) {
+                console.error('❌ Supabase initialization failed:', error);
+            }
+        }
+
+        // Supabase Helper Functions for Categories
+        async function loadCategoriesFromSupabase() {
+            if (!supabaseClient) {
+                console.warn('⚠️ Supabase not available');
+                return [];
+            }
+            
+            try {
+                const { data, error } = await supabaseClient
+                    .from('inventory_categories')
+                    .select('*')
+                    .order('created_at', { ascending: false });
+                
+                if (error) {
+                    console.error('❌ Error loading categories from Supabase:', error);
+                    return [];
+                }
+                
+                console.log('✅ Categories loaded from Supabase:', data?.length || 0);
+                return data || [];
+            } catch (error) {
+                console.error('❌ Exception loading categories:', error);
+                return [];
+            }
+        }
+
+        async function saveCategoryToSupabase(category) {
+            if (!supabaseClient) {
+                console.error('❌ Supabase not available');
+                return { success: false, error: 'Supabase not configured' };
+            }
+            
+            try {
+                const { data, error } = await supabaseClient
+                    .from('inventory_categories')
+                    .insert([category])
+                    .select()
+                    .single();
+                
+                if (error) {
+                    console.error('❌ Error saving category to Supabase:', error);
+                    return { success: false, error };
+                }
+                
+                console.log('✅ Category saved to Supabase:', data);
+                return { success: true, data };
+            } catch (error) {
+                console.error('❌ Exception saving category:', error);
+                return { success: false, error };
+            }
+        }
+
+        async function updateCategoryInSupabase(categoryId, updates) {
+            if (!supabaseClient) {
+                console.error('❌ Supabase not available');
+                return { success: false, error: 'Supabase not configured' };
+            }
+            
+            try {
+                const { data, error } = await supabaseClient
+                    .from('inventory_categories')
+                    .update(updates)
+                    .eq('id', categoryId)
+                    .select()
+                    .single();
+                
+                if (error) {
+                    console.error('❌ Error updating category in Supabase:', error);
+                    return { success: false, error };
+                }
+                
+                console.log('✅ Category updated in Supabase:', data);
+                return { success: true, data };
+            } catch (error) {
+                console.error('❌ Exception updating category:', error);
+                return { success: false, error };
+            }
+        }
+
+        async function deleteCategoryFromSupabase(categoryId) {
+            if (!supabaseClient) {
+                console.error('❌ Supabase not available');
+                return { success: false, error: 'Supabase not configured' };
+            }
+            
+            try {
+                // Soft delete - mark as deleted
+                const { error } = await supabaseClient
+                    .from('inventory_categories')
+                    .update({ deleted: true })
+                    .eq('id', categoryId);
+                
+                if (error) {
+                    console.error('❌ Error deleting category from Supabase:', error);
+                    return { success: false, error };
+                }
+                
+                console.log('✅ Category deleted from Supabase');
+                return { success: true };
+            } catch (error) {
+                console.error('❌ Exception deleting category:', error);
+                return { success: false, error };
+            }
+        }
+
+        // Remove default categories initialization
+        function initializeSampleCategories() {
+            // Clear localStorage to remove old default categories
+            localStorage.removeItem('inventory_categories');
+            console.log('✅ Cleared localStorage - Categories will be loaded from Supabase only');
+        }
+
+        // Go back
+        function goBack() {
+            if (window.parent && window.parent !== window) {
+                window.parent.postMessage({
+                    type: 'LOAD_DASHBOARD',
+                    url: 'inventory/more.html'
+                }, '*');
+            } else {
+                window.location.href = 'more.html';
+            }
+        }
+
+        // Switch tab
+        function switchTab(tab) {
+            currentTab = tab;
+            document.querySelectorAll('.tab-button').forEach(btn => {
+                btn.classList.remove('active', 'border-b-2', 'border-purple-600');
+            });
+            document.querySelector(`[data-tab="${tab}"]`).classList.add('active', 'border-b-2', 'border-purple-600');
+            loadCategories();
+        }
+
+        // Load categories
+        async function loadCategories() {
+            const categories = await loadCategoriesFromSupabase();
+            const filteredCategories = categories.filter(cat => {
+                const isDeleted = cat.deleted === true || cat.deleted === 'true';
+                return currentTab === 'all' ? !isDeleted : isDeleted;
+            });
+            const tbody = document.getElementById('categories-table-body');
+            
+            if (filteredCategories.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="4" class="px-6 py-4 text-center text-gray-500">No categories found</td></tr>';
+                return;
+            }
+            
+            tbody.innerHTML = filteredCategories.map(category => {
+                // Handle both Supabase (snake_case) and localStorage (camelCase) formats
+                const categoryId = category.id;
+                const categoryName = category.name;
+                const categoryRef = category.reference || '-';
+                const createdAt = category.created_at || category.createdAt;
+                const createdDate = new Date(createdAt);
+                const formattedDate = createdDate.toLocaleDateString('en-US', { 
+                    month: 'long', 
+                    day: 'numeric',
+                    hour: '2-digit', 
+                    minute: '2-digit',
+                    hour12: true 
+                });
+                
+                return `
+                    <tr onclick="editCategory('${categoryId}')" class="category-row">
+                        <td class="px-6 py-4" onclick="event.stopPropagation()">
+                            <input type="checkbox" class="category-checkbox rounded" data-category-id="${categoryId}" onclick="event.stopPropagation()">
+                        </td>
+                        <td class="px-6 py-4">
+                            <div class="font-medium text-gray-900">${categoryName}</div>
+                        </td>
+                        <td class="px-6 py-4 text-gray-600">${categoryRef}</td>
+                        <td class="px-6 py-4 text-gray-600">${formattedDate}</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        // Open create category modal
+        function openCreateCategoryModal() {
+            document.getElementById('create-category-modal').classList.add('show');
+            document.getElementById('create-category-form').reset();
+        }
+
+        // Close create category modal
+        function closeCreateCategoryModal() {
+            document.getElementById('create-category-modal').classList.remove('show');
+        }
+
+        // Save category
+        async function saveCategory() {
+            const name = document.getElementById('category-name').value.trim();
+            const nameLocalized = document.getElementById('category-name-localized').value.trim();
+            const reference = document.getElementById('category-reference').value.trim();
+            
+            if (!name) {
+                alert('Please enter category name');
+                return;
+            }
+            
+            // Check if category already exists
+            const existingCategories = await loadCategoriesFromSupabase();
+            const exists = existingCategories.some(cat => {
+                const isDeleted = cat.deleted === true || cat.deleted === 'true';
+                return cat.name.toLowerCase() === name.toLowerCase() && !isDeleted;
+            });
+            
+            if (exists) {
+                alert('A category with this name already exists');
+                return;
+            }
+            
+            const newCategory = {
+                name: name,
+                name_localized: nameLocalized || name,
+                reference: reference || null,
+                deleted: false
+            };
+            
+            const result = await saveCategoryToSupabase(newCategory);
+            
+            if (result.success) {
+            alert('Category created successfully!');
+            closeCreateCategoryModal();
+                await loadCategories();
+            } else {
+                alert('Error creating category. Please try again.');
+            }
+        }
+
+        // Edit category
+        async function editCategory(categoryId) {
+            const categories = await loadCategoriesFromSupabase();
+            const category = categories.find(cat => cat.id === categoryId);
+            
+            if (!category) return;
+            
+            currentCategoryId = categoryId;
+            document.getElementById('edit-category-name').value = category.name;
+            document.getElementById('edit-category-name-localized').value = category.name_localized || category.nameLocalized || '';
+            document.getElementById('edit-category-reference').value = category.reference || '';
+            document.getElementById('edit-category-modal').classList.add('show');
+        }
+
+        // Close edit category modal
+        function closeEditCategoryModal() {
+            document.getElementById('edit-category-modal').classList.remove('show');
+            currentCategoryId = null;
+        }
+
+        // Update category
+        async function updateCategory() {
+            if (!currentCategoryId) return;
+            
+            const name = document.getElementById('edit-category-name').value.trim();
+            const nameLocalized = document.getElementById('edit-category-name-localized').value.trim();
+            const reference = document.getElementById('edit-category-reference').value.trim();
+            
+            if (!name) {
+                alert('Please enter category name');
+                return;
+            }
+            
+            // Check if name already exists (excluding current category)
+            const existingCategories = await loadCategoriesFromSupabase();
+            const exists = existingCategories.some(cat => {
+                const isDeleted = cat.deleted === true || cat.deleted === 'true';
+                return cat.id !== currentCategoryId && cat.name.toLowerCase() === name.toLowerCase() && !isDeleted;
+            });
+            
+            if (exists) {
+                alert('A category with this name already exists');
+                return;
+            }
+            
+            const updates = {
+                name: name,
+                name_localized: nameLocalized || name,
+                reference: reference || null
+            };
+            
+            const result = await updateCategoryInSupabase(currentCategoryId, updates);
+            
+            if (result.success) {
+            alert('Category updated successfully!');
+            closeEditCategoryModal();
+                await loadCategories();
+            } else {
+                alert('Error updating category. Please try again.');
+            }
+        }
+
+        // Delete category from modal
+        async function deleteCategoryFromModal() {
+            if (!currentCategoryId) return;
+            
+            if (!confirm('Are you sure you want to delete this category?')) {
+                return;
+            }
+            
+            const result = await deleteCategoryFromSupabase(currentCategoryId);
+            
+            if (result.success) {
+            alert('Category deleted successfully!');
+            closeEditCategoryModal();
+                await loadCategories();
+            } else {
+                alert('Error deleting category: ' + (result.error?.message || 'Unknown error'));
+                console.error('Delete error:', result.error);
+            }
+        }
+
+        // Toggle select all
+        function toggleSelectAllCategories() {
+            const selectAll = document.getElementById('select-all-categories');
+            const checkboxes = document.querySelectorAll('.category-checkbox');
+            checkboxes.forEach(cb => {
+                cb.checked = selectAll.checked;
+            });
+        }
+
+        // Open filter
+        function openFilter() {
+            alert('Filter options - To be implemented');
+        }
+
+        // Close modals on outside click
+        document.getElementById('create-category-modal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeCreateCategoryModal();
+            }
+        });
+
+        document.getElementById('edit-category-modal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeEditCategoryModal();
+            }
+        });
+
+        // Clear all localStorage data for categories (one-time cleanup)
+        function clearLocalStorageCategories() {
+            localStorage.removeItem('inventory_categories');
+            console.log('✅ Cleared localStorage for inventory_categories');
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', async function() {
+            // Clear localStorage to remove old default categories
+            clearLocalStorageCategories();
+            initializeSampleCategories();
+            await loadCategories();
+        });
+    </script>
+</body>
+</html>

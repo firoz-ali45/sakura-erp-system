@@ -1,0 +1,27 @@
+{
+    "sqltools.connections": [
+        {
+            "ssh": "Disabled",
+            "previewLimit": 50,
+            "server": "Server Address: db.kexwnurwavszvmlpifsf.supabase.co",
+            "port": 5432,
+            "driver": "PostgreSQL",
+            "name": "Supabase ERP",
+            "group": "db.kexwnurwavszvmlpifsf.supabase.co",
+            "database": "postgres",
+            "username": "postgres",
+            "password": "Firoz112233@@"
+        },
+        {
+            "ssh": "Disabled",
+            "previewLimit": 50,
+            "server": "db.kexwnurwavszvmlpifsf.supabase.co",
+            "port": 5432,
+            "driver": "PostgreSQL",
+            "name": "Supabase ERP",
+            "database": "postgres",
+            "username": "postgres",
+            "password": "Firoz112233@@4"
+        }
+    ]
+}

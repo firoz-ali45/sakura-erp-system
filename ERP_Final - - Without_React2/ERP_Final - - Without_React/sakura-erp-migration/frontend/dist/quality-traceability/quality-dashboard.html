@@ -1,0 +1,745 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Food Quality Traceability System - Sakura Portal</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Font Awesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Custom Styles -->
+    <link rel="stylesheet" href="quality.css">
+    
+    <style>
+        body {
+            font-family: 'Cairo', sans-serif;
+            background-color: #f0e1cd;
+            margin: 0;
+            padding: 0;
+        }
+    </style>
+</head>
+<body>
+    <!-- Main Container -->
+    <div class="container mx-auto px-6 py-4" style="padding-top: 20px;">
+        <!-- Tab Navigation -->
+        <div class="tab-container mb-6">
+            <button class="tab-button active" data-tab="grn">
+                <i class="fas fa-clipboard-check"></i>
+                <span data-key="quality_grn_receiving">GRN & Receiving</span>
+            </button>
+            <button class="tab-button" data-tab="batches">
+                <i class="fas fa-boxes"></i>
+                <span data-key="quality_raw_batches">Raw Material Batches</span>
+            </button>
+            <button class="tab-button" data-tab="production">
+                <i class="fas fa-industry"></i>
+                <span data-key="quality_production_lots">Production & Finished Lots</span>
+            </button>
+            <button class="tab-button" data-tab="stock">
+                <i class="fas fa-warehouse"></i>
+                <span data-key="quality_stock_location">Stock by Location & Expiry</span>
+            </button>
+            <button class="tab-button" data-tab="transfers">
+                <i class="fas fa-exchange-alt"></i>
+                <span data-key="quality_transfers">Transfers (TRS / TRR)</span>
+            </button>
+            <button class="tab-button" data-tab="sales">
+                <i class="fas fa-shopping-cart"></i>
+                <span data-key="quality_sales">Sales Consumption</span>
+            </button>
+            <button class="tab-button" data-tab="adjustments">
+                <i class="fas fa-balance-scale"></i>
+                <span data-key="quality_adjustments">Adjustments (Waste / Test)</span>
+            </button>
+            <button class="tab-button" data-tab="traceability">
+                <i class="fas fa-search"></i>
+                <span data-key="quality_traceability">Traceability & Recall</span>
+            </button>
+        </div>
+
+        <!-- GRN & Receiving Tab -->
+        <div id="tab-grn" class="tab-content active">
+            <div class="card">
+                <h2 class="text-xl font-bold mb-4 text-[#284b44]">
+                    <i class="fas fa-clipboard-check mr-2"></i>
+                    <span data-key="quality_grn_receiving">GRN & Receiving</span>
+                </h2>
+                
+                <div class="mb-4">
+                    <button class="btn btn-primary" onclick="qualityUI.loadPurchases()">
+                        <i class="fas fa-sync-alt"></i>
+                        <span data-key="quality_load_purchases">Load Pending Purchases</span>
+                    </button>
+                </div>
+
+                <div class="table-container">
+                    <table class="data-table w-full">
+                        <thead>
+                            <tr>
+                                <th data-key="quality_purchase_id">Purchase ID</th>
+                                <th data-key="quality_supplier">Supplier</th>
+                                <th data-key="quality_date">Date</th>
+                                <th data-key="quality_items">Items</th>
+                                <th data-key="quality_status">Status</th>
+                                <th data-key="actions">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="purchases-table-body">
+                            <tr>
+                                <td colspan="6" class="text-center py-8 text-gray-500">
+                                    <span data-key="quality_click_load_purchases">Click "Load Pending Purchases" to fetch data</span>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Raw Material Batches Tab -->
+        <div id="tab-batches" class="tab-content">
+            <div class="card">
+                <h2 class="text-xl font-bold mb-4 text-[#284b44]">
+                    <i class="fas fa-boxes mr-2"></i>
+                    <span data-key="quality_raw_batches">Raw Material Batches</span>
+                </h2>
+                
+                <div class="mb-4 flex gap-3">
+                    <button class="btn btn-primary" onclick="qualityUI.loadBatches()">
+                        <i class="fas fa-sync-alt"></i>
+                        <span data-key="quality_load_batches">Load Batches</span>
+                    </button>
+                    <button class="btn btn-secondary" onclick="qualityUI.showCreateBatchModal()">
+                        <i class="fas fa-plus"></i>
+                        <span data-key="quality_create_batch">Create New Batch</span>
+                    </button>
+                </div>
+
+                <div class="table-container">
+                    <table class="data-table w-full">
+                        <thead>
+                            <tr>
+                                <th data-key="quality_batch_id">Batch ID</th>
+                                <th data-key="quality_grn_ref">GRN Reference</th>
+                                <th data-key="quality_material">Material</th>
+                                <th data-key="quality_quantity">Quantity</th>
+                                <th data-key="quality_unit">Unit</th>
+                                <th data-key="quality_expiry_date">Expiry Date</th>
+                                <th data-key="quality_location">Location</th>
+                                <th data-key="quality_created">Created</th>
+                            </tr>
+                        </thead>
+                        <tbody id="batches-table-body">
+                            <tr>
+                                <td colspan="8" class="text-center py-8 text-gray-500">
+                                    <span data-key="quality_click_load_batches">Click "Load Batches" to fetch data</span>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Production & Finished Lots Tab -->
+        <div id="tab-production" class="tab-content">
+            <div class="card">
+                <h2 class="text-xl font-bold mb-4 text-[#284b44]">
+                    <i class="fas fa-industry mr-2"></i>
+                    <span data-key="quality_production_lots">Production & Finished Lots</span>
+                </h2>
+                
+                <div class="mb-4 flex gap-3">
+                    <button class="btn btn-primary" onclick="qualityUI.loadProductionLots()">
+                        <i class="fas fa-sync-alt"></i>
+                        <span data-key="quality_load_production">Load Production Lots</span>
+                    </button>
+                    <button class="btn btn-secondary" onclick="qualityUI.showCreateProductionModal()">
+                        <i class="fas fa-plus"></i>
+                        <span data-key="quality_create_production">Create Production Lot</span>
+                    </button>
+                </div>
+
+                <div class="table-container">
+                    <table class="data-table w-full">
+                        <thead>
+                            <tr>
+                                <th data-key="quality_lot_id">Lot ID</th>
+                                <th data-key="quality_product">Product</th>
+                                <th data-key="quality_quantity">Quantity</th>
+                                <th data-key="quality_unit">Unit</th>
+                                <th data-key="quality_production_date">Production Date</th>
+                                <th data-key="quality_expiry_date">Expiry Date</th>
+                                <th data-key="quality_location">Location</th>
+                                <th data-key="quality_batch_sources">Batch Sources</th>
+                                <th data-key="quality_created">Created</th>
+                            </tr>
+                        </thead>
+                        <tbody id="production-table-body">
+                            <tr>
+                                <td colspan="9" class="text-center py-8 text-gray-500">
+                                    <span data-key="quality_click_load_production">Click "Load Production Lots" to fetch data</span>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Stock by Location & Expiry Tab -->
+        <div id="tab-stock" class="tab-content">
+            <div class="card">
+                <h2 class="text-xl font-bold mb-4 text-[#284b44]">
+                    <i class="fas fa-warehouse mr-2"></i>
+                    <span data-key="quality_stock_location">Stock by Location & Expiry</span>
+                </h2>
+                
+                <div class="mb-4 flex gap-3">
+                    <button class="btn btn-primary" onclick="qualityUI.loadStock()">
+                        <i class="fas fa-sync-alt"></i>
+                        <span data-key="quality_refresh_stock">Refresh Stock</span>
+                    </button>
+                    <select id="stock-location-filter" class="px-4 py-2 border rounded-lg">
+                        <option value="" data-key="quality_all_locations">All Locations</option>
+                        <option value="Main Warehouse" data-key="quality_main_warehouse">Main Warehouse</option>
+                        <option value="Production Area" data-key="quality_production_area">Production Area</option>
+                        <option value="Cold Storage" data-key="quality_cold_storage">Cold Storage</option>
+                    </select>
+                </div>
+
+                <div class="table-container">
+                    <table class="data-table w-full">
+                        <thead>
+                            <tr>
+                                <th data-key="quality_type">Type</th>
+                                <th data-key="quality_id">ID</th>
+                                <th data-key="quality_item_name">Item Name</th>
+                                <th data-key="quality_quantity">Quantity</th>
+                                <th data-key="quality_unit">Unit</th>
+                                <th data-key="quality_location">Location</th>
+                                <th data-key="quality_expiry_date">Expiry Date</th>
+                                <th data-key="quality_days_until_expiry">Days Until Expiry</th>
+                                <th data-key="quality_status">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="stock-table-body">
+                            <tr>
+                                <td colspan="9" class="text-center py-8 text-gray-500">
+                                    <span data-key="quality_click_refresh_stock">Click "Refresh Stock" to fetch data</span>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Transfers Tab -->
+        <div id="tab-transfers" class="tab-content">
+            <div class="card">
+                <h2 class="text-xl font-bold mb-4 text-[#284b44]">
+                    <i class="fas fa-exchange-alt mr-2"></i>
+                    <span data-key="quality_transfers">Transfers (TRS / TRR)</span>
+                </h2>
+                
+                <div class="mb-4 flex gap-3">
+                    <button class="btn btn-primary" onclick="qualityUI.loadTransfers()">
+                        <i class="fas fa-sync-alt"></i>
+                        <span data-key="quality_load_transfers">Load Transfers</span>
+                    </button>
+                    <button class="btn btn-secondary" onclick="qualityUI.showCreateTransferModal()">
+                        <i class="fas fa-plus"></i>
+                        <span data-key="quality_create_transfer">Create Transfer (TRS)</span>
+                    </button>
+                </div>
+
+                <div class="table-container">
+                    <table class="data-table w-full">
+                        <thead>
+                            <tr>
+                                <th data-key="quality_transfer_id">Transfer ID</th>
+                                <th data-key="quality_type">Type</th>
+                                <th data-key="quality_from_location">From Location</th>
+                                <th data-key="quality_to_location">To Location</th>
+                                <th data-key="quality_items">Items</th>
+                                <th data-key="quality_status">Status</th>
+                                <th data-key="quality_created">Created</th>
+                                <th data-key="actions">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="transfers-table-body">
+                            <tr>
+                                <td colspan="8" class="text-center py-8 text-gray-500">
+                                    <span data-key="quality_click_load_transfers">Click "Load Transfers" to fetch data</span>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sales Consumption Tab -->
+        <div id="tab-sales" class="tab-content">
+            <div class="card">
+                <h2 class="text-xl font-bold mb-4 text-[#284b44]">
+                    <i class="fas fa-shopping-cart mr-2"></i>
+                    <span data-key="quality_sales">Sales Consumption</span>
+                </h2>
+                
+                <div class="mb-4 flex gap-3">
+                    <button class="btn btn-primary" onclick="qualityUI.loadSales()">
+                        <i class="fas fa-sync-alt"></i>
+                        <span data-key="quality_load_sales">Load Sales Records</span>
+                    </button>
+                    <button class="btn btn-secondary" onclick="qualityUI.showRecordSaleModal()">
+                        <i class="fas fa-plus"></i>
+                        <span data-key="quality_record_sale">Record Sale</span>
+                    </button>
+                </div>
+
+                <div class="table-container">
+                    <table class="data-table w-full">
+                        <thead>
+                            <tr>
+                                <th data-key="quality_sale_id">Sale ID</th>
+                                <th data-key="quality_lot_id">Lot ID</th>
+                                <th data-key="quality_product">Product</th>
+                                <th data-key="quality_quantity">Quantity</th>
+                                <th data-key="quality_unit">Unit</th>
+                                <th data-key="quality_customer_outlet">Customer/Outlet</th>
+                                <th data-key="quality_sale_date">Sale Date</th>
+                                <th data-key="quality_external_ref">External Reference</th>
+                            </tr>
+                        </thead>
+                        <tbody id="sales-table-body">
+                            <tr>
+                                <td colspan="8" class="text-center py-8 text-gray-500">
+                                    <span data-key="quality_click_load_sales">Click "Load Sales Records" to fetch data</span>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Adjustments Tab -->
+        <div id="tab-adjustments" class="tab-content">
+            <div class="card">
+                <h2 class="text-xl font-bold mb-4 text-[#284b44]">
+                    <i class="fas fa-balance-scale mr-2"></i>
+                    <span data-key="quality_adjustments">Adjustments (Waste / Test)</span>
+                </h2>
+                
+                <div class="mb-4 flex gap-3">
+                    <button class="btn btn-primary" onclick="qualityUI.loadAdjustments()">
+                        <i class="fas fa-sync-alt"></i>
+                        <span data-key="quality_load_adjustments">Load Adjustments</span>
+                    </button>
+                    <button class="btn btn-secondary" onclick="qualityUI.showAdjustmentModal()">
+                        <i class="fas fa-plus"></i>
+                        <span data-key="quality_create_adjustment">Create Adjustment</span>
+                    </button>
+                </div>
+
+                <div class="table-container">
+                    <table class="data-table w-full">
+                        <thead>
+                            <tr>
+                                <th data-key="quality_adjustment_id">Adjustment ID</th>
+                                <th data-key="quality_type">Type</th>
+                                <th data-key="quality_batch_lot_id">Batch/Lot ID</th>
+                                <th data-key="quality_item">Item</th>
+                                <th data-key="quality_quantity">Quantity</th>
+                                <th data-key="quality_unit">Unit</th>
+                                <th data-key="quality_reason">Reason</th>
+                                <th data-key="quality_date">Date</th>
+                                <th data-key="quality_external_ref">External Reference</th>
+                            </tr>
+                        </thead>
+                        <tbody id="adjustments-table-body">
+                            <tr>
+                                <td colspan="9" class="text-center py-8 text-gray-500">
+                                    <span data-key="quality_click_load_adjustments">Click "Load Adjustments" to fetch data</span>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Traceability & Recall Tab -->
+        <div id="tab-traceability" class="tab-content">
+            <div class="card">
+                <h2 class="text-xl font-bold mb-4 text-[#284b44]">
+                    <i class="fas fa-search mr-2"></i>
+                    <span data-key="quality_traceability">Traceability & Recall</span>
+                </h2>
+                
+                <div class="mb-4">
+                    <div class="flex gap-3 mb-4">
+                        <input 
+                            type="text" 
+                            id="trace-lot-input" 
+                            data-placeholder-key="quality_trace_placeholder"
+                            placeholder="Enter Lot ID or Batch ID to trace"
+                            class="flex-1 px-4 py-2 border rounded-lg"
+                        >
+                        <button class="btn btn-primary" onclick="qualityUI.traceLot()">
+                            <i class="fas fa-search"></i>
+                            <span data-key="quality_trace">Trace</span>
+                        </button>
+                        <button class="btn btn-secondary" onclick="qualityUI.simulateRecall()">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            <span data-key="quality_simulate_recall">Simulate Recall</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div id="traceability-results" class="hidden">
+                    <div class="card bg-blue-50 border-l-4 border-blue-500 mb-4">
+                        <h3 class="font-bold text-lg mb-3" data-key="quality_traceability_chain">Traceability Chain</h3>
+                        <div id="traceability-chain" class="space-y-2"></div>
+                    </div>
+                </div>
+
+                <div class="table-container">
+                    <table class="data-table w-full">
+                        <thead>
+                            <tr>
+                                <th data-key="quality_transaction_type">Transaction Type</th>
+                                <th data-key="quality_reference_id">Reference ID</th>
+                                <th data-key="quality_item">Item</th>
+                                <th data-key="quality_quantity">Quantity</th>
+                                <th data-key="quality_date">Date</th>
+                                <th data-key="quality_location">Location</th>
+                                <th data-key="quality_external_ref">External Reference</th>
+                            </tr>
+                        </thead>
+                        <tbody id="traceability-table-body">
+                            <tr>
+                                <td colspan="7" class="text-center py-8 text-gray-500">
+                                    <span data-key="quality_enter_trace">Enter a Lot ID or Batch ID and click "Trace" to view traceability chain</span>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modals will be dynamically created by quality-ui.js -->
+
+    <!-- Scripts -->
+    <script src="quality-api.js"></script>
+    <script src="quality-ui.js"></script>
+    
+    <script>
+        // Complete translations object (fallback)
+        const qualityTranslations = {
+            en: {
+                quality_grn_receiving: 'GRN & Receiving',
+                quality_raw_batches: 'Raw Material Batches',
+                quality_production_lots: 'Production & Finished Lots',
+                quality_stock_location: 'Stock by Location & Expiry',
+                quality_transfers: 'Transfers (TRS / TRR)',
+                quality_sales: 'Sales Consumption',
+                quality_adjustments: 'Adjustments (Waste / Test)',
+                quality_traceability: 'Traceability & Recall',
+                quality_load_purchases: 'Load Pending Purchases',
+                quality_purchase_id: 'Purchase ID',
+                quality_supplier: 'Supplier',
+                quality_date: 'Date',
+                quality_items: 'Items',
+                quality_status: 'Status',
+                actions: 'Actions',
+                quality_click_load_purchases: 'Click "Load Pending Purchases" to fetch data',
+                quality_load_batches: 'Load Batches',
+                quality_create_batch: 'Create New Batch',
+                quality_batch_id: 'Batch ID',
+                quality_grn_ref: 'GRN Reference',
+                quality_material: 'Material',
+                quality_quantity: 'Quantity',
+                quality_unit: 'Unit',
+                quality_expiry_date: 'Expiry Date',
+                quality_location: 'Location',
+                quality_created: 'Created',
+                quality_click_load_batches: 'Click "Load Batches" to fetch data',
+                quality_load_production: 'Load Production Lots',
+                quality_create_production: 'Create Production Lot',
+                quality_lot_id: 'Lot ID',
+                quality_product: 'Product',
+                quality_production_date: 'Production Date',
+                quality_batch_sources: 'Batch Sources',
+                quality_click_load_production: 'Click "Load Production Lots" to fetch data',
+                quality_refresh_stock: 'Refresh Stock',
+                quality_all_locations: 'All Locations',
+                quality_main_warehouse: 'Main Warehouse',
+                quality_production_area: 'Production Area',
+                quality_cold_storage: 'Cold Storage',
+                quality_type: 'Type',
+                quality_id: 'ID',
+                quality_item_name: 'Item Name',
+                quality_days_until_expiry: 'Days Until Expiry',
+                quality_click_refresh_stock: 'Click "Refresh Stock" to fetch data',
+                quality_load_transfers: 'Load Transfers',
+                quality_create_transfer: 'Create Transfer (TRS)',
+                quality_transfer_id: 'Transfer ID',
+                quality_from_location: 'From Location',
+                quality_to_location: 'To Location',
+                quality_click_load_transfers: 'Click "Load Transfers" to fetch data',
+                quality_load_sales: 'Load Sales Records',
+                quality_record_sale: 'Record Sale',
+                quality_sale_id: 'Sale ID',
+                quality_customer_outlet: 'Customer/Outlet',
+                quality_sale_date: 'Sale Date',
+                quality_external_ref: 'External Reference',
+                quality_click_load_sales: 'Click "Load Sales Records" to fetch data',
+                quality_load_adjustments: 'Load Adjustments',
+                quality_create_adjustment: 'Create Adjustment',
+                quality_adjustment_id: 'Adjustment ID',
+                quality_batch_lot_id: 'Batch/Lot ID',
+                quality_item: 'Item',
+                quality_reason: 'Reason',
+                quality_click_load_adjustments: 'Click "Load Adjustments" to fetch data',
+                quality_trace_placeholder: 'Enter Lot ID or Batch ID to trace',
+                quality_trace: 'Trace',
+                quality_simulate_recall: 'Simulate Recall',
+                quality_traceability_chain: 'Traceability Chain',
+                quality_transaction_type: 'Transaction Type',
+                quality_reference_id: 'Reference ID',
+                quality_enter_trace: 'Enter a Lot ID or Batch ID and click "Trace" to view traceability chain'
+            },
+            ar: {
+                quality_grn_receiving: 'استلام و GRN',
+                quality_raw_batches: 'دفعات المواد الخام',
+                quality_production_lots: 'الإنتاج والدفعات النهائية',
+                quality_stock_location: 'المخزون حسب الموقع والانتهاء',
+                quality_transfers: 'التحويلات (TRS / TRR)',
+                quality_sales: 'استهلاك المبيعات',
+                quality_adjustments: 'التعديلات (الهدر / الاختبار)',
+                quality_traceability: 'التتبع والاستدعاء',
+                quality_load_purchases: 'تحميل المشتريات المعلقة',
+                quality_purchase_id: 'معرف الشراء',
+                quality_supplier: 'المورد',
+                quality_date: 'التاريخ',
+                quality_items: 'العناصر',
+                quality_status: 'الحالة',
+                actions: 'الإجراءات',
+                quality_click_load_purchases: 'انقر على "تحميل المشتريات المعلقة" لجلب البيانات',
+                quality_load_batches: 'تحميل الدفعات',
+                quality_create_batch: 'إنشاء دفعة جديدة',
+                quality_batch_id: 'معرف الدفعة',
+                quality_grn_ref: 'مرجع GRN',
+                quality_material: 'المادة',
+                quality_quantity: 'الكمية',
+                quality_unit: 'الوحدة',
+                quality_expiry_date: 'تاريخ الانتهاء',
+                quality_location: 'الموقع',
+                quality_created: 'تم الإنشاء',
+                quality_click_load_batches: 'انقر على "تحميل الدفعات" لجلب البيانات',
+                quality_load_production: 'تحميل دفعات الإنتاج',
+                quality_create_production: 'إنشاء دفعة إنتاج',
+                quality_lot_id: 'معرف الدفعة',
+                quality_product: 'المنتج',
+                quality_production_date: 'تاريخ الإنتاج',
+                quality_batch_sources: 'مصادر الدفعة',
+                quality_click_load_production: 'انقر على "تحميل دفعات الإنتاج" لجلب البيانات',
+                quality_refresh_stock: 'تحديث المخزون',
+                quality_all_locations: 'جميع المواقع',
+                quality_main_warehouse: 'المستودع الرئيسي',
+                quality_production_area: 'منطقة الإنتاج',
+                quality_cold_storage: 'التخزين البارد',
+                quality_type: 'النوع',
+                quality_id: 'المعرف',
+                quality_item_name: 'اسم العنصر',
+                quality_days_until_expiry: 'الأيام حتى الانتهاء',
+                quality_click_refresh_stock: 'انقر على "تحديث المخزون" لجلب البيانات',
+                quality_load_transfers: 'تحميل التحويلات',
+                quality_create_transfer: 'إنشاء تحويل (TRS)',
+                quality_transfer_id: 'معرف التحويل',
+                quality_from_location: 'من الموقع',
+                quality_to_location: 'إلى الموقع',
+                quality_click_load_transfers: 'انقر على "تحميل التحويلات" لجلب البيانات',
+                quality_load_sales: 'تحميل سجلات المبيعات',
+                quality_record_sale: 'تسجيل بيع',
+                quality_sale_id: 'معرف البيع',
+                quality_customer_outlet: 'العميل/المنفذ',
+                quality_sale_date: 'تاريخ البيع',
+                quality_external_ref: 'المرجع الخارجي',
+                quality_click_load_sales: 'انقر على "تحميل سجلات المبيعات" لجلب البيانات',
+                quality_load_adjustments: 'تحميل التعديلات',
+                quality_create_adjustment: 'إنشاء تعديل',
+                quality_adjustment_id: 'معرف التعديل',
+                quality_batch_lot_id: 'معرف الدفعة/الدفعة',
+                quality_item: 'العنصر',
+                quality_reason: 'السبب',
+                quality_click_load_adjustments: 'انقر على "تحميل التعديلات" لجلب البيانات',
+                quality_trace_placeholder: 'أدخل معرف الدفعة أو معرف الدفعة للتتبع',
+                quality_trace: 'تتبع',
+                quality_simulate_recall: 'محاكاة الاستدعاء',
+                quality_traceability_chain: 'سلسلة التتبع',
+                quality_transaction_type: 'نوع المعاملة',
+                quality_reference_id: 'معرف المرجع',
+                quality_enter_trace: 'أدخل معرف الدفعة أو معرف الدفعة وانقر على "تتبع" لعرض سلسلة التتبع'
+            }
+        };
+
+        // Language translation function
+        function updateTranslations() {
+            // Get language from parent window or localStorage (using correct key)
+            let lang = 'en';
+            try {
+                // Try to get from parent window first
+                if (window.parent && window.parent !== window) {
+                    try {
+                        lang = window.parent.localStorage.getItem('portalLang') || 'en';
+                    } catch (e) {
+                        // Cross-origin or security restriction
+                        lang = localStorage.getItem('portalLang') || 'en';
+                    }
+                } else {
+                    lang = localStorage.getItem('portalLang') || 'en';
+                }
+            } catch (e) {
+                lang = localStorage.getItem('portalLang') || 'en';
+            }
+
+            console.log('🌐 Quality Dashboard: Current language:', lang);
+
+            // Get i18n object from parent window (if accessible)
+            let i18n = qualityTranslations; // Use fallback by default
+            try {
+                if (window.parent && window.parent !== window && window.parent.i18n) {
+                    // Try to merge parent i18n with our translations
+                    const parentI18n = window.parent.i18n;
+                    if (parentI18n && parentI18n[lang]) {
+                        // Merge parent translations with our quality translations
+                        i18n = {
+                            en: { ...qualityTranslations.en, ...(parentI18n.en || {}) },
+                            ar: { ...qualityTranslations.ar, ...(parentI18n.ar || {}) }
+                        };
+                        console.log('✅ Using parent i18n translations');
+                    }
+                }
+            } catch (e) {
+                console.log('⚠️ Cannot access parent i18n, using fallback translations');
+            }
+
+            // Update all elements with data-key
+            document.querySelectorAll('[data-key]').forEach(element => {
+                const key = element.getAttribute('data-key');
+                if (i18n[lang] && i18n[lang][key]) {
+                    if (element.tagName === 'INPUT' && element.hasAttribute('data-placeholder-key')) {
+                        element.placeholder = i18n[lang][key];
+                    } else {
+                        element.textContent = i18n[lang][key];
+                    }
+                } else {
+                    console.warn('⚠️ Translation missing for key:', key, 'in language:', lang);
+                }
+            });
+
+            // Update select options
+            const locationFilter = document.getElementById('stock-location-filter');
+            if (locationFilter && i18n[lang]) {
+                locationFilter.querySelectorAll('option').forEach(option => {
+                    const key = option.getAttribute('data-key');
+                    if (key && i18n[lang][key]) {
+                        option.textContent = i18n[lang][key];
+                    }
+                });
+            }
+
+            console.log('✅ Translations updated for language:', lang);
+        }
+
+        // Listen for language changes from parent
+        window.addEventListener('message', (event) => {
+            if (event.data) {
+                if (event.data.type === 'SET_LANGUAGE' || event.data.type === 'LANGUAGE_CHANGED' || event.data.type === 'UPDATE_TRANSLATIONS') {
+                    console.log('🔄 Language change detected, updating translations...', event.data.lang || event.data.language);
+                    if (event.data.lang) {
+                        localStorage.setItem('portalLang', event.data.lang);
+                    }
+                    updateTranslations();
+                } else if (event.data.type === 'LANGUAGE_RESPONSE') {
+                    console.log('📨 Received language from parent:', event.data.language);
+                    if (event.data.language) {
+                        localStorage.setItem('portalLang', event.data.language);
+                    }
+                    updateTranslations();
+                }
+            }
+        });
+
+        // Also listen for storage events (when language changes in parent)
+        window.addEventListener('storage', (e) => {
+            if (e.key === 'portalLang') {
+                console.log('🔄 Language changed in storage, updating translations...');
+                updateTranslations();
+            }
+        });
+
+        // Tab switching functionality
+        document.querySelectorAll('.tab-button').forEach(button => {
+            button.addEventListener('click', () => {
+                const tabName = button.getAttribute('data-tab');
+                
+                // Update active tab button
+                document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
+                button.classList.add('active');
+                
+                // Update active tab content
+                document.querySelectorAll('.tab-content').forEach(content => {
+                    content.classList.remove('active');
+                });
+                document.getElementById(`tab-${tabName}`).classList.add('active');
+            });
+        });
+
+        // Initialize on load
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('Food Quality Traceability System initialized');
+            
+            // Update translations immediately
+            updateTranslations();
+            
+            // Also update after a short delay (in case parent needs time to load)
+            setTimeout(updateTranslations, 100);
+            setTimeout(updateTranslations, 500);
+            setTimeout(updateTranslations, 1000);
+            
+            // Request language from parent
+            try {
+                if (window.parent && window.parent !== window) {
+                    window.parent.postMessage({ type: 'REQUEST_LANGUAGE' }, '*');
+                }
+            } catch (e) {
+                console.log('Cannot send message to parent');
+            }
+        });
+
+        // Listen for language response from parent
+        window.addEventListener('message', (event) => {
+            if (event.data && event.data.type === 'LANGUAGE_RESPONSE') {
+                console.log('📨 Received language from parent:', event.data.language);
+                updateTranslations();
+            }
+        });
+    </script>
+</body>
+</html>
+

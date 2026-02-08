@@ -1,0 +1,12 @@
+-- ============================================================
+-- 24: GRN APPROVAL BATCH PRESERVE — APPLIED VIA MCP
+-- Migration: grn_approval_batch_preserve_root_fix
+-- ============================================================
+-- This migration was applied via Supabase MCP.
+-- It ensures:
+-- 1. Approval NEVER deletes/merges/overwrites grn_batches
+-- 2. trg_grn_batches_protect_quantity blocks quantity zeroing
+-- 3. Batch sequence 001/002/003 per (grn_id, item_id)
+-- 4. v_grn_all_batches returns one row per grn_batch (no collapse)
+-- 5. trg_inventory_ledger_on_grn_approval posts one ledger row per batch
+-- ============================================================

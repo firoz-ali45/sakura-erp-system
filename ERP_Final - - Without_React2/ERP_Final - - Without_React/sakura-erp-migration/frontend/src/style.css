@@ -1,0 +1,433 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Mobile-first root layout - enterprise ERP standard */
+html, body, #app {
+  height: 100%;
+  overflow: hidden;
+  margin: 0;
+  padding: 0;
+}
+
+/* Mobile: Body must scroll vertically on ALL pages */
+@media (max-width: 767px) {
+  html, body {
+    overflow-y: auto;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  body.sidebar-open {
+    overflow: hidden; /* Lock body scroll only when sidebar is open */
+  }
+}
+
+/* Enterprise ERP Typography Lockdown - SAP/Oracle/NetSuite Standard - Mobile-First */
+html {
+  font-size: clamp(14px, 4vw, 16px); /* Fluid base font size */
+}
+
+body {
+  font-family: 'Cairo', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  background-color: #f0e1cd;
+  font-weight: 400; /* Root truth - normal text weight */
+  line-height: 1.6;
+  letter-spacing: 0.1px;
+  color: #1f2937;
+  font-size: clamp(12px, 3.5vw, 16px); /* Fluid typography */
+}
+
+/* Typography Hierarchy - Enterprise ERP Standard */
+
+/* Headings */
+h1 {
+  font-weight: 700;
+}
+
+h2, h3 {
+  font-weight: 600;
+}
+
+h4, h5, h6 {
+  font-weight: 500;
+}
+
+/* Tables - Light and readable (ERP Standard) */
+table {
+  font-size: 14px;
+}
+
+table td {
+  font-weight: 400;
+}
+
+table th {
+  font-weight: 500;
+}
+
+/* Labels and Form Elements - Calm and readable */
+label {
+  font-weight: 400;
+}
+
+input, select, textarea {
+  font-weight: 400;
+}
+
+/* Buttons - Medium weight by default */
+button {
+  font-weight: 500;
+}
+
+/* Primary CTA buttons may use 600 */
+button.sakura-primary-btn,
+button[class*="primary"],
+button[type="submit"] {
+  font-weight: 600;
+}
+
+/* Sidebar Navigation - Professional ERP Standard */
+.sidebar {
+  font-size: 14px;
+}
+
+.nav-link {
+  font-weight: 500;
+}
+
+.nav-link.active {
+  font-weight: 600;
+}
+
+.nav-sub-item {
+  font-weight: 500;
+}
+
+.nav-sub-item.active {
+  font-weight: 600;
+}
+
+/* KPI & Dashboard Numbers */
+.kpi-value,
+[class*="kpi-value"],
+[class*="metric-value"] {
+  font-weight: 600;
+}
+
+.kpi-label,
+[class*="kpi-label"],
+[class*="metric-label"] {
+  font-weight: 400;
+}
+
+/* Ensure iframes can be displayed properly in modals */
+body.modal-open {
+  overflow: hidden;
+}
+
+/* Modal iframe container - no overflow blocking */
+.modal-iframe-container {
+  overflow: visible !important;
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.modal-iframe-container iframe {
+  width: 100%;
+  height: 100%;
+  border: none;
+}
+
+/* Sakura Notification System */
+.sakura-notification {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 10000;
+  min-width: 350px;
+  max-width: 500px;
+  animation: slideInRight 0.3s ease-out;
+}
+
+@keyframes slideInRight {
+  from {
+    transform: translateX(400px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slideOutRight {
+  from {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateX(400px);
+    opacity: 0;
+  }
+}
+
+/* Main Content - Enterprise Mobile ERP Standard */
+.main-content {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Table Container - Mobile Scroll */
+.table-container {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  width: 100%;
+}
+
+@media (max-width: 767px) {
+  .table-container {
+    position: relative;
+  }
+  
+  .table-container table {
+    min-width: 600px; /* Prevent table from shrinking */
+  }
+  
+  /* Ensure table headers stay visible on mobile scroll */
+  .table-container thead th {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background-color: #284b44;
+  }
+}
+
+/* Modal Styles */
+.modal {
+  display: none;
+  position: fixed;
+  z-index: 1000;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  overflow: auto;
+  background-color: rgba(0, 0, 0, 0.5);
+  -webkit-backdrop-filter: blur(4px);
+  backdrop-filter: blur(4px);
+}
+
+.modal.show {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal-content {
+  background-color: white;
+  margin: auto;
+  padding: 0;
+  border-radius: 12px;
+  width: 90%;
+  max-width: 800px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  animation: scaleIn 0.2s ease-out;
+}
+
+/* Mobile Modal - Full Screen */
+@media (max-width: 768px) {
+  .modal-content {
+    width: 100vw;
+    height: 100vh;
+    max-width: 100vw;
+    max-height: 100vh;
+    border-radius: 0;
+    margin: 0;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  /* Mobile Inputs & Forms - Touch-Friendly */
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  input[type="number"],
+  input[type="date"],
+  textarea,
+  select {
+    width: 100% !important;
+    min-height: 44px; /* Touch target minimum */
+    font-size: 16px; /* Prevents iOS zoom on focus */
+    padding: clamp(0.5rem, 2vw, 0.75rem);
+    border-radius: clamp(0.375rem, 1vw, 0.5rem);
+  }
+  
+  button,
+  .btn,
+  [role="button"],
+  a[role="button"] {
+    min-height: 44px; /* Touch target minimum */
+    min-width: 44px;
+    padding: clamp(0.625rem, 2vw, 0.75rem) clamp(0.875rem, 3vw, 1rem);
+    font-size: clamp(0.875rem, 2.5vw, 1rem);
+    -webkit-tap-highlight-color: transparent;
+  }
+  
+  /* Forms - stack fields vertically on mobile */
+  form .grid-cols-2,
+  form .grid-cols-3,
+  form .grid-cols-4 {
+    grid-template-columns: 1fr !important;
+    gap: clamp(0.75rem, 2vw, 1rem);
+  }
+  
+  /* Mobile Typography - Fluid */
+  h1 { font-size: clamp(1.375rem, 5vw, 1.875rem); }
+  h2 { font-size: clamp(1.125rem, 4vw, 1.5rem); }
+  h3 { font-size: clamp(1rem, 3.5vw, 1.25rem); }
+  h4 { font-size: clamp(0.9375rem, 3vw, 1.125rem); }
+  p { font-size: clamp(0.875rem, 2.5vw, 1rem); }
+}
+
+/* RTL Support - Mobile-First */
+[dir="rtl"] {
+  direction: rtl;
+}
+
+[dir="rtl"] body {
+  font-family: 'Cairo', system-ui, sans-serif;
+}
+
+/* Prevent horizontal scroll on all devices */
+html, body {
+  overflow-x: hidden;
+  max-width: 100vw;
+  position: relative;
+}
+
+/* Fix nested scroll containers */
+.main-content,
+.router-view-wrapper,
+.table-container,
+.dashboard-container {
+  overflow-x: hidden;
+  max-width: 100vw;
+  width: 100%;
+}
+
+/* Global Fluid Typography - Mobile-First */
+* {
+  box-sizing: border-box;
+}
+
+/* Ensure text never overflows */
+p, h1, h2, h3, h4, h5, h6, span, div {
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  hyphens: auto;
+}
+
+/* Touch-Friendly Global Styles */
+a, button, [role="button"], input, select, textarea {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Ensure icons respect RTL */
+[dir="rtl"] .fas,
+[dir="rtl"] .fa {
+  transform: scaleX(-1); /* Mirror icons in RTL */
+}
+
+/* Special: Directional icons should NOT mirror */
+[dir="rtl"] .fa-chevron-left,
+[dir="rtl"] .fa-chevron-right,
+[dir="rtl"] .fa-arrow-left,
+[dir="rtl"] .fa-arrow-right {
+  transform: none; /* Don't mirror directional icons */
+}
+
+/* Table Mobile Swipe - Sticky First Column */
+@media (max-width: 767px) {
+  .table-container {
+    position: relative;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scroll-snap-type: x mandatory;
+  }
+  
+  .table-container table {
+    min-width: 600px;
+    width: 100%;
+  }
+  
+  .table-container thead th:first-child,
+  .table-container tbody td:first-child {
+    position: sticky;
+    left: 0;
+    z-index: 5;
+    background-color: inherit;
+    box-shadow: 2px 0 4px rgba(0, 0, 0, 0.1);
+  }
+  
+  /* RTL: Sticky first column on right */
+  [dir="rtl"] .table-container thead th:first-child,
+  [dir="rtl"] .table-container tbody td:first-child {
+    left: auto;
+    right: 0;
+    box-shadow: -2px 0 4px rgba(0, 0, 0, 0.1);
+  }
+}
+
+/* Charts - Responsive Canvas */
+canvas {
+  max-width: 100%;
+  height: auto;
+}
+
+.chart-container {
+  position: relative;
+  width: 100%;
+  max-width: 100%;
+  overflow: hidden;
+}
+
+.chart-container canvas {
+  width: 100% !important;
+  height: auto !important;
+  max-width: 100%;
+}
+
+@keyframes scaleIn {
+  from {
+    transform: scale(0.9);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* Notification slide-in animation */
+@keyframes slide-in {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.animate-slide-in {
+  animation: slide-in 0.3s ease-out;
+  transition: opacity 0.3s, transform 0.3s;
+}
+

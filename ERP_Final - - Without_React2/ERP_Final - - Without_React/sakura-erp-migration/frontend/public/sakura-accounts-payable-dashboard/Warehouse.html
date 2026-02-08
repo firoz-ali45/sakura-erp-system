@@ -1,0 +1,2423 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SakuraCafe Raw Materials Warehouse Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&family=Dubai:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="unified-styles.css">
+    <style>
+        :root {
+            --brand-primary: #284b44;
+            --brand-secondary: #956c2a;
+            --brand-accent: #ea8990;
+            --brand-background: #f0e1cd;
+            --text-color: #333;
+            --card-bg-color: #ffffff;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: 'Cairo', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--brand-background);
+            min-height: 100vh;
+            color: var(--text-color);
+            padding: 20px;
+        }
+
+        /* Header Hidden - Main dashboard already provides header */
+        .header {
+            display: none;
+        }
+
+        .container { max-width: 1400px; margin: 0 auto; }
+        
+        /* Data Load Area */
+        .data-load-zone {
+            background: var(--card-bg-color);
+            border: 3px dashed var(--brand-secondary);
+            border-radius: 16px;
+            padding: 20px;
+            text-align: center;
+            margin-bottom: 30px;
+            position: relative;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+        }
+        
+        .load-btn {
+            background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary));
+            color: white;
+            border: none;
+            padding: 16px 32px;
+            border-radius: 12px;
+            font-weight: 600;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .load-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(40, 75, 68, 0.3);
+        }
+        
+        .loading-spinner {
+            display: none;
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            border-top: 4px solid white;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            animation: spin 1s linear infinite;
+            margin-left: 10px;
+            vertical-align: middle;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        /* Status - Unified with Forecasting Dashboard */
+        .status-log {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            width: 300px;
+            max-height: 400px;
+            overflow-y: auto;
+            z-index: 1000;
+            display: none !important; /* Hide all loading notifications */
+            visibility: hidden !important;
+        }
+        
+        /* Loading Section - Match Forecasting Dashboard */
+        .loading-section {
+            text-align: center;
+            padding: 40px 20px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            margin-bottom: 30px;
+        }
+        
+        .loading-section h2 {
+            color: var(--brand-primary);
+            margin-bottom: 10px;
+            font-size: 1.5em;
+        }
+        
+        .loading-section p {
+            color: #6b7280;
+            margin-bottom: 20px;
+        }
+        
+        .progress-section {
+            margin: 30px 0;
+            display: none;
+        }
+        
+        .progress-bar {
+            width: 100%;
+            height: 25px;
+            background: #e0e0e0;
+            border-radius: 12px;
+            overflow: hidden;
+            margin: 15px 0;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(45deg, var(--brand-primary), var(--brand-secondary));
+            transition: width 0.5s ease;
+            width: 0%;
+        }
+        
+        .status {
+            padding: 12px 16px;
+            margin-bottom: 8px;
+            border-radius: 8px;
+            font-size: 14px;
+            animation: slideIn 0.3s ease;
+        }
+        
+        .status.success { background: #10b981; color: white; }
+        .status.error { background: #ef4444; color: white; }
+        .status.info { background: #2563eb; color: white; }
+        
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        
+        /* Navigation */
+        .nav-tabs {
+            text-align: center;
+            margin-bottom: 20px;
+            background: #eee;
+            border-radius: 25px;
+            padding: 5px;
+            display: inline-block;
+            width: 100%;
+        }
+        
+        .nav-tab {
+            background: transparent;
+            border: none;
+            padding: 10px 20px;
+            cursor: pointer;
+            border-radius: 20px;
+            font-weight: 600;
+            color: #555;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            margin: 0 2px;
+        }
+        
+        .nav-tab.active {
+            background: var(--brand-secondary);
+            color: white;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .nav-tab:hover:not(.active) {
+            background: rgba(149, 108, 42, 0.1);
+            color: var(--brand-secondary);
+        }
+
+        .sub-nav-tabs {
+            text-align: center;
+            margin-bottom: 20px;
+            background: #eee;
+            border-radius: 25px;
+            padding: 5px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 100%;
+            box-sizing: border-box;
+            flex-wrap: wrap;
+        }
+
+        .sub-nav-tab {
+            background: transparent;
+            border: none;
+            padding: 10px 20px;
+            cursor: pointer;
+            border-radius: 20px;
+            font-weight: 600;
+            color: #555;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            margin: 0 2px;
+            font-size: 14px;
+            flex-shrink: 0;
+        }
+
+        .sub-nav-tab.active {
+            background: var(--brand-secondary);
+            color: white;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .sub-nav-tab:hover:not(.active) {
+            background: rgba(149, 108, 42, 0.1);
+            color: var(--brand-secondary);
+        }
+        
+        /* Sections */
+        .section { display: none; }
+        .section.active { display: block; }
+        
+        /* Cards */
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .metric-card {
+            background: var(--card-bg-color);
+            padding: 24px;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            border-left: 4px solid var(--card-border-color);
+            transition: transform 0.3s ease;
+        }
+        
+        .metric-card:hover { transform: translateY(-4px); }
+        
+        .metric-card.blue { --card-border-color: var(--brand-primary); }
+        .metric-card.green { --card-border-color: #10b981; }
+        .metric-card.orange { --card-border-color: #f59e0b; }
+        .metric-card.red { --card-border-color: #ef4444; }
+        .metric-card.purple { --card-border-color: var(--brand-secondary); }
+        
+        .metric-value {
+            font-size: 2rem;
+            font-weight: 800;
+            color: var(--card-border-color);
+            margin-bottom: 8px;
+        }
+        
+        .metric-label {
+            font-weight: 600;
+            color: #374151;
+            margin-bottom: 4px;
+        }
+        
+        .metric-subtitle {
+            font-size: 14px;
+            color: #6b7280;
+        }
+        
+        /* Tables */
+        .data-table {
+            width: 100%;
+            background: white;
+            border-radius: 12px;
+            overflow: visible;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            margin-bottom: 30px;
+        }
+        
+        /* Table Container for Mobile Scrolling */
+        .table-container {
+            max-height: 70vh;
+            overflow-y: auto;
+            overflow-x: auto;
+            border-radius: 12px;
+        }
+        
+        .data-table table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+        }
+        
+        .data-table thead th {
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            background: var(--brand-primary);
+            color: white;
+            border-bottom: 2px solid var(--brand-secondary);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            padding: 12px 20px;
+            font-weight: 600;
+            text-align: center;
+        }
+        
+        .data-table tbody td {
+            background: #f8f9fa;
+            border-bottom: 1px solid #ddd;
+            padding: 12px 20px;
+            text-align: center;
+        }
+        
+        .data-table tbody tr:hover td {
+            background: #e9ecef;
+        }
+        
+        .table-header {
+            padding: 20px;
+            background: var(--brand-background);
+            border-bottom: 1px solid #e2e8f0;
+            min-height: 60px;
+            display: flex;
+            align-items: center;
+        }
+        
+        .table-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--text-color);
+            white-space: normal;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+            line-height: 1.4;
+            padding: 5px 0;
+        }
+        
+        .data-table table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        .data-table th,
+        .data-table td {
+            padding: 12px 20px;
+            text-align: left;
+            border-bottom: 1px solid #f1f5f9;
+        }
+        
+        .data-table th {
+            background: var(--brand-background);
+            font-weight: 600;
+            color: var(--text-color);
+            font-size: 14px;
+        }
+        
+        .data-table tbody tr:hover {
+            background: rgba(40, 75, 68, 0.05);
+        }
+
+        /* Modal / Mini Window */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 0;
+            border-radius: 15px;
+            width: 95%;
+            max-width: 1200px;
+            box-shadow: 0 5px 25px rgba(0,0,0,0.4);
+            position: relative;
+            animation: animatetop 0.4s ease-out;
+            overflow: hidden;
+        }
+
+        @keyframes animatetop {
+            from { top: -300px; opacity: 0; transform: scale(0.8); }
+            to { top: 0; opacity: 1; transform: scale(1); }
+        }
+
+        .modal-header {
+            padding: 20px 30px;
+            background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary));
+            color: white;
+            border-top-left-radius: 15px;
+            border-top-right-radius: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .modal-title {
+            margin: 0;
+            font-size: 1.5em;
+            font-weight: 600;
+        }
+        
+        .modal-close-btn {
+            color: white;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+            background: none;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 50%;
+            transition: all 0.3s ease;
+        }
+        
+        .modal-close-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: scale(1.1);
+        }
+        
+        /* Charts */
+        .chart-container {
+            background: white;
+            padding: 24px;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            margin-bottom: 30px;
+            min-height: 100px;
+        }
+        
+        .chart-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--text-color);
+            margin-bottom: 20px;
+            white-space: normal;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+            line-height: 1.4;
+            padding: 5px 0;
+        }
+        
+        /* Arabic text specific fixes */
+        [dir="rtl"] .chart-title,
+        [dir="rtl"] .table-title {
+            text-align: right;
+            direction: rtl;
+        }
+        
+        /* Comprehensive Responsive Design */
+        @media (max-width: 1200px) {
+            .container {
+                padding: 15px;
+            }
+            
+            .metrics-grid {
+                grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+                gap: 15px;
+            }
+            
+            .chart-container {
+                padding: 20px;
+            }
+        }
+        
+        @media (max-width: 992px) {
+            .nav-tabs {
+                flex-direction: column;
+                gap: 10px;
+            }
+            
+            .sub-nav-tabs {
+                flex-direction: column;
+                gap: 10px;
+            }
+            
+            .metrics-grid {
+                grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+                gap: 12px;
+            }
+            
+            .chart-title,
+            .table-title {
+                font-size: 16px;
+                line-height: 1.3;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .container {
+                padding: 10px;
+            }
+            
+            .metrics-grid {
+                grid-template-columns: 1fr;
+                gap: 10px;
+            }
+            
+            .chart-container {
+                padding: 15px;
+                margin-bottom: 20px;
+            }
+            
+            .data-table {
+                margin-bottom: 20px;
+            }
+            
+            .chart-title,
+            .table-title {
+                font-size: 15px;
+                line-height: 1.3;
+            }
+            
+            .chart-canvas {
+                height: 300px;
+            }
+            
+            .table-container {
+                max-height: 60vh;
+            }
+            
+            .data-table table {
+                font-size: 14px;
+            }
+            
+            .data-table th,
+            .data-table td {
+                padding: 8px 6px;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .container {
+                padding: 5px;
+            }
+            
+            .chart-container {
+                padding: 10px;
+                margin-bottom: 15px;
+            }
+            
+            .chart-title,
+            .table-title {
+                font-size: 14px;
+                line-height: 1.2;
+            }
+            
+            .chart-canvas {
+                height: 250px;
+            }
+            
+            .table-container {
+                max-height: 50vh;
+            }
+            
+            .data-table table {
+                font-size: 12px;
+            }
+            
+            .data-table th,
+            .data-table td {
+                padding: 6px 4px;
+            }
+            
+            .metric-card {
+                padding: 15px;
+            }
+            
+            .metric-value {
+                font-size: 1.5rem;
+            }
+        }
+        
+        .chart-canvas {
+            position: relative;
+            height: 400px;
+        }
+        
+        /* Responsive Grid System */
+        .responsive-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        @media (max-width: 992px) {
+            .responsive-grid {
+                grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+                gap: 15px;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .responsive-grid {
+                grid-template-columns: 1fr;
+                gap: 15px;
+                margin-bottom: 20px;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .responsive-grid {
+                grid-template-columns: 1fr;
+                gap: 10px;
+                margin-bottom: 15px;
+            }
+        }
+        
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            background: var(--card-bg-color);
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+        }
+        
+        .empty-icon {
+            font-size: 3rem;
+            color: #cbd5e1;
+            margin-bottom: 16px;
+        }
+        
+        .empty-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: #374151;
+            margin-bottom: 8px;
+        }
+        
+        .empty-description {
+            color: #6b7280;
+        }
+        
+        .loading-indicator {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        
+        .loading-indicator p {
+            color: #6b7280;
+            font-size: 14px;
+        }
+
+        .table-details-btn {
+            background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary));
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .table-details-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(40, 75, 68, 0.3);
+        }
+
+        .modal-body {
+            max-height: 60vh;
+            overflow-y: auto;
+            padding-right: 10px;
+        }
+        
+        .modal-body::-webkit-scrollbar {
+            width: 6px;
+        }
+        
+        .modal-body::-webkit-scrollbar-track {
+            background: #f1f5f9;
+            border-radius: 3px;
+        }
+        
+        .modal-body::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 3px;
+        }
+        
+        .modal-body::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+        
+        .modal-body .data-table {
+            box-shadow: none;
+        }
+        
+        /* RTL Support */
+        html[dir="rtl"] {
+            text-align: right;
+        }
+        
+        html[dir="rtl"] .metric-card {
+            border-left: none;
+            border-right: 4px solid var(--card-border-color);
+        }
+        
+        html[dir="rtl"] .data-table th,
+        html[dir="rtl"] .data-table td {
+            text-align: right;
+        }
+        
+        html[dir="rtl"] .status-log {
+            right: auto;
+            left: 20px;
+        }
+        
+        html[dir="rtl"] .modal-close-btn {
+            right: auto;
+            left: 15px;
+        }
+        
+        /* Enhanced Modal Styling */
+        .modal-overlay {
+            backdrop-filter: blur(5px);
+        }
+        
+        .modal-content {
+            animation: modalSlideIn 0.3s ease-out;
+        }
+        
+        @keyframes modalSlideIn {
+            from {
+                opacity: 0;
+                transform: scale(0.9) translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1) translateY(0);
+            }
+        }
+        
+        /* Enhanced Button Styling */
+        .table-details-btn {
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .table-details-btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            transition: left 0.5s;
+        }
+        
+        .table-details-btn:hover::before {
+            left: 100%;
+        }
+        
+        /* Loading Animation Enhancement */
+        .loading-spinner {
+            border-top-color: #284b44;
+            border-right-color: #284b44;
+        }
+        
+        /* Mobile Responsive */
+        @media (max-width: 768px) {
+            .modal-content {
+                width: 95%;
+                margin: 10px;
+                padding: 20px;
+                max-height: 90vh;
+                overflow-y: auto;
+            }
+            
+            .modal-body {
+                max-height: 50vh;
+            }
+            
+            .modal-close-btn {
+                top: 10px;
+                right: 10px;
+                width: 30px;
+                height: 30px;
+                font-size: 1.2rem;
+            }
+            
+            html[dir="rtl"] .modal-close-btn {
+                right: auto;
+                left: 10px;
+            }
+            
+            .data-table {
+                font-size: 0.875rem;
+            }
+            
+            .data-table th,
+            .data-table td {
+                padding: 8px 6px;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .modal-content {
+                width: 98%;
+                margin: 5px;
+                padding: 15px;
+            }
+            
+            .modal-body {
+                max-height: 45vh;
+            }
+            
+            .data-table {
+                font-size: 0.8rem;
+            }
+            
+            .data-table th,
+            .data-table td {
+                padding: 6px 4px;
+            }
+        }
+        
+        html[dir="rtl"] .nav-tabs,
+        html[dir="rtl"] .sub-nav-tabs {
+            direction: rtl;
+        }
+        
+        html[dir="rtl"] .chart-container {
+            direction: ltr; /* Keep charts LTR for proper display */
+        }
+        
+        @media (max-width: 768px) {
+            .nav-tabs, .sub-nav-tabs { flex-direction: column; }
+            .metrics-grid { grid-template-columns: 1fr; }
+            .chart-canvas { height: 300px; }
+            .load-btn { margin: 5px 0; display: block; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        
+        
+        <div class="nav-tabs">
+            <button class="nav-tab active" onclick="showDashboard('dashboard-combined')">
+                <i class="fas fa-chart-pie"></i> <span data-lang="combined_dashboard">Combined Dashboard</span>
+            </button>
+            <button class="nav-tab" onclick="showDashboard('dashboard-fg')">
+                <i class="fas fa-box-open"></i> <span data-lang="fg_dashboard">FG & WIP Dashboard</span>
+            </button>
+            <button class="nav-tab" onclick="showDashboard('dashboard-rm')">
+                <i class="fas fa-boxes"></i> <span data-lang="rm_dashboard">Raw Materials Dashboard</span>
+            </button>
+        </div>
+        
+        <div class="sub-nav-tabs" id="sub-nav-combined">
+            <button class="sub-nav-tab active" onclick="showSection('combined-overview', this, 'combined')">
+                <i class="fas fa-chart-pie"></i> <span data-lang="overview">Overview</span>
+            </button>
+            <button class="sub-nav-tab" onclick="showSection('combined-inventory', this, 'combined')">
+                <i class="fas fa-boxes"></i> <span data-lang="inventory">Inventory</span>
+            </button>
+            <button class="sub-nav-tab" onclick="showSection('combined-transfers', this, 'combined')">
+                <i class="fas fa-truck"></i> <span data-lang="transfers">Transfers</span>
+            </button>
+            <button class="sub-nav-tab" onclick="showSection('combined-purchasing', this, 'combined')">
+                <i class="fas fa-shopping-cart"></i> <span data-lang="purchasing">Purchasing</span>
+            </button>
+        </div>
+
+        <div class="sub-nav-tabs" id="sub-nav-fg" style="display: none;">
+            <button class="sub-nav-tab active" onclick="showSection('fg-overview', this, 'fg')">
+                <i class="fas fa-chart-pie"></i> <span data-lang="overview">Overview</span>
+            </button>
+            <button class="sub-nav-tab" onclick="showSection('fg-inventory', this, 'fg')">
+                <i class="fas fa-boxes"></i> <span data-lang="inventory">Inventory</span>
+            </button>
+            <button class="sub-nav-tab" onclick="showSection('fg-transfers', this, 'fg')">
+                <i class="fas fa-truck"></i> <span data-lang="transfers">Transfers</span>
+            </button>
+            <button class="sub-nav-tab" onclick="showSection('fg-purchasing', this, 'fg')">
+                <i class="fas fa-shopping-cart"></i> <span data-lang="purchasing">Purchasing</span>
+            </button>
+        </div>
+
+        <div class="sub-nav-tabs" id="sub-nav-rm" style="display: none;">
+            <button class="sub-nav-tab active" onclick="showSection('rm-overview', this, 'rm')">
+                <i class="fas fa-chart-pie"></i> <span data-lang="overview">Overview</span>
+            </button>
+            <button class="sub-nav-tab" onclick="showSection('rm-inventory', this, 'rm')">
+                <i class="fas fa-boxes"></i> <span data-lang="inventory">Inventory</span>
+            </button>
+            <button class="sub-nav-tab" onclick="showSection('rm-transfers', this, 'rm')">
+                <i class="fas fa-truck"></i> <span data-lang="transfers">Transfers</span>
+            </button>
+            <button class="sub-nav-tab" onclick="showSection('rm-purchasing', this, 'rm')">
+                <i class="fas fa-shopping-cart"></i> <span data-lang="purchasing">Purchasing</span>
+            </button>
+        </div>
+        
+        
+        <div id="combined-overview" class="section active">
+            <div class="empty-state">
+                <i class="fas fa-chart-line empty-icon"></i>
+                <h3 class="empty-title">Combined Overview</h3>
+                <p class="empty-description">Load data to view analytics for all categories combined</p>
+            </div>
+        </div>
+        <div id="combined-inventory" class="section"></div>
+        <div id="combined-transfers" class="section"></div>
+        <div id="combined-purchasing" class="section"></div>
+
+        <div id="fg-overview" class="section">
+            <div class="empty-state">
+                <i class="fas fa-chart-line empty-icon"></i>
+                <h3 class="empty-title">FG & WIP Overview</h3>
+                <p class="empty-description">Load data to view analytics for 'fg_and_wip_from_pr' category</p>
+            </div>
+        </div>
+        <div id="fg-inventory" class="section"></div>
+        <div id="fg-transfers" class="section"></div>
+        <div id="fg-purchasing" class="section"></div>
+
+        <div id="rm-overview" class="section">
+            <div class="empty-state">
+                <i class="fas fa-chart-line empty-icon"></i>
+                <h3 class="empty-title">Raw Materials Overview</h3>
+                <p class="empty-description">Load data to view analytics for other categories</p>
+            </div>
+        </div>
+        <div id="rm-inventory" class="section"></div>
+        <div id="rm-transfers" class="section"></div>
+        <div id="rm-purchasing" class="section"></div>
+    </div>
+    
+    <div id="statusLog" class="status-log"></div>
+
+    <div class="modal-overlay" id="detailsModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title" id="modalTitle"></h3>
+                <button class="modal-close-btn" onclick="closeDetailsModal()">&times;</button>
+            </div>
+            <div class="modal-body" id="modalBody"></div>
+        </div>
+    </div>
+    
+    <script>
+        var data = {
+            inventory: null,
+            transfers: null,
+            purchasing: null,
+            rmDetails: null,
+            charts: {}
+        };
+        
+        const SPREADSHEET_ID = '1ValWzTN7XWKZ7o7QUPSjoUNiGBRpNvmmqjzeuV115kg';
+        const API_KEY = 'AIzaSyCnoLcmC_MpuI12NUK-E2l0B9KbsdC42C4'; // Google Sheets API Key
+        
+        let currentDashboard = 'combined';
+        let currentLang = 'en';
+
+        // Language translations
+        const i18n = {
+            en: {
+                load_data: 'Load Data from Google Sheet',
+                load_data_desc: 'Click to load the latest inventory, transfer, and purchasing data.',
+                load_data_note: 'NOTE: If you see a \'403 Forbidden\' error, please ensure your Google Sheet\'s sharing settings are set to \'Anyone with the link can view.\'',
+                load_btn: 'Load Data',
+                combined_dashboard: 'Combined Dashboard',
+                fg_dashboard: 'FG & WIP Dashboard',
+                rm_dashboard: 'Raw Materials Dashboard',
+                overview: 'Overview',
+                inventory: 'Inventory',
+                transfers: 'Transfers',
+                purchasing: 'Purchasing',
+                combined_overview: 'Combined Overview',
+                combined_overview_desc: 'Load data to view analytics for all categories combined',
+                fg_overview: 'FG & WIP Overview',
+                fg_overview_desc: 'Load data to view analytics for \'fg_and_wip_from_pr\' category',
+                rm_overview: 'Raw Materials Overview',
+                rm_overview_desc: 'Load data to view analytics for other categories',
+                inventory_value: 'Inventory Value',
+                out_of_stock: 'Out of Stock',
+                low_stock: 'low stock',
+                transfer_value: 'Transfer Value',
+                transfers_count: 'transfers',
+                purchase_value: 'Purchase Value',
+                purchases_count: 'purchases',
+                financial_overview: 'Financial Overview (Inventory, Transfers, Purchasing)',
+                inventory_by_category: 'Inventory Value by Category',
+                most_active_items: 'Top 10 Most Active Items (by Movement)',
+                low_stock_items: 'Top 10 Low Stock Items (Q < 50)',
+                out_stock_items: 'Top 10 Out of Stock Items (Q = 0)',
+                item_name: 'Item Name',
+                quantity: 'Quantity',
+                total_items: 'Total Items',
+                total_value: 'Total Value',
+                total_transfers: 'Total Transfers',
+                total_cost: 'Total cost',
+                active_branches: 'Active Branches',
+                distribution_points: 'Distribution points',
+                units_moved: 'Units Moved',
+                total_quantity: 'Total quantity',
+                items_purchased: 'Items Purchased',
+                transactions: 'Transactions',
+                total_spend: 'Total spend',
+                skus_in_inventory: 'SKUs in inventory',
+                current_valuation: 'Current valuation',
+                need_attention: 'Need attention',
+                immediate_reorder: 'Immediate reorder',
+                completed: 'Completed',
+                unit: 'Unit',
+                sku: 'SKU',
+                no_low_stock: 'No low stock items found.',
+                no_out_stock: 'No out of stock items.',
+                total_items: 'Total Items',
+                skus_inventory: 'SKUs in inventory',
+                current_valuation: 'Current valuation',
+                need_attention: 'Need attention',
+                immediate_reorder: 'Immediate reorder',
+                available_quantity: 'Available Quantity',
+                storage_unit: 'Storage Unit',
+                total_value: 'Total Value',
+                details: 'Details',
+                view_details: 'View Details',
+                branch: 'Branch',
+                total_transfers: 'Total Transfers',
+                completed: 'Completed',
+                total_cost: 'Total cost',
+                active_branches: 'Active Branches',
+                distribution_points: 'Distribution points',
+                units_moved: 'Units Moved',
+                total_quantity: 'Total quantity',
+                branch_performance: 'Branch Performance',
+                top_branches: 'Top Branches by Value',
+                rank: 'Rank',
+                branch_name: 'Branch Name',
+                avg_transfer: 'Avg Transfer',
+                items_purchased: 'Items Purchased',
+                transactions: 'Transactions',
+                total_spend: 'Total spend',
+                top_purchases: 'Top 10 Purchases by Value',
+                cost: 'Cost',
+                no_branch_data: 'No branch transfer data available.',
+                no_data_available: 'No data available for this dashboard.',
+                warehouse_title: 'Warehouse Management Dashboard',
+                warehouse_subtitle: 'Real-time inventory tracking and management',
+                current_date_label: 'Current Date'
+            },
+            ar: {
+                load_data: 'تحميل البيانات من جدول جوجل',
+                load_data_desc: 'انقر لتحميل أحدث بيانات المخزون والنقل والشراء.',
+                load_data_note: 'ملاحظة: إذا رأيت خطأ \'403 Forbidden\'، يرجى التأكد من أن إعدادات مشاركة جدول جوجل مضبوطة على \'يمكن لأي شخص لديه الرابط المشاهدة.\'',
+                load_btn: 'تحميل البيانات',
+                combined_dashboard: 'لوحة التحكم المجمعة',
+                fg_dashboard: 'لوحة تحكم المنتجات النهائية والعمل الجاري',
+                rm_dashboard: 'لوحة تحكم المواد الخام',
+                overview: 'نظرة عامة',
+                inventory: 'المخزون',
+                transfers: 'النقل',
+                purchasing: 'الشراء',
+                combined_overview: 'نظرة عامة مجمعة',
+                combined_overview_desc: 'تحميل البيانات لعرض التحليلات لجميع الفئات مجتمعة',
+                fg_overview: 'نظرة عامة على المنتجات النهائية والعمل الجاري',
+                fg_overview_desc: 'تحميل البيانات لعرض التحليلات لفئة \'fg_and_wip_from_pr\'',
+                rm_overview: 'نظرة عامة على المواد الخام',
+                rm_overview_desc: 'تحميل البيانات لعرض التحليلات للفئات الأخرى',
+                inventory_value: 'قيمة المخزون',
+                out_of_stock: 'نفد المخزون',
+                low_stock: 'مخزون منخفض',
+                transfer_value: 'قيمة النقل',
+                transfers_count: 'نقل',
+                purchase_value: 'قيمة الشراء',
+                purchases_count: 'شراء',
+                financial_overview: 'نظرة مالية عامة (المخزون، النقل، الشراء)',
+                inventory_by_category: 'قيمة المخزون حسب الفئة',
+                most_active_items: 'أهم 10 أصناف نشطة (حسب الحركة)',
+                low_stock_items: 'أهم 10 أصناف مخزون منخفض (كمية < 50)',
+                out_stock_items: 'أهم 10 أصناف نفد المخزون (كمية = 0)',
+                item_name: 'اسم الصنف',
+                quantity: 'الكمية',
+                unit: 'الوحدة',
+                sku: 'رمز الصنف',
+                no_low_stock: 'لم يتم العثور على أصناف مخزون منخفض.',
+                no_out_stock: 'لا توجد أصناف نفد المخزون.',
+                total_items: 'إجمالي الأصناف',
+                skus_inventory: 'رموز الأصناف في المخزون',
+                current_valuation: 'التقييم الحالي',
+                need_attention: 'تحتاج انتباه',
+                immediate_reorder: 'إعادة طلب فورية',
+                available_quantity: 'الكمية المتاحة',
+                storage_unit: 'وحدة التخزين',
+                total_value: 'القيمة الإجمالية',
+                details: 'التفاصيل',
+                view_details: 'عرض التفاصيل',
+                branch: 'الفرع',
+                total_transfers: 'إجمالي النقل',
+                completed: 'مكتمل',
+                total_cost: 'التكلفة الإجمالية',
+                active_branches: 'الفروع النشطة',
+                distribution_points: 'نقاط التوزيع',
+                units_moved: 'الوحدات المنقولة',
+                total_quantity: 'الكمية الإجمالية',
+                branch_performance: 'أداء الفروع',
+                top_branches: 'أفضل الفروع حسب القيمة',
+                rank: 'الترتيب',
+                branch_name: 'اسم الفرع',
+                avg_transfer: 'متوسط النقل',
+                items_purchased: 'الأصناف المشتراة',
+                transactions: 'المعاملات',
+                total_spend: 'إجمالي الإنفاق',
+                top_purchases: 'أهم 10 مشتريات حسب القيمة',
+                cost: 'التكلفة',
+                no_branch_data: 'لا توجد بيانات نقل للفروع.',
+                no_data_available: 'لا توجد بيانات متاحة لهذه لوحة التحكم.',
+                warehouse_title: 'لوحة تحكم إدارة المستودع',
+                warehouse_subtitle: 'تتبع وإدارة المخزون في الوقت الفعلي',
+                current_date_label: 'التاريخ الحالي',
+                financial_overview: 'نظرة عامة مالية (المخزون، النقل، الشراء)',
+                inventory_by_category: 'قيمة المخزون حسب الفئة',
+                most_active_items: 'أهم 10 عناصر نشطة (حسب الحركة)',
+                low_stock_items: 'أهم 10 عناصر منخفضة المخزون (Q < 50)',
+                out_stock_items: 'أهم 10 عناصر نفدت من المخزون (Q = 0)',
+                total_items: 'إجمالي العناصر',
+                total_value: 'إجمالي القيمة',
+                total_transfers: 'إجمالي النقل',
+                total_cost: 'إجمالي التكلفة',
+                active_branches: 'الفروع النشطة',
+                distribution_points: 'نقاط التوزيع',
+                units_moved: 'الوحدات المنقولة',
+                total_quantity: 'إجمالي الكمية',
+                items_purchased: 'العناصر المشتراة',
+                transactions: 'المعاملات',
+                total_spend: 'إجمالي الإنفاق',
+                skus_in_inventory: 'رموز SKU في المخزون',
+                current_valuation: 'التقييم الحالي',
+                need_attention: 'تحتاج انتباه',
+                immediate_reorder: 'إعادة طلب فورية',
+                completed: 'مكتمل'
+            }
+        };
+
+
+        // Listen for language changes from parent
+        window.addEventListener('message', (event) => {
+            if (event.data && event.data.type === 'SET_LANGUAGE') {
+                currentLang = event.data.lang;
+                document.body.dir = currentLang === 'ar' ? 'rtl' : 'ltr';
+                document.documentElement.lang = currentLang;
+                document.documentElement.dir = currentLang === 'ar' ? 'rtl' : 'ltr';
+                
+                // Update elements with data-lang attributes (unified system)
+                document.querySelectorAll('[data-lang]').forEach(el => {
+                    const key = el.getAttribute('data-lang');
+                    if (i18n[currentLang] && i18n[currentLang][key]) {
+                        el.innerHTML = i18n[currentLang][key];
+                    }
+                });
+                
+                updateDateTime();
+                
+                // Re-render all dashboard sections with new language
+                if (typeof updateSectionContent === 'function' && typeof data !== 'undefined' && data.inventory) {
+                    console.log('🔄 Re-rendering warehouse dashboard sections with new language...');
+                    // Re-render all active sections
+                    const activeSections = ['combined-overview', 'fg-overview', 'rm-overview', 
+                                          'combined-inventory', 'fg-inventory', 'rm-inventory',
+                                          'combined-transfers', 'fg-transfers', 'rm-transfers',
+                                          'combined-purchasing', 'fg-purchasing', 'rm-purchasing'];
+                    activeSections.forEach(sectionName => {
+                        const section = document.getElementById(sectionName);
+                        if (section && section.innerHTML.trim() !== '') {
+                            updateSectionContent(sectionName);
+                        }
+                    });
+                }
+                
+                console.log('✅ Warehouse: Language changed to:', currentLang);
+            } else if (event.data && event.data.type === 'AUTO_LOAD_DATA') {
+                // Auto-load data when requested by parent
+                loadData();
+            } else if (event.data && event.data.type === 'REQUEST_DATA_DUMP') {
+                // Send warehouse data to parent
+                if (data.inventory || data.transfers || data.purchasing) {
+                    const warehouseData = {
+                        totalInventoryValue: data.inventory ? formatCurrency(data.inventory.totalValue) : 'SAR 0',
+                        outOfStock: data.inventory ? data.inventory.zeroStock : 0,
+                        lowStock: data.inventory ? data.inventory.lowStock : 0,
+                        transferValue: data.transfers ? formatCurrency(data.transfers.totalValue) : 'SAR 0',
+                        purchaseValue: data.purchasing ? formatCurrency(data.purchasing.totalPurchaseValue) : 'SAR 0'
+                    };
+                    
+                    window.parent.postMessage({
+                        type: 'WAREHOUSE_DATA',
+                        payload: warehouseData
+                    }, '*');
+                    
+                    // Send detailed data
+                    window.parent.postMessage({
+                        type: 'WAREHOUSE_DATA_DETAIL',
+                        payload: data
+                    }, '*');
+                }
+            }
+        });
+
+        function log(message, type) {
+            // Logging disabled for production - notifications hidden for clean UI
+            // Only log to console for debugging
+            if (type === 'error') {
+                console.error('Warehouse:', message);
+            } else {
+                console.log('Warehouse:', message);
+            }
+            // UI notifications completely disabled
+            return;
+        }
+        
+        function formatCurrency(value) {
+            if (value === null || isNaN(value)) return 'SAR 0';
+            const locale = currentLang === 'ar' ? 'ar-SA' : 'en-US';
+            return 'SAR ' + parseFloat(value).toLocaleString(locale, { maximumFractionDigits: 2 });
+        }
+        
+        function formatNumber(value) {
+            if (value === null || isNaN(value)) return '0';
+            const locale = currentLang === 'ar' ? 'ar-SA' : 'en-US';
+            return parseFloat(value).toLocaleString(locale);
+        }
+        
+        function escapeHtml(text) {
+            var div = document.createElement('div');
+            div.textContent = text || '';
+            return div.innerHTML;
+        }
+
+        // Ultra-fast: Track if data is already loaded
+        let dataLoaded = false;
+        
+        // ULTRA-FAST: Hide loading message immediately
+        function hideLoadingMessage() {
+            const loadingElements = document.querySelectorAll('.loading-spinner, .loading-indicator');
+            loadingElements.forEach(el => {
+                el.style.display = 'none';
+                el.parentElement?.classList?.remove('loading');
+            });
+            
+            // Also hide "Loading data from Google Sheet..." text
+            const loadingTexts = document.querySelectorAll('p');
+            loadingTexts.forEach(p => {
+                if (p.textContent.includes('Loading data from Google Sheet')) {
+                    p.style.display = 'none';
+                }
+            });
+        }
+        
+        // ULTRA-FAST: Load with immediate cache display
+        async function loadData() {
+            // IMMEDIATE: Try to load from cache first
+            const fullCacheKey = 'warehouse_full_data_cache';
+            const cacheTimestamp = 'warehouse_full_data_timestamp';
+            const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+            
+            try {
+                const cached = localStorage.getItem(fullCacheKey);
+                const timestamp = localStorage.getItem(cacheTimestamp);
+                if (cached && timestamp) {
+                    const age = Date.now() - parseInt(timestamp);
+                    if (age < CACHE_DURATION) {
+                        const cachedData = JSON.parse(cached);
+                        data.inventory = cachedData.inventory;
+                        data.transfers = cachedData.transfers;
+                        data.purchasing = cachedData.purchasing;
+                        data.rmDetails = cachedData.rmDetails;
+                        dataLoaded = true;
+                        
+                        console.log('⚡ Warehouse: Loaded from cache instantly');
+                        
+                        // ULTRA-FAST: Hide loading message immediately
+                        hideLoadingMessage();
+                        
+                        updateAllSections();
+                        
+                        // Send cached data to parent
+                        sendWarehouseDataToParent();
+                        
+                        // Background refresh (non-blocking)
+                        refreshDataInBackground();
+                        return;
+                    }
+                }
+            } catch (e) {
+                console.warn('Cache read failed:', e);
+            }
+            
+            // If no cache, load fresh data with timeout
+            // Set timeout to hide loading message after 3 seconds even if data not loaded
+            const loadingTimeout = setTimeout(() => {
+                console.warn('⏱️ Loading timeout - hiding loading message');
+                hideLoadingMessage();
+            }, 3000);
+            
+            try {
+                await refreshDataInBackground();
+            } finally {
+                clearTimeout(loadingTimeout);
+                hideLoadingMessage(); // Ensure loading is hidden
+            }
+        }
+        
+        // Background refresh (non-blocking)
+        async function refreshDataInBackground() {
+            // Hide loading immediately when starting refresh
+            hideLoadingMessage();
+            
+            try {
+                const sheetNames = ["Available Quantity", "Transfers", "Purchasing", "RM Details"];
+                
+                // Fetch with individual timeouts
+                const promises = sheetNames.map(sheet => 
+                    Promise.race([
+                        fetchSheetData(sheet),
+                        new Promise((_, reject) => 
+                            setTimeout(() => reject(new Error(`Timeout: ${sheet}`)), 5000)
+                        )
+                    ]).catch(error => {
+                        console.warn(`Failed to load ${sheet}:`, error);
+                        return null; // Return null for failed sheets
+                    })
+                );
+                
+                const results = await Promise.all(promises);
+                
+                // Process only successful results
+                if (results[0]) data.inventory = processInventory(results[0]);
+                if (results[1]) data.transfers = processTransfers(results[1]);
+                if (results[2]) data.purchasing = processPurchasing(results[2]);
+                if (results[3]) data.rmDetails = processRmDetails(results[3]);
+                
+                // Cache full data
+                try {
+                    const fullData = {
+                        inventory: data.inventory,
+                        transfers: data.transfers,
+                        purchasing: data.purchasing,
+                        rmDetails: data.rmDetails
+                    };
+                    localStorage.setItem('warehouse_full_data_cache', JSON.stringify(fullData));
+                    localStorage.setItem('warehouse_full_data_timestamp', Date.now().toString());
+                } catch (e) {
+                    console.warn('Cache write failed:', e);
+                }
+                
+                updateAllSections();
+                dataLoaded = true;
+                sendWarehouseDataToParent();
+                
+                console.log('✅ Warehouse: Data refreshed');
+            } catch (error) {
+                console.error('Warehouse loading error:', error);
+            } finally {
+                const loadingElements = document.querySelectorAll('.loading-spinner');
+                loadingElements.forEach(el => el.style.display = 'none');
+            }
+        }
+        
+        // Send data to parent
+        function sendWarehouseDataToParent() {
+            if (!data.inventory || !data.transfers || !data.purchasing) return;
+            
+            const warehouseData = {
+                totalInventoryValue: formatCurrency(data.inventory.totalValue),
+                outOfStock: data.inventory.zeroStock,
+                lowStock: data.inventory.lowStock,
+                transferValue: formatCurrency(data.transfers.totalValue),
+                purchaseValue: formatCurrency(data.purchasing.totalPurchaseValue)
+            };
+            
+            window.parent.postMessage({
+                type: 'WAREHOUSE_DATA',
+                payload: warehouseData
+            }, '*');
+            
+            window.parent.postMessage({
+                type: 'WAREHOUSE_DATA_DETAIL',
+                payload: data
+            }, '*');
+        }
+
+        // ULTRA-FAST: Fetch with timeout and caching
+        async function fetchSheetData(sheetName) {
+            const cacheKey = `warehouse_${sheetName}_cache`;
+            const cacheTimestamp = `warehouse_${sheetName}_timestamp`;
+            const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+            const TIMEOUT = 5000; // 5 seconds max
+            
+            // IMMEDIATE: Try cache first
+            try {
+                const cached = localStorage.getItem(cacheKey);
+                const timestamp = localStorage.getItem(cacheTimestamp);
+                if (cached && timestamp) {
+                    const age = Date.now() - parseInt(timestamp);
+                    if (age < CACHE_DURATION) {
+                        console.log(`⚡ ${sheetName}: Loaded from cache (${Math.round(age/1000)}s old)`);
+                        return JSON.parse(cached);
+                    }
+                }
+            } catch (e) {
+                console.warn(`Cache read failed for ${sheetName}:`, e);
+            }
+            
+            // FETCH: With timeout
+            const range = encodeURIComponent(sheetName);
+            const url = `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/${range}?key=${API_KEY}`;
+            
+            try {
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), TIMEOUT);
+                
+                const response = await fetch(url, { signal: controller.signal });
+                clearTimeout(timeoutId);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status} for ${sheetName}`);
+                }
+                
+                const json = await response.json();
+                const data = json.values || [];
+                
+                // CACHE: Save for next time
+                try {
+                    localStorage.setItem(cacheKey, JSON.stringify(data));
+                    localStorage.setItem(cacheTimestamp, Date.now().toString());
+                    console.log(`✅ ${sheetName}: Fetched and cached`);
+                } catch (e) {
+                    console.warn(`Cache write failed for ${sheetName}:`, e);
+                }
+                
+                return data;
+            } catch (error) {
+                if (error.name === 'AbortError') {
+                    console.warn(`⏱️ ${sheetName}: Timeout after ${TIMEOUT}ms`);
+                } else {
+                    console.error(`❌ ${sheetName}: Fetch error:`, error);
+                }
+                
+                // FALLBACK: Return cached data even if stale
+                try {
+                    const cached = localStorage.getItem(cacheKey);
+                    if (cached) {
+                        console.log(`⚠️ ${sheetName}: Using stale cache due to error`);
+                        return JSON.parse(cached);
+                    }
+                } catch (e) {
+                    // Ignore
+                }
+                
+                throw error;
+            }
+        }
+
+        function processInventory(jsonData) {
+            if (!jsonData || jsonData.length < 2) return null;
+            
+            const groupedItems = new Map();
+
+            // Note: Data starts from row 2 (index 1) after header row
+            for (let i = 1; i < jsonData.length; i++) {
+                const row = jsonData[i];
+                // Check for a non-empty row with enough columns
+                if (row && row.length >= 9 && (row[0] || row[1])) {
+                    const itemName = (row[0] || '').trim();
+                    const branchName = (row[2] || '').trim();
+                    
+                    if (!groupedItems.has(itemName)) {
+                        groupedItems.set(itemName, {
+                            name: itemName,
+                            sku: (row[1] || '').trim(),
+                            unit: (row[5] || '').trim(), // Column F
+                            totalQuantity: 0,
+                            totalValue: 0,
+                            branches: new Map()
+                        });
+                    }
+                    
+                    const item = groupedItems.get(itemName);
+                    // Sanitize and parse numbers from columns G and I
+                    const quantity = parseFloat((row[6] || '0').replace(/,/g, '')) || 0; // Column G
+                    const totalCost = parseFloat((row[8] || '0').replace(/,/g, '')) || 0; // Column I
+
+                    item.totalQuantity += quantity;
+                    item.totalValue += totalCost;
+                    item.branches.set(branchName, {
+                        quantity: quantity,
+                        costPerUnit: parseFloat((row[7] || '0').replace(/,/g, '')) || 0, // Column H
+                        totalCost: totalCost
+                    });
+                }
+            }
+            
+            const items = Array.from(groupedItems.values());
+            const totalValue = items.reduce((sum, item) => sum + item.totalValue, 0);
+            const totalQuantity = items.reduce((sum, item) => sum + item.totalQuantity, 0);
+            const zeroStock = items.filter(item => item.totalQuantity === 0).length;
+            const lowStock = items.filter(item => item.totalQuantity > 0 && item.totalQuantity <= 50).length;
+
+            return {
+                items: items,
+                totalValue: totalValue,
+                totalQuantity: totalQuantity,
+                zeroStock: zeroStock,
+                lowStock: lowStock,
+                totalItems: items.length
+            };
+        }
+        
+        function processTransfers(jsonData) {
+            if (!jsonData || jsonData.length < 3) return null;
+            
+            const items = [];
+            let totalValue = 0;
+            let totalQuantity = 0;
+            
+            for (let i = 2; i < jsonData.length; i++) {
+                const row = jsonData[i];
+                if (row && row.length >= 7 && row[0]) {
+                    const item = {
+                        name: row[0] || '',
+                        sku: row[1] || '',
+                        unit: row[2] || '',
+                        from: row[3] || '',
+                        to: row[4] || '',
+                        quantity: parseFloat(row[5]) || 0,
+                        cost: parseFloat(row[6]) || 0
+                    };
+                    
+                    items.push(item);
+                    totalValue += item.cost;
+                    totalQuantity += item.quantity;
+                }
+            }
+            
+            return {
+                items: items,
+                totalValue: totalValue,
+                totalQuantity: totalQuantity,
+                totalTransfers: items.length
+            };
+        }
+        
+        function processPurchasing(jsonData) {
+            if (!jsonData || jsonData.length < 3) return null;
+            
+            const items = [];
+            let totalCost = 0;
+            
+            for (let i = 2; i < jsonData.length; i++) {
+                const row = jsonData[i];
+                if (row && row.length >= 5 && row[0]) {
+                    const item = {
+                        name: row[0] || '',
+                        sku: row[1] || '',
+                        unit: row[2] || '',
+                        quantity: parseFloat(row[3]) || 0,
+                        cost: parseFloat(row[4]) || 0
+                    };
+                    
+                    totalCost += item.cost;
+                    
+                    if (item.cost > 0) {
+                        items.push(item);
+                    }
+                }
+            }
+            
+            return {
+                items: items,
+                totalPurchaseValue: totalCost,
+                totalItems: items.length
+            };
+        }
+
+        function processRmDetails(jsonData) {
+            if (!jsonData || jsonData.length < 2) return null;
+            
+            const items = {};
+            for (let i = 1; i < jsonData.length; i++) {
+                const row = jsonData[i];
+                if (row && row.length >= 11 && row[1]) {
+                    const itemName = row[1];
+                    const category = row[10];
+                    if (itemName) {
+                        items[itemName.trim()] = category ? category.trim() : 'Unknown';
+                    }
+                }
+            }
+            return items;
+        }
+
+        function showDashboard(dashboardName) {
+            document.querySelectorAll('.nav-tab').forEach(tab => tab.classList.remove('active'));
+            event.target.classList.add('active');
+
+            document.getElementById('sub-nav-combined').style.display = 'none';
+            document.getElementById('sub-nav-fg').style.display = 'none';
+            document.getElementById('sub-nav-rm').style.display = 'none';
+
+            let defaultSection = '';
+            
+            if (dashboardName === 'dashboard-fg') {
+                document.getElementById('sub-nav-fg').style.display = 'flex';
+                currentDashboard = 'fg';
+                defaultSection = 'fg-overview';
+            } else if (dashboardName === 'dashboard-rm') {
+                document.getElementById('sub-nav-rm').style.display = 'flex';
+                currentDashboard = 'rm';
+                defaultSection = 'rm-overview';
+            } else {
+                document.getElementById('sub-nav-combined').style.display = 'flex';
+                currentDashboard = 'combined';
+                defaultSection = 'combined-overview';
+            }
+            
+            const defaultSubTab = document.getElementById(`sub-nav-${currentDashboard}`).querySelector('.sub-nav-tab');
+            showSection(defaultSection, defaultSubTab, currentDashboard);
+        }
+
+        function showSection(sectionName, element, category) {
+            document.querySelectorAll('.section').forEach(section => section.classList.remove('active'));
+            document.getElementById(sectionName).classList.add('active');
+
+            document.getElementById(`sub-nav-${category}`).querySelectorAll('.sub-nav-tab').forEach(tab => tab.classList.remove('active'));
+            element.classList.add('active');
+
+            updateSectionContent(sectionName);
+        }
+
+        function updateAllSections() {
+            updateSectionContent('combined-overview');
+            updateSectionContent('combined-inventory');
+            updateSectionContent('combined-transfers');
+            updateSectionContent('combined-purchasing');
+            updateSectionContent('fg-overview');
+            updateSectionContent('fg-inventory');
+            updateSectionContent('fg-transfers');
+            updateSectionContent('fg-purchasing');
+            updateSectionContent('rm-overview');
+            updateSectionContent('rm-inventory');
+            updateSectionContent('rm-transfers');
+            updateSectionContent('rm-purchasing');
+            
+            const activeDashboardTab = document.querySelector('.nav-tab.active');
+            if (activeDashboardTab) {
+                const dashboardId = activeDashboardTab.getAttribute('onclick').match(/'(.*?)'/)[1];
+                showDashboard(dashboardId);
+            }
+        }
+        
+        function getFilteredData(category) {
+            if (!data.inventory || !data.rmDetails || !data.transfers || !data.purchasing) {
+                return { inventory: null, transfers: null, purchasing: null };
+            }
+
+            let filteredInventoryItems = data.inventory.items;
+            let filteredTransfersItems = data.transfers.items;
+            let filteredPurchasingItems = data.purchasing.items;
+
+            if (category !== 'combined') {
+                filteredInventoryItems = data.inventory.items.filter(item => {
+                    const itemCategory = data.rmDetails[item.name.trim()] || 'Unknown';
+                    return category === 'fg' ? itemCategory === 'fg_and_wip_from_pr' : itemCategory !== 'fg_and_wip_from_pr';
+                });
+                filteredTransfersItems = data.transfers.items.filter(item => {
+                    const itemCategory = data.rmDetails[item.name.trim()] || 'Unknown';
+                    return category === 'fg' ? itemCategory === 'fg_and_wip_from_pr' : itemCategory !== 'fg_and_wip_from_pr';
+                });
+                filteredPurchasingItems = data.purchasing.items.filter(item => {
+                    const itemCategory = data.rmDetails[item.name.trim()] || 'Unknown';
+                    return category === 'fg' ? itemCategory === 'fg_and_wip_from_pr' : itemCategory !== 'fg_and_wip_from_pr';
+                });
+            }
+            
+            const invData = {
+                items: filteredInventoryItems,
+                totalValue: filteredInventoryItems.reduce((sum, item) => sum + item.totalValue, 0),
+                totalQuantity: filteredInventoryItems.reduce((sum, item) => sum + item.totalQuantity, 0),
+                zeroStock: filteredInventoryItems.filter(item => item.totalQuantity === 0).length,
+                lowStock: filteredInventoryItems.filter(item => item.totalQuantity > 0 && item.totalQuantity <= 50).length,
+                totalItems: filteredInventoryItems.length,
+            };
+
+            const transData = {
+                items: filteredTransfersItems,
+                totalValue: filteredTransfersItems.reduce((sum, item) => sum + item.cost, 0),
+                totalQuantity: filteredTransfersItems.reduce((sum, item) => sum + item.quantity, 0),
+                totalTransfers: filteredTransfersItems.length
+            };
+
+            const purchData = {
+                items: filteredPurchasingItems,
+                totalPurchaseValue: filteredPurchasingItems.reduce((sum, item) => sum + item.cost, 0),
+                totalItems: filteredPurchasingItems.length
+            };
+
+            return { inventory: invData, transfers: transData, purchasing: purchData };
+        }
+
+        function updateSectionContent(sectionName) {
+            let category = 'combined';
+            if (sectionName.startsWith('fg-')) category = 'fg';
+            if (sectionName.startsWith('rm-')) category = 'rm';
+
+            const { inventory: inv, transfers: trans, purchasing: purch } = getFilteredData(category);
+
+            if (sectionName.endsWith('overview')) {
+                updateDashboardSection(sectionName, inv, trans, purch, category);
+            } else if (sectionName.endsWith('inventory')) {
+                updateInventorySection(sectionName, inv, category);
+            } else if (sectionName.endsWith('transfers')) {
+                updateTransfersSection(sectionName, trans, category);
+            } else if (sectionName.endsWith('purchasing')) {
+                updatePurchasingSection(sectionName, purch, category);
+            }
+        }
+
+        function updateDashboardSection(sectionId, inv, trans, purch, category) {
+            const section = document.getElementById(sectionId);
+            const titleMap = {
+                'combined': 'Combined Dashboard',
+                'fg': 'FG & WIP Dashboard',
+                'rm': 'Raw Materials Dashboard'
+            };
+            const descMap = {
+                'combined': 'Analytics for all categories combined.',
+                'fg': 'Analytics for the \'fg_and_wip_from_pr\' category.',
+                'rm': 'Analytics for other categories.'
+            };
+            
+            if (!inv || (!inv.totalItems && (!trans || !trans.totalTransfers) && (!purch || !purch.totalItems))) {
+                section.innerHTML = `<div class="empty-state">
+                    <i class="fas fa-chart-line empty-icon"></i>
+                    <h3 class="empty-title">${titleMap[category]}</h3>
+                    <p class="empty-description">${descMap[category]}</p>
+                    <div class="loading-indicator">
+                        <div class="loading-spinner"></div>
+                        <p>Loading data from Google Sheet...</p>
+                    </div>
+                </div>`;
+                return;
+            }
+
+            let html = '<div class="metrics-grid">';
+            
+            if (inv) {
+                html += createMetricCard(i18n[currentLang].inventory_value || 'Inventory Value', formatCurrency(inv.totalValue), inv.totalItems + ' items', 'blue');
+                html += createMetricCard(i18n[currentLang].out_of_stock || 'Out of Stock', inv.zeroStock, inv.lowStock + ' ' + (i18n[currentLang].low_stock || 'low stock'), 'red');
+            }
+            if (trans) {
+                html += createMetricCard(i18n[currentLang].transfer_value || 'Transfer Value', formatCurrency(trans.totalValue), trans.totalTransfers + ' ' + (i18n[currentLang].transfers_count || 'transfers'), 'green');
+            }
+            if (purch) {
+                html += createMetricCard(i18n[currentLang].purchase_value || 'Purchase Value', formatCurrency(purch.totalPurchaseValue), purch.totalItems + ' ' + (i18n[currentLang].purchases_count || 'purchases'), 'orange');
+            }
+            
+            html += '</div>';
+            
+            // Adding new, more powerful charts for the Combined Dashboard
+            if (category === 'combined' && inv && trans && purch) {
+                html += `
+                    <div style="display: grid; grid-template-columns: 1fr; gap: 20px; margin-bottom: 30px;">
+                         <div class="chart-container"><h3 class="chart-title" data-lang="financial_overview">${i18n[currentLang].financial_overview || 'Financial Overview (Inventory, Transfers, Purchasing)'}</h3><div class="chart-canvas"><canvas id="${sectionId}OverviewChart"></canvas></div></div>
+                    </div>
+                    <div class="responsive-grid">
+                        <div class="chart-container"><h3 class="chart-title" data-lang="inventory_by_category">${i18n[currentLang].inventory_by_category || 'Inventory Value by Category'}</h3><div class="chart-canvas"><canvas id="${sectionId}CategoryChart"></canvas></div></div>
+                        <div class="chart-container"><h3 class="chart-title" data-lang="most_active_items">${i18n[currentLang].most_active_items || 'Top 10 Most Active Items (by Movement)'}</h3><div class="chart-canvas"><canvas id="${sectionId}MovementChart"></canvas></div></div>
+                    </div>
+                    <div class="responsive-grid">
+                        <div class="data-table">
+                            <div class="table-header"><h3 class="table-title" data-lang="low_stock_items">${i18n[currentLang].low_stock_items || 'Top 10 Low Stock Items (Q < 50)'}</h3></div>
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Item Name</th>
+                                        <th>Quantity</th>
+                                        <th>Unit</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="${sectionId}LowStockTable"></tbody>
+                            </table>
+                        </div>
+                        <div class="data-table">
+                            <div class="table-header"><h3 class="table-title" data-lang="out_stock_items">${i18n[currentLang].out_stock_items || 'Top 10 Out of Stock Items (Q = 0)'}</h3></div>
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Item Name</th>
+                                        <th>SKU</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="${sectionId}OutStockTable"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                `;
+            } else {
+                 html += `<div class="chart-container"><h3 class="chart-title" data-lang="financial_overview">${i18n[currentLang].financial_overview || 'Financial Overview'}</h3><div class="chart-canvas"><canvas id="${sectionId}Chart"></canvas></div></div>`;
+            }
+
+            section.innerHTML = html;
+            
+            setTimeout(() => {
+                if (category === 'combined' && inv && trans && purch) {
+                    createCombinedOverviewChart(`${sectionId}OverviewChart`, inv, trans, purch);
+                    createCategoryChart(`${sectionId}CategoryChart`, inv);
+                    createMovementChart(`${sectionId}MovementChart`, trans, purch);
+                    populateLowStockTable(`${sectionId}LowStockTable`, inv);
+                    populateOutStockTable(`${sectionId}OutStockTable`, inv);
+                } else {
+                    createOverviewChart(`${sectionId}Chart`, inv, trans, purch);
+                }
+            }, 100);
+        }
+        
+        // New Function for Combined Overview Chart
+        function createCombinedOverviewChart(canvasId, inv, trans, purch) {
+            const canvas = document.getElementById(canvasId);
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            
+            if (data.charts[canvasId]) data.charts[canvasId].destroy();
+            
+            const chartData = {
+                labels: [
+                    i18n[currentLang].inventory_value || 'Inventory Value',
+                    i18n[currentLang].transfer_value || 'Transfer Value', 
+                    i18n[currentLang].purchase_value || 'Purchase Value'
+                ],
+                datasets: [{
+                    data: [inv.totalValue, trans.totalValue, purch.totalPurchaseValue],
+                    backgroundColor: ['#284b44', '#956c2a', '#ea8990'],
+                    borderWidth: 0
+                }]
+            };
+
+            data.charts[canvasId] = new Chart(ctx, {
+                type: 'doughnut',
+                data: chartData,
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'bottom' },
+                        tooltip: { callbacks: { label: (context) => {
+                            let label = context.label || '';
+                            if (label) { label += ': '; }
+                            label += formatCurrency(context.parsed);
+                            return label;
+                        }}}
+                    }
+                }
+            });
+        }
+        
+        // New Function for Inventory by Category Chart
+        function createCategoryChart(canvasId, inv) {
+            const canvas = document.getElementById(canvasId);
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            
+            if (data.charts[canvasId]) data.charts[canvasId].destroy();
+
+            const categoryValues = inv.items.reduce((acc, item) => {
+                const category = data.rmDetails[item.name.trim()] || 'Unknown';
+                acc[category] = (acc[category] || 0) + item.totalValue;
+                return acc;
+            }, {});
+
+            const sortedCategories = Object.entries(categoryValues).sort((a, b) => b[1] - a[1]);
+
+            const chartData = {
+                labels: sortedCategories.map(item => item[0]),
+                datasets: [{
+                    label: 'Total Value (SAR)',
+                    data: sortedCategories.map(item => item[1]),
+                    backgroundColor: '#284b44',
+                    borderRadius: 5
+                }]
+            };
+
+            data.charts[canvasId] = new Chart(ctx, {
+                type: 'bar',
+                data: chartData,
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: { title: { display: true, text: 'Category' } },
+                        y: { title: { display: true, text: 'Value (SAR)' }, ticks: { callback: v => formatCurrency(v) } }
+                    }
+                }
+            });
+        }
+
+        // New Function for Movement Analysis Chart
+        function createMovementChart(canvasId, trans, purch) {
+            const canvas = document.getElementById(canvasId);
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            
+            if (data.charts[canvasId]) data.charts[canvasId].destroy();
+
+            const allItems = {};
+            if (trans && trans.items) {
+                trans.items.forEach(item => {
+                    allItems[item.name] = { transfer: (allItems[item.name]?.transfer || 0) + item.quantity, purchase: (allItems[item.name]?.purchase || 0) };
+                });
+            }
+            if (purch && purch.items) {
+                purch.items.forEach(item => {
+                    allItems[item.name] = { transfer: (allItems[item.name]?.transfer || 0), purchase: (allItems[item.name]?.purchase || 0) + item.quantity };
+                });
+            }
+
+            const sortedItems = Object.entries(allItems).sort((a, b) => (b[1].transfer + b[1].purchase) - (a[1].transfer + a[1].purchase)).slice(0, 10);
+
+            const chartData = {
+                labels: sortedItems.map(item => item[0]),
+                datasets: [
+                    {
+                        label: 'Total Purchased',
+                        data: sortedItems.map(item => item[1].purchase),
+                        backgroundColor: '#284b44'
+                    },
+                    {
+                        label: 'Total Transferred',
+                        data: sortedItems.map(item => item[1].transfer),
+                        backgroundColor: '#956c2a'
+                    }
+                ]
+            };
+
+            data.charts[canvasId] = new Chart(ctx, {
+                type: 'bar',
+                data: chartData,
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: { stacked: true },
+                        y: { stacked: true }
+                    }
+                }
+            });
+        }
+
+        // New Function to populate Low Stock table
+        function populateLowStockTable(tableId, inv) {
+            const tableBody = document.getElementById(tableId);
+            if (!tableBody) return;
+            const lowStockItems = inv.items.filter(item => item.totalQuantity > 0 && item.totalQuantity <= 50).sort((a,b) => a.totalQuantity - b.totalQuantity).slice(0, 10);
+            
+            if (lowStockItems.length === 0) {
+                tableBody.innerHTML = `<tr><td colspan="3" style="text-align: center; color: #6b7280; padding: 20px;">No low stock items found.</td></tr>`;
+            } else {
+                tableBody.innerHTML = lowStockItems.map(item => `
+                    <tr>
+                        <td>${escapeHtml(item.name)}</td>
+                        <td>${formatNumber(item.totalQuantity)}</td>
+                        <td>${escapeHtml(item.unit)}</td>
+                    </tr>
+                `).join('');
+            }
+        }
+
+        // New Function to populate Out of Stock table
+        function populateOutStockTable(tableId, inv) {
+            const tableBody = document.getElementById(tableId);
+            if (!tableBody) return;
+            const outOfStockItems = inv.items.filter(item => item.totalQuantity === 0).sort((a,b) => a.name.localeCompare(b.name)).slice(0, 10);
+            
+            if (outOfStockItems.length === 0) {
+                tableBody.innerHTML = `<tr><td colspan="2" style="text-align: center; color: #6b7280; padding: 20px;">No out of stock items.</td></tr>`;
+            } else {
+                tableBody.innerHTML = outOfStockItems.map(item => `
+                    <tr>
+                        <td>${escapeHtml(item.name)}</td>
+                        <td>${escapeHtml(item.sku)}</td>
+                    </tr>
+                `).join('');
+            }
+        }
+        
+        function updateInventorySection(sectionId, inv, category) {
+            const section = document.getElementById(sectionId);
+            const titleMap = {
+                'combined': 'Combined Inventory Report',
+                'fg': 'FG & WIP Inventory Report',
+                'rm': 'Raw Materials Inventory Report'
+            };
+            const descMap = {
+                'combined': 'Detailed inventory report for all categories.',
+                'fg': 'Detailed inventory report for \'fg_and_wip_from_pr\' category.',
+                'rm': 'Detailed inventory report for other categories.'
+            };
+
+            if (!inv || inv.totalItems === 0) {
+                section.innerHTML = `<div class="empty-state"><i class="fas fa-boxes empty-icon"></i><h3 class="empty-title">${titleMap[category]}</h3><p class="empty-description">${descMap[category]}</p></div>`;
+                return;
+            }
+            
+            let html = '<div class="metrics-grid">';
+            html += createMetricCard(i18n[currentLang].total_items || 'Total Items', formatNumber(inv.totalItems), i18n[currentLang].skus_in_inventory || 'SKUs in inventory', 'blue');
+            html += createMetricCard(i18n[currentLang].total_value || 'Total Value', formatCurrency(inv.totalValue), i18n[currentLang].current_valuation || 'Current valuation', 'green');
+            html += createMetricCard(i18n[currentLang].low_stock || 'Low Stock', inv.lowStock, i18n[currentLang].need_attention || 'Need attention', 'orange');
+            html += createMetricCard(i18n[currentLang].out_of_stock || 'Out of Stock', inv.zeroStock, i18n[currentLang].immediate_reorder || 'Immediate reorder', 'red');
+            html += '</div>';
+            
+            html += `<div class="data-table"><div class="table-header"><h3 class="table-title">Inventory by Item</h3></div><table><thead><tr><th>Rank</th><th>Item Name</th><th>SKU</th><th>Available Quantity</th><th>Storage Unit</th><th>Total Value</th><th>Details</th></tr></thead><tbody>`;
+            
+            inv.items.sort((a, b) => b.totalValue - a.totalValue).forEach((item, i) => {
+                html += `
+                    <tr class="item-row">
+                        <td>#${i + 1}</td>
+                        <td><strong>${escapeHtml(item.name)}</strong></td>
+                        <td>${escapeHtml(item.sku)}</td>
+                        <td>${formatNumber(item.totalQuantity)}</td>
+                        <td>${escapeHtml(item.unit)}</td>
+                        <td><strong>${formatCurrency(item.totalValue)}</strong></td>
+                        <td><button class="table-details-btn" onclick="openDetailsModal('${escapeHtml(item.name)}')">View Details</button></td>
+                    </tr>
+                `;
+            });
+            
+            html += '</tbody></table></div>';
+            section.innerHTML = html;
+        }
+
+        function openDetailsModal(itemName) {
+            const modal = document.getElementById('detailsModal');
+            const modalTitle = document.getElementById('modalTitle');
+            const modalBody = document.getElementById('modalBody');
+            
+            const itemData = data.inventory.items.find(item => item.name.trim() === itemName.trim());
+            if (!itemData || !itemData.branches) return;
+
+            modalTitle.textContent = `${itemData.name} - Details`;
+
+            let branchesHtml = `
+                <div class="data-table">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Branch</th>
+                                <th>Quantity</th>
+                                <th>Total Value</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+            `;
+            
+            Array.from(itemData.branches.entries()).forEach(([branchName, item]) => {
+                branchesHtml += `
+                    <tr>
+                        <td>${escapeHtml(branchName)}</td>
+                        <td>${formatNumber(item.quantity)} ${escapeHtml(itemData.unit)}</td>
+                        <td>${formatCurrency(item.totalCost)}</td>
+                    </tr>
+                `;
+            });
+
+            branchesHtml += `</tbody></table></div>`;
+            
+            // Add close button at bottom
+            branchesHtml += `
+                <div style="margin-top: 20px; text-align: center;">
+                    <button onclick="closeDetailsModal()" style="
+                        background: #284b44; 
+                        color: white; 
+                        border: none; 
+                        padding: 12px 24px; 
+                        border-radius: 8px; 
+                        cursor: pointer; 
+                        font-size: 1rem;
+                        transition: background 0.2s ease;
+                    " onmouseover="this.style.background='#1a332e'" onmouseout="this.style.background='#284b44'">
+                        ${currentLang === 'ar' ? 'إغلاق' : 'Close'}
+                    </button>
+                </div>
+            `;
+            
+            modalBody.innerHTML = branchesHtml;
+
+            modal.style.display = 'flex';
+            
+            // Add escape key functionality
+            escapeKeyHandler = function(e) {
+                if (e.key === 'Escape') {
+                    closeDetailsModal();
+                }
+            };
+            document.addEventListener('keydown', escapeKeyHandler);
+            
+            // Add click outside to close
+            modalClickHandler = function(e) {
+                if (e.target === modal) {
+                    closeDetailsModal();
+                }
+            };
+            modal.addEventListener('click', modalClickHandler);
+        }
+
+        function closeDetailsModal() {
+            const modal = document.getElementById('detailsModal');
+            if (modal) {
+                modal.style.display = 'none';
+                // Clean up event listeners
+                modal.removeEventListener('click', modalClickHandler);
+                document.removeEventListener('keydown', escapeKeyHandler);
+            }
+        }
+        
+        // Store event handlers for cleanup
+        let modalClickHandler = null;
+        let escapeKeyHandler = null;
+        
+        function updateTransfersSection(sectionId, trans, category) {
+            const section = document.getElementById(sectionId);
+            const titleMap = {
+                'combined': 'Combined Transfers Report',
+                'fg': 'FG & WIP Transfers Report',
+                'rm': 'Raw Materials Transfers Report'
+            };
+            const descMap = {
+                'combined': 'Detailed transfers report for all categories.',
+                'fg': 'Detailed transfers report for \'fg_and_wip_from_pr\' category.',
+                'rm': 'Detailed transfers report for other categories.'
+            };
+            
+            if (!trans || trans.totalTransfers === 0) {
+                section.innerHTML = `<div class="empty-state"><i class="fas fa-truck empty-icon"></i><h3 class="empty-title">${titleMap[category]}</h3><p class="empty-description">${descMap[category]}</p></div>`;
+                return;
+            }
+
+            const branchStats = {};
+            trans.items.forEach(item => {
+                if (item.to && item.to.trim()) {
+                    if (!branchStats[item.to]) { branchStats[item.to] = { transfers: 0, totalValue: 0, totalQuantity: 0 }; }
+                    branchStats[item.to].transfers++;
+                    branchStats[item.to].totalValue += item.cost;
+                    branchStats[item.to].totalQuantity += item.quantity;
+                }
+            });
+
+            const branchList = Object.keys(branchStats).map(name => ({ name, stats: branchStats[name] }));
+            
+            let html = '<div class="metrics-grid">';
+            html += createMetricCard(i18n[currentLang].total_transfers || 'Total Transfers', formatNumber(trans.totalTransfers), i18n[currentLang].completed || 'Completed', 'blue');
+            html += createMetricCard(i18n[currentLang].transfer_value || 'Transfer Value', formatCurrency(trans.totalValue), i18n[currentLang].total_cost || 'Total cost', 'green');
+            html += createMetricCard(i18n[currentLang].active_branches || 'Active Branches', Object.keys(branchStats).length, i18n[currentLang].distribution_points || 'Distribution points', 'purple');
+            html += createMetricCard(i18n[currentLang].units_moved || 'Units Moved', formatNumber(trans.totalQuantity), i18n[currentLang].total_quantity || 'Total quantity', 'orange');
+            html += '</div>';
+            
+            html += `<div class="chart-container"><h3 class="chart-title">Branch Performance</h3><div class="chart-canvas"><canvas id="${sectionId}Chart"></canvas></div></div>`;
+            
+            html += `<div class="data-table"><div class="table-header"><h3 class="table-title">Top Branches by Value</h3></div><table><thead><tr><th>Rank</th><th>Branch Name</th><th>Transfers</th><th>Total Value</th><th>Avg Transfer</th></tr></thead><tbody>`;
+            
+            branchList.sort((a, b) => b.stats.totalValue - a.stats.totalValue).slice(0, 10).forEach((branch, i) => {
+                html += `<tr><td>#${i + 1}</td><td><strong>${escapeHtml(branch.name)}</strong></td><td>${formatNumber(branch.stats.transfers)}</td><td><strong>${formatCurrency(branch.stats.totalValue)}</strong></td><td>${formatCurrency(branch.stats.totalValue / branch.stats.transfers)}</td></tr>`;
+            });
+            
+            html += '</tbody></table></div>';
+            section.innerHTML = html;
+            
+            setTimeout(() => createBranchChart(`${sectionId}Chart`, branchList), 100);
+        }
+        
+        function updatePurchasingSection(sectionId, purch, category) {
+            const section = document.getElementById(sectionId);
+            const titleMap = {
+                'combined': 'Combined Procurement Report',
+                'fg': 'FG & WIP Procurement Report',
+                'rm': 'Raw Materials Procurement Report'
+            };
+            const descMap = {
+                'combined': 'Detailed purchasing report for all categories.',
+                'fg': 'Detailed purchasing report for \'fg_and_wip_from_pr\' category.',
+                'rm': 'Detailed purchasing report for other categories.'
+            };
+
+            if (!purch || purch.totalItems === 0) {
+                section.innerHTML = `<div class="empty-state"><i class="fas fa-shopping-cart empty-icon"></i><h3 class="empty-title">${titleMap[category]}</h3><p class="empty-description">${descMap[category]}</p></div>`;
+                return;
+            }
+            
+            let html = '<div class="metrics-grid">';
+            html += createMetricCard(i18n[currentLang].items_purchased || 'Items Purchased', formatNumber(purch.totalItems), i18n[currentLang].transactions || 'Transactions', 'blue');
+            html += createMetricCard(i18n[currentLang].purchase_value || 'Purchase Value', formatCurrency(purch.totalPurchaseValue), i18n[currentLang].total_spend || 'Total spend', 'green');
+            html += '</div>';
+            
+            html += `<div class="data-table"><div class="table-header"><h3 class="table-title">Top 10 Purchases by Value</h3></div><table><thead><tr><th>Rank</th><th>Item Name</th><th>SKU</th><th>Quantity</th><th>Cost</th></tr></thead><tbody>`;
+            
+            const topPurchases = purch.items.sort((a, b) => b.cost - a.cost).slice(0, 10);
+            topPurchases.forEach((item, i) => {
+                html += `<tr><td>#${i + 1}</td><td><strong>${escapeHtml(item.name)}</strong></td><td>${escapeHtml(item.sku)}</td><td>${formatNumber(item.quantity)} ${escapeHtml(item.unit)}</td><td><strong>${formatCurrency(item.cost)}</strong></td></tr>`;
+            });
+            
+            html += '</tbody></table></div>';
+            section.innerHTML = html;
+        }
+        
+        function createMetricCard(label, value, subtitle, color) {
+            const labelKey = label.toLowerCase().replace(/\s+/g, '_');
+            return `<div class="metric-card ${color}"><div class="metric-value">${value}</div><div class="metric-label" data-lang="${labelKey}">${label}</div><div class="metric-subtitle">${subtitle}</div></div>`;
+        }
+
+        function createOverviewChart(canvasId, inv, trans, purch) {
+            const canvas = document.getElementById(canvasId);
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            
+            if (data.charts[canvasId]) data.charts[canvasId].destroy();
+            
+            const chartData = { labels: [], datasets: [{ data: [], backgroundColor: ['#284b44', '#956c2a', '#ea8990'], borderWidth: 0 }] };
+            
+            if (inv && inv.totalValue > 0) { chartData.labels.push('Inventory'); chartData.datasets[0].data.push(inv.totalValue); }
+            if (trans && trans.totalValue > 0) { chartData.labels.push('Transfers'); chartData.datasets[0].data.push(trans.totalValue); }
+            if (purch && purch.totalPurchaseValue > 0) { chartData.labels.push('Purchasing'); chartData.datasets[0].data.push(purch.totalPurchaseValue); }
+            
+            if (chartData.labels.length === 0) {
+                canvas.parentNode.innerHTML = '<div style="text-align: center; color: #6b7280; padding: 20px;">No data available for this dashboard.</div>';
+                return;
+            }
+
+            data.charts[canvasId] = new Chart(ctx, { type: 'doughnut', data: chartData, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } } });
+        }
+        
+        function createBranchChart(canvasId, branchList) {
+            const canvas = document.getElementById(canvasId);
+            if (!canvas || !branchList || branchList.length === 0) {
+                if(canvas) canvas.parentNode.innerHTML = '<div style="text-align: center; color: #6b7280; padding: 20px;">No branch transfer data available.</div>';
+                return;
+            }
+            
+            const ctx = canvas.getContext('2d');
+            
+            if (data.charts[canvasId]) data.charts[canvasId].destroy();
+            
+            const top5 = branchList.slice(0, 5);
+            
+            data.charts[canvasId] = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: top5.map(b => b.name),
+                    datasets: [{
+                        label: i18n[currentLang].transfer_value || 'Transfer Value',
+                        data: top5.map(b => b.stats.totalValue),
+                        backgroundColor: '#284b44',
+                        borderRadius: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: { callback: value => formatCurrency(value) }
+                        }
+                    }
+                }
+            });
+        }
+        
+        // Function to update date
+        function updateDateTime() {
+            const dateEl = document.getElementById('currentDate');
+            if (dateEl) {
+                const now = new Date();
+                const locale = currentLang === 'ar' ? 'ar-SA-u-nu-latn' : 'en-US';
+                const options = { 
+                    weekday: 'long', 
+                    year: 'numeric', 
+                    month: 'long', 
+                    day: 'numeric', 
+                    hour: '2-digit', 
+                    minute: '2-digit', 
+                    hour12: true 
+                };
+                dateEl.textContent = now.toLocaleDateString(locale, options);
+            }
+        }
+
+
+        // Initialize the dashboard
+        function initializeWarehouse() {
+            console.log('🚀 Initializing Warehouse Dashboard...', document.readyState);
+            
+            // ULTRA-FAST: Load data immediately (cache-first)
+            loadData().catch(err => {
+                console.error('Initial load failed:', err);
+                hideLoadingMessage(); // Hide loading on error
+            });
+            
+            // Set initial language and direction from parent
+            if (window.parent && window.parent !== window) {
+                try {
+                const parentLang = window.parent.localStorage?.getItem('portalLang') || 'en';
+                currentLang = parentLang;
+                document.documentElement.lang = currentLang;
+                document.documentElement.dir = currentLang === 'ar' ? 'rtl' : 'ltr';
+                document.body.dir = currentLang === 'ar' ? 'rtl' : 'ltr';
+                console.log('✅ Language set to:', currentLang);
+                
+                // Translate immediately on load
+                if (typeof i18n !== 'undefined' && i18n[currentLang]) {
+                    console.log('🔄 Translating warehouse dashboard on initial load to:', currentLang);
+                    document.querySelectorAll('[data-lang]').forEach(el => {
+                        const key = el.getAttribute('data-lang');
+                        if (i18n[currentLang] && i18n[currentLang][key]) {
+                            el.innerHTML = i18n[currentLang][key];
+                        }
+                    });
+                    updateDateTime();
+                }
+                } catch (e) {
+                    console.log('⚠️ Could not access parent localStorage:', e);
+                }
+            }
+            
+            if (typeof updateDateTime === 'function') {
+            updateDateTime();
+            }
+            
+            if (typeof showDashboard === 'function') {
+            showDashboard('dashboard-combined');
+            }
+            
+            // Update date every minute
+            if (typeof updateDateTime === 'function') {
+            setInterval(updateDateTime, 60000);
+            }
+            
+            // Auto-load data when dashboard opens
+            // ULTRA-FAST: Load immediately (no delay)
+            if (typeof loadData === 'function') {
+                console.log('📥 Loading warehouse data immediately...');
+                loadData().catch(err => {
+                    console.error('❌ Error loading warehouse data:', err);
+                    hideLoadingMessage(); // Hide loading on error
+                    // Retry after 1 second
+                    setTimeout(() => {
+                        console.log('🔄 Retrying warehouse data load...');
+                        loadData();
+                    }, 1000);
+                });
+            } else {
+                console.error('❌ loadData function not found');
+                hideLoadingMessage();
+            }
+        }
+        
+        // Listen for messages from parent (for iframe context)
+        window.addEventListener('message', (event) => {
+            console.log('📨 Warehouse: Message received from parent:', event.data);
+            if (event.data && event.data.type === 'AUTO_LOAD_DATA') {
+                console.log('🔄 Auto-load requested by parent for Warehouse');
+                if (typeof loadData === 'function') {
+                    console.log('📥 Loading warehouse data on parent request...');
+                    loadData().catch(err => {
+                        console.error('❌ Error loading warehouse data:', err);
+                    });
+                } else {
+                    console.log('🔄 Initializing warehouse dashboard...');
+                    initializeWarehouse();
+                }
+            }
+        });
+        
+        // Try multiple initialization methods for iframe compatibility
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initializeWarehouse, { once: true });
+        } else {
+            // DOM already loaded (common in iframes)
+            console.log('✅ DOM already loaded, initializing immediately...');
+            setTimeout(initializeWarehouse, 100);
+        }
+        
+        // Fallback: also try on window load
+        window.addEventListener('load', () => {
+            console.log('✅ Window load event fired');
+            if (document.readyState === 'complete') {
+                setTimeout(initializeWarehouse, 100);
+            }
+        }, { once: true });
+        
+        // Legacy window.onload for compatibility
+        window.onload = initializeWarehouse;
+    </script>
+</body>
+</html>

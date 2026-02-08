@@ -1,0 +1,2934 @@
+﻿<!DOCTYPE html>
+
+<html lang="en" dir="ltr">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    <!-- Cache Control Meta Tags -->
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <meta http-equiv="Last-Modified" content="0">
+    
+    <!-- Version for Cache Busting -->
+    <meta name="version" content="2.0.1">
+    <meta name="build-date" content="2025-01-06T16:30:00Z">
+
+    <title>Sakura Portal - Accounts Payable Management System</title>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+
+
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
+    
+    <!-- PWA Meta Tags -->
+    <meta name="application-name" content="Sakura Portal">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="Sakura Portal">
+    <meta name="description" content="Complete ERP Management System for Sakura Cafe">
+    <meta name="format-detection" content="telephone=no">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="msapplication-config" content="/browserconfig.xml">
+    <meta name="msapplication-TileColor" content="#284b44">
+    <meta name="msapplication-tap-highlight" content="no">
+    <meta name="theme-color" content="#284b44">
+    
+    <!-- Apple Touch Icons -->
+    <link rel="apple-touch-icon" href="https://images.deliveryhero.io/image/hungerstation/restaurant/logo/8556a1377e5154c66adf844d9c5ecb9f.jpg">
+    <link rel="apple-touch-icon" sizes="152x152" href="https://images.deliveryhero.io/image/hungerstation/restaurant/logo/8556a1377e5154c66adf844d9c5ecb9f.jpg">
+    <link rel="apple-touch-icon" sizes="180x180" href="https://images.deliveryhero.io/image/hungerstation/restaurant/logo/8556a1377e5154c66adf844d9c5ecb9f.jpg">
+    <link rel="apple-touch-icon" sizes="167x167" href="https://images.deliveryhero.io/image/hungerstation/restaurant/logo/8556a1377e5154c66adf844d9c5ecb9f.jpg">
+    
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="/manifest.json">
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/jpeg" sizes="32x32" href="https://images.deliveryhero.io/image/hungerstation/restaurant/logo/8556a1377e5154c66adf844d9c5ecb9f.jpg">
+    <link rel="icon" type="image/jpeg" sizes="16x16" href="https://images.deliveryhero.io/image/hungerstation/restaurant/logo/8556a1377e5154c66adf844d9c5ecb9f.jpg">
+    <link rel="shortcut icon" href="https://images.deliveryhero.io/image/hungerstation/restaurant/logo/8556a1377e5154c66adf844d9c5ecb9f.jpg">
+
+
+    <!-- Performance Optimizations -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="preconnect" href="https://cdnjs.cloudflare.com">
+    <link rel="preconnect" href="https://cdn.jsdelivr.net">
+    
+    <!-- Critical CSS inline -->
+    <style>
+        /* Critical CSS for above-the-fold content */
+        body { font-family: 'Cairo', sans-serif; margin: 0; padding: 0; }
+        .login-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%); display: flex; align-items: center; justify-content: center; z-index: 9999; }
+        .splash-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%); display: flex; align-items: center; justify-content: center; z-index: 9999; }
+        .logo-container { text-align: center; color: white; }
+    </style>
+    
+    <!-- Non-critical CSS deferred -->
+    <link rel="preload" href="unified-styles.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
+    <noscript><link rel="stylesheet" href="unified-styles.css"></noscript>
+
+    <style>
+
+        body { font-family: 'Cairo', sans-serif; background-color: #f8f4f0; overflow-x: hidden; overflow-y: auto; }
+
+        body.menu-open { overflow: hidden; }
+
+        /* Login Screen Styles */
+        .login-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10000;
+            transition: all 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+            overflow: hidden;
+        }
+
+        .login-screen.hidden {
+            opacity: 0;
+            transform: scale(1.1);
+            pointer-events: none;
+        }
+
+        .login-background {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+        }
+
+        .login-video {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            z-index: 1;
+        }
+
+        .login-video-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, 
+                rgba(40, 75, 68, 0.4) 0%, 
+                rgba(149, 108, 42, 0.3) 50%, 
+                rgba(234, 137, 144, 0.35) 100%);
+            z-index: 2;
+            mix-blend-mode: overlay;
+        }
+
+        .login-content {
+            text-align: center;
+            color: white;
+            z-index: 10;
+            position: relative;
+            animation: fadeInUp 1s ease-out 0.5s both;
+            max-width: 400px;
+            width: 90%;
+        }
+
+        .login-form {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 2rem;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+        }
+
+        .login-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            color: white;
+        }
+
+        .login-input {
+            width: 100%;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            border: none;
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            font-size: 1rem;
+            backdrop-filter: blur(5px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            transition: all 0.3s ease;
+        }
+
+        .login-input::placeholder {
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        .login-input:focus {
+            outline: none;
+            background: rgba(255, 255, 255, 0.2);
+            border-color: var(--brand-accent);
+            box-shadow: 0 0 20px rgba(234, 137, 144, 0.3);
+        }
+
+        .login-button {
+            width: 100%;
+            padding: 1rem;
+            border: none;
+            border-radius: 10px;
+            background: linear-gradient(135deg, var(--brand-primary) 0%, var(--brand-secondary) 100%);
+            color: white;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 1rem;
+        }
+
+        .login-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(40, 75, 68, 0.4);
+        }
+
+        .login-button:active {
+            transform: translateY(0);
+        }
+
+        .login-error {
+            color: #ff6b6b;
+            font-size: 0.9rem;
+            margin-top: 0.5rem;
+            display: none;
+        }
+
+        .login-error.show {
+            display: block;
+            animation: shake 0.5s ease-in-out;
+        }
+
+        .login-success {
+            color: #4ade80;
+            font-size: 0.9rem;
+            margin-top: 0.5rem;
+            display: none;
+            text-align: center;
+        }
+
+        .login-success.show {
+            display: block;
+            animation: fadeInUp 0.5s ease-out;
+        }
+
+        /* Simplified Logo Text */
+        .logo-text {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .logo-title {
+            display: block;
+            font-size: 3rem;
+            font-weight: 800;
+            letter-spacing: 4px;
+            background: linear-gradient(135deg, #ffd700 0%, #ffed4e 50%, #ffffff 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            animation: titleShine 3s ease-in-out infinite;
+            margin-bottom: 0.5rem;
+        }
+
+        .logo-subtitle {
+            display: block;
+            font-size: 1.2rem;
+            font-weight: 300;
+            letter-spacing: 10px;
+            color: rgba(255, 255, 255, 0.9);
+            text-transform: uppercase;
+        }
+
+        /* Form Tabs */
+        .form-tabs {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1.5rem;
+            border-bottom: 2px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .tab-button {
+            flex: 1;
+            padding: 0.75rem 1rem;
+            background: transparent;
+            border: none;
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            border-bottom: 2px solid transparent;
+            margin-bottom: -2px;
+        }
+
+        .tab-button:hover {
+            color: rgba(255, 255, 255, 0.8);
+        }
+
+        .tab-button.active {
+            color: #ffd700;
+            border-bottom-color: #ffd700;
+        }
+
+        .form-content {
+            display: none;
+        }
+
+        .form-content.active {
+            display: block;
+            animation: fadeInUp 0.4s ease-out;
+        }
+
+        .form-content .login-input {
+            margin-bottom: 1rem;
+        }
+
+        @keyframes titleShine {
+            0%, 100% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+        }
+
+
+        @keyframes fadeInUp {
+            0% { opacity: 0; transform: translateY(30px); }
+            100% { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+
+        .sidebar { background-color: #284b44; }
+
+        .sidebar a { transition: background-color 0.2s ease, border-left-color 0.2s ease, border-right-color 0.2s ease; }
+
+        .kpi-card { 
+            background: linear-gradient(145deg, #f0e1cd 0%, #e8d5c0 100%); 
+            border-radius: 0.75rem; 
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); 
+            padding: 1.5rem; 
+            display: flex; 
+            flex-direction: column; 
+            justify-content: center; 
+            align-items: center; 
+            text-align: center; 
+            border: 1px solid rgba(149, 108, 42, 0.2);
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+        
+        .kpi-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, #284b44, #956c2a, #ea8990);
+            opacity: 0.8;
+            transition: all 0.3s ease;
+        }
+        
+        .kpi-card .value { 
+            font-size: 1.75rem; 
+            font-weight: 700; 
+            color: #284b44; 
+            margin-top: 0.25rem; 
+            min-height: 36px; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+            position: relative;
+            z-index: 1;
+            transition: all 0.3s ease;
+        }
+        
+        .kpi-card .title {
+            color: #284b44;
+            font-weight: 600;
+            font-size: 0.875rem;
+            margin-bottom: 0.5rem;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+        }
+        
+        .kpi-card .icon {
+            color: #956c2a;
+            font-size: 1.5rem;
+            margin-bottom: 0.5rem;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+        }
+        
+        /* Creative hover effects */
+        .kpi-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+            border-color: rgba(149, 108, 42, 0.4);
+        }
+        
+        .kpi-card:hover .value {
+            color: #956c2a;
+            transform: scale(1.05);
+        }
+        
+        .kpi-card:hover .icon {
+            color: #ea8990;
+            transform: scale(1.1);
+        }
+        
+        .kpi-card:hover::before {
+            height: 5px;
+            opacity: 1;
+        }
+        
+        /* Special styling for different card types */
+        .kpi-card:nth-child(1) .value { color: #284b44; }
+        .kpi-card:nth-child(2) .value { color: #dc3545; }
+        .kpi-card:nth-child(3) .value { color: #17a2b8; }
+        .kpi-card:nth-child(4) .value { color: #28a745; }
+        .kpi-card:nth-child(5) .value { color: #fd7e14; }
+        
+        /* Apply same creative styling to all dashboard cards */
+        .card, .insight-card, .metric-card, .summary-card, .recommendation-card {
+            background: linear-gradient(145deg, #f0e1cd 0%, #e8d5c0 100%) !important;
+            border-radius: 0.75rem !important;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06) !important;
+            border: 1px solid rgba(149, 108, 42, 0.2) !important;
+            position: relative !important;
+            overflow: hidden !important;
+            transition: all 0.3s ease !important;
+        }
+        
+        .card::before, .insight-card::before, .metric-card::before, .summary-card::before, .recommendation-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, #284b44, #956c2a, #ea8990);
+            opacity: 0.8;
+            transition: all 0.3s ease;
+        }
+        
+        .card:hover, .insight-card:hover, .metric-card:hover, .summary-card:hover, .recommendation-card:hover {
+            transform: translateY(-2px) !important;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15) !important;
+            border-color: rgba(149, 108, 42, 0.4) !important;
+        }
+        
+        .card:hover::before, .insight-card:hover::before, .metric-card:hover::before, .summary-card:hover::before, .recommendation-card:hover::before {
+            height: 5px;
+            opacity: 1;
+        }
+        
+        /* Style all text elements in cards */
+        .card h3, .card h4, .card p, .card span, .card div,
+        .insight-card h3, .insight-card h4, .insight-card p, .insight-card span, .insight-card div,
+        .metric-card h3, .metric-card h4, .metric-card p, .metric-card span, .metric-card div,
+        .summary-card h3, .summary-card h4, .summary-card p, .summary-card span, .summary-card div,
+        .recommendation-card h3, .recommendation-card h4, .recommendation-card p, .recommendation-card span, .recommendation-card div {
+            color: #284b44 !important;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1) !important;
+        }
+        
+        /* Style all icons in cards */
+        .card i, .insight-card i, .metric-card i, .summary-card i, .recommendation-card i {
+            color: #956c2a !important;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1) !important;
+            transition: all 0.3s ease !important;
+        }
+        
+        .card:hover i, .insight-card:hover i, .metric-card:hover i, .summary-card:hover i, .recommendation-card:hover i {
+            color: #ea8990 !important;
+            transform: scale(1.1) !important;
+        }
+        
+        /* Style section titles */
+        .section-title, h2, h3 {
+            color: #284b44 !important;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1) !important;
+        }
+        
+        /* Style recommendation text */
+        .recommendation-text {
+            color: #284b44 !important;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1) !important;
+        }
+        
+        /* Style insight values */
+        .insight-value, .metric-value {
+            color: #284b44 !important;
+            font-weight: 700 !important;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1) !important;
+        }
+        
+        /* Hide unwanted elements */
+        img[src*="image.png"], img[alt*="image.png"], .image-preview, .file-preview {
+            display: none !important;
+        }
+        
+        /* Responsive adjustments */
+        @media (max-width: 768px) {
+            body {
+                overflow-y: auto !important;
+                -webkit-overflow-scrolling: touch;
+                background-color: #f8f4f0 !important;
+                position: relative;
+            }
+            body.menu-open {
+                overflow: hidden;
+            }
+            .main-content {
+                overflow-y: auto;
+                -webkit-overflow-scrolling: touch;
+                height: auto;
+                min-height: 100vh;
+                padding-bottom: 100px;
+                background-color: #f8f4f0 !important;
+                position: relative;
+                z-index: 1;
+            }
+            .main-content::before,
+            .main-content::after {
+                display: none !important;
+            }
+            html {
+                overflow-y: auto;
+                -webkit-overflow-scrolling: touch;
+                background-color: #f8f4f0 !important;
+            }
+            .container {
+                background-color: transparent !important;
+                overflow: visible !important;
+            }
+            * {
+                backdrop-filter: none !important;
+            }
+            .kpi-card .value, .card .value, .insight-card .value, .metric-card .value {
+                font-size: 1.5rem !important;
+            }
+            .kpi-card .title, .card .title, .insight-card .title, .metric-card .title {
+                font-size: 0.8rem !important;
+            }
+            .kpi-card .icon, .card .icon, .insight-card .icon, .metric-card .icon {
+                font-size: 1.25rem !important;
+            }
+        }
+
+        .loading-spinner { border: 4px solid rgba(0, 0, 0, 0.1); width: 36px; height: 36px; border-radius: 50%; border-left-color: #284b44; animation: spin 1s ease infinite; }
+
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+
+
+        .gradient-header { background: linear-gradient(135deg, #284b44 0%, #956c2a 100%); color: white; }
+
+        
+        
+        @property --p{ syntax: '<number>'; inherits: true; initial-value: 0; }
+
+        .health-gauge { width: 120px; height: 120px; border-radius: 50%; display: grid; place-items: center; background: conic-gradient(from 0deg, var(--c1) calc(var(--p) * 1%), var(--c2) 0); transition: --p 1s ease-in-out; }
+
+        .health-gauge::before { content: ""; display: block; width: 95px; height: 95px; background: white; border-radius: 50%; }
+
+        .health-score-text { position: absolute; font-size: 1.875rem; font-weight: 700; }
+
+        .aging-bar-bg { background-color: #e5e7eb; }
+
+
+        .aging-bar { transition: width 0.8s ease-out; }
+
+        .insight-card { background-color: #ffffff; border-left: 4px solid #956c2a; }
+
+        .analysis-card { background-color: #f8fafc; border-top: 3px solid; padding: 1rem; border-radius: 0.5rem; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+
+        .analysis-card .value { font-size: 1.5rem; font-weight: 700; }
+
+
+
+        .sidebar { transform: translateX(-100%); left: 0; }
+
+        .sidebar.open { transform: translateX(0); }
+
+        html[dir="rtl"] .sidebar { transform: translateX(100%); left: auto; right: 0; }
+
+        html[dir="rtl"] .sidebar.open { transform: translateX(0); }
+
+
+
+        .sidebar a { border-left: 4px solid transparent; }
+
+        .sidebar a:hover { background-color: #3a685e; }
+
+        .sidebar a.active { background-color: #956c2a; color: white; font-weight: 700; border-left-color: white; }
+
+
+        .sidebar span { margin-left: 1rem; flex-grow: 1; }
+
+        
+        
+        html[dir="rtl"] .sidebar a { border-left: none; border-right: 4px solid transparent; }
+
+        html[dir="rtl"] .sidebar a:hover { border-right-color: #956c2a; }
+
+        html[dir="rtl"] .sidebar a.active { border-right-color: white; }
+
+        html[dir="rtl"] .sidebar span { margin-left: 0; margin-right: 1rem; }
+
+        html[dir="rtl"] .insight-card { border-left: none; border-right: 4px solid #956c2a; }
+
+        
+        
+        .sidebar-overlay { display: none; position: fixed; inset: 0; background-color: rgba(0, 0, 0, 0.5); z-index: 40; }
+
+        .sidebar-overlay.open { display: block; }
+
+        
+        
+        .modal-backdrop { transition: opacity 0.3s ease-in-out; }
+
+        .modal-content { transition: transform 0.3s ease-in-out, opacity 0.3s ease-in-out; }
+
+
+
+        #chat-toggle-button { position: fixed; bottom: 2rem; right: 2rem; background-color: #284b44; color: white; width: 60px; height: 60px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 24px; box-shadow: 0 4px 12px rgba(0,0,0,0.2); cursor: pointer; z-index: 1000; transition: transform 0.2s ease; }
+
+        #chat-toggle-button:hover { transform: scale(1.1); }
+
+        html[dir="rtl"] #chat-toggle-button { right: auto; left: 2rem; }
+
+        #chat-window { position: fixed; bottom: 6.5rem; right: 2rem; width: 350px; height: 450px; background-color: white; border-radius: 15px; box-shadow: 0 5px 20px rgba(0,0,0,0.25); display: flex; flex-direction: column; overflow: hidden; z-index: 999; transform-origin: bottom right; transition: transform 0.3s ease, opacity 0.3s ease; transform: scale(0.5); opacity: 0; pointer-events: none; }
+
+        html[dir="rtl"] #chat-window { right: auto; left: 2rem; transform-origin: bottom left; }
+
+        #chat-window.open { transform: scale(1); opacity: 1; pointer-events: auto; }
+
+        #chat-header { background: linear-gradient(135deg, #284b44 0%, #3a685e 100%); color: white; padding: 1rem; font-weight: bold; display: flex; align-items: center; gap: 0.75rem; }
+
+        #chat-messages { flex-grow: 1; padding: 1rem; overflow-y: auto; }
+
+        .chat-message { max-width: 85%; padding: 0.5rem 0.75rem; border-radius: 10px; margin-bottom: 0.5rem; line-height: 1.4; }
+
+        .chat-message.user { background-color: #956c2a; color: white; margin-left: auto; border-bottom-right-radius: 2px; }
+
+
+        .chat-message.ai { background-color: #f3f4f6; color: #1f2937; margin-right: auto; border-bottom-left-radius: 2px; }
+
+        html[dir="rtl"] .chat-message.user { margin-left: 0; margin-right: auto; border-bottom-right-radius: 10px; border-bottom-left-radius: 2px; }
+
+        html[dir="rtl"] .chat-message.ai { margin-right: 0; margin-left: auto; border-bottom-left-radius: 10px; border-bottom-right-radius: 2px; }
+
+        .chat-message.loading { display: flex; align-items: center; gap: 0.5rem; }
+
+        .typing-indicator span { height: 8px; width: 8px; background-color: #9ca3af; border-radius: 50%; display: inline-block; animation: bounce 1.4s infinite ease-in-out both; }
+
+        .typing-indicator span:nth-child(1) { animation-delay: -0.32s; }
+
+        .typing-indicator span:nth-child(2) { animation-delay: -0.16s; }
+
+        @keyframes bounce { 0%, 80%, 100% { transform: scale(0); } 40% { transform: scale(1.0); } }
+
+        #chat-form { display: flex; padding: 0.5rem; border-top: 1px solid #e5e7eb; }
+
+        #chat-input { flex-grow: 1; border: 1px solid #d1d5db; padding: 0.5rem; border-radius: 20px; outline: none; }
+
+        #chat-send { background: none; border: none; font-size: 1.5rem; color: #284b44; cursor: pointer; padding: 0.5rem; }
+
+
+
+        @media (min-width: 768px) {
+
+            .sidebar { position: static; transform: translateX(0) !important; }
+
+            #menu-toggle { display: none; }
+
+            .sidebar-overlay { display: none !important; }
+
+
+
+            .health-gauge { width: 150px; height: 150px; }
+
+            .health-gauge::before { width: 120px; height: 120px; }
+
+            .health-score-text { font-size: 2.25rem; }
+
+            .analysis-card .value { font-size: 1.75rem; }
+
+        }
+
+    </style>
+
+    <script src="https://apis.google.com/js/api.js"></script>
+
+
+    <script>
+        // Site-specific configuration
+        window.SITE_CONFIG = {
+            name: "Accounts Payable Dashboard",
+            domain: "https://sakura-accounts-payable-dashboard.surge.sh/",
+            description: "Accounts Payable Management System"
+        };
+        
+        // Update page title dynamically
+        // Cache Busting and Version Control
+        const APP_VERSION = '2.0.1';
+        const BUILD_DATE = '2025-01-06T16:30:00Z';
+        
+        // Clear old caches on load
+        if ('caches' in window) {
+            caches.keys().then(function(names) {
+                for (let name of names) {
+                    caches.delete(name);
+                }
+            });
+        }
+        
+        // Force reload if version changed
+        const storedVersion = localStorage.getItem('sakura_app_version');
+        if (storedVersion && storedVersion !== APP_VERSION) {
+            localStorage.clear();
+            sessionStorage.clear();
+            location.reload(true);
+        }
+        localStorage.setItem('sakura_app_version', APP_VERSION);
+        
+        document.addEventListener('DOMContentLoaded', () => {
+            document.title = "Accounts Payable Management System - Sakura Portal";
+            
+            // Additional cache clearing
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.getRegistrations().then(function(registrations) {
+                    for(let registration of registrations) {
+                        registration.unregister();
+                    }
+                });
+            }
+        });
+    </script>
+</head>
+
+<body class="bg-gray-100">
+
+    <!-- Login Screen with Sakura Logo Animation -->
+    <div id="login-screen" class="login-screen">
+        <div class="login-background">
+            <video class="login-video" autoplay loop muted playsinline>
+                <source src="Sakura Animation.mp4" type="video/mp4">
+            </video>
+            <div class="login-video-overlay"></div>
+        </div>
+        <div class="login-content">
+                <div class="logo-text">
+                    <span class="logo-title">SAKURA</span>
+                    <span class="logo-subtitle">PORTAL</span>
+                </div>
+            
+            <div class="login-form" id="login-form">
+                <div class="form-tabs">
+                    <button class="tab-button active" id="signin-tab" onclick="switchTab('signin')">Sign In</button>
+                    <button class="tab-button" id="signup-tab" onclick="switchTab('signup')">Sign Up</button>
+            </div>
+            
+                <!-- Sign In Form -->
+                <div id="signin-content" class="form-content active">
+                <h2 class="login-title">Welcome to Sakura Portal</h2>
+                <input type="password" id="password-input" class="login-input" placeholder="Enter Access Password" autocomplete="current-password">
+                <button id="login-button" class="login-button">Access ERP System</button>
+                <div id="login-error" class="login-error">Incorrect password. Please try again.</div>
+                </div>
+                
+                <!-- Sign Up Form -->
+                <div id="signup-content" class="form-content">
+                    <h2 class="login-title">Create Your Account</h2>
+                    <input type="text" id="signup-name" class="login-input" placeholder="Full Name" autocomplete="name">
+                    <input type="email" id="signup-email" class="login-input" placeholder="Email Address" autocomplete="email">
+                    <input type="password" id="signup-password" class="login-input" placeholder="Create Password" autocomplete="new-password">
+                    <input type="password" id="signup-confirm" class="login-input" placeholder="Confirm Password" autocomplete="new-password">
+                    <button id="signup-button" class="login-button">Create Account</button>
+                    <div id="signup-error" class="login-error"></div>
+                    <div id="signup-success" class="login-success"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="relative flex h-screen overflow-hidden">
+
+        <div id="sidebar-overlay" class="sidebar-overlay"></div>
+
+        <aside id="sidebar" class="sidebar w-64 text-white flex-shrink-0 flex flex-col fixed inset-y-0 z-50 transition-transform duration-300 ease-in-out md:relative">
+
+            <div class="flex items-center justify-center p-6 border-b border-gray-700">
+
+                <img src="https://images.deliveryhero.io/image/hungerstation/restaurant/logo/8556a1377e5154c66adf844d9c5ecb9f.jpg" alt="Logo" class="h-16 w-16 rounded-full ring-2 ring-white">
+
+            </div>
+
+            <nav class="flex-grow p-4">
+
+                <a href="#" onclick="loadDashboard(event, 'home')" class="nav-link active flex items-center p-4 my-2 rounded-lg"><i class="fas fa-tachometer-alt w-6 text-center"></i><span data-key="home_portal">Home Portal</span></a>
+
+                <a href="#" onclick="loadDashboard(event, 'payable.html')" class="nav-link flex items-center p-4 my-2 rounded-lg"><i class="fas fa-file-invoice-dollar w-6 text-center"></i><span data-key="accounts_payable">Accounts Payable</span></a>
+
+                <a href="#" onclick="loadDashboard(event, 'forecasting.html')" class="nav-link flex items-center p-4 my-2 rounded-lg"><i class="fas fa-chart-line w-6 text-center"></i><span data-key="rm_forecasting">RM Forecasting</span></a>
+
+                <a href="#" onclick="loadDashboard(event, 'Warehouse.html')" class="nav-link flex items-center p-4 my-2 rounded-lg"><i class="fas fa-warehouse w-6 text-center"></i><span data-key="warehouse_dashboard">Warehouse Dashboard</span></a>
+            </nav>
+
+
+
+
+            <div class="p-4 mt-auto border-t border-gray-700">
+
+
+                <a href="#" onclick="openSettingsModal(event)" class="flex items-center p-2 my-1 text-gray-300 rounded-lg hover:bg-white/10">
+
+                    <i class="fas fa-cog w-6 text-center"></i>
+
+                    <span data-key="settings">Settings</span>
+
+                </a>
+
+            </div>
+
+
+
+            <div class="p-4 text-center text-sm text-gray-400 border-t border-gray-700"><p data-key="portal_footer">Sakura Portal &copy; 2025</p></div>
+
+        </aside>
+
+
+
+        <main class="flex-1 flex flex-col overflow-y-auto">
+
+            <header class="gradient-header shadow-md p-4 flex items-center justify-between z-20 sticky top-0">
+
+                <div class="flex-1 flex justify-start">
+
+                    <button id="menu-toggle" class="md:hidden text-white text-2xl"><i class="fas fa-bars"></i></button>
+
+                </div>
+
+                <div class="flex items-center justify-center gap-3">
+
+                    <img src="https://images.deliveryhero.io/image/hungerstation/restaurant/logo/8556a1377e5154c66adf844d9c5ecb9f.jpg" alt="Small Logo" class="h-10 w-10 rounded-full ring-1 ring-white/50">
+
+                    <h1 id="header-title" class="text-xl md:text-2xl font-bold text-white whitespace-nowrap" data-key="hub_title">Sakura Management Hub</h1>
+                    
+                    <!-- Data consistency indicator -->
+                    <div id="data-consistency-indicator" class="hidden ml-2 flex items-center gap-1 text-xs text-white/80">
+                        <i class="fas fa-shield-alt text-green-400"></i>
+                        <span>Consistent</span>
+                    </div>
+
+                </div>
+
+                <div class="flex-1 flex justify-end">
+
+                    <div class="hidden md:block">
+
+                        <div class="font-semibold text-white/90 text-xs md:text-base" id="current-date-time"></div>
+
+                    </div>
+
+                </div>
+
+            </header>
+
+            
+            
+            <div class="flex-1 p-2 md:p-4">
+
+                <div id="home-screen">
+
+                    <div class="mb-6">
+
+                        <h2 class="text-2xl md:text-3xl font-bold text-gray-800" data-key="erp_command_center_title">ERP Command Center</h2>
+
+                        <p class="text-sm text-gray-500 mt-1" data-key="erp_command_center_subtitle">Integrated analytics for strategic decision-making.</p>
+
+                        <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6 mt-4">
+
+                            <div class="bg-white p-4 rounded-lg shadow-lg flex flex-col items-center justify-center">
+
+                                <h3 class="font-bold text-gray-700 mb-2" data-key="health_score_title">Working Capital Health</h3>
+
+                                <div class="relative"><div id="health-gauge" class="health-gauge relative"><div class="health-score-text flex items-center justify-center flex-col"><span id="health-score-value">--</span><span class="text-xs font-normal" data-key="score_out_of_100">/ 100</span></div></div></div>
+
+                                <p class="text-xs text-center text-gray-500 mt-2" data-key="health_score_desc">An overall score based on overdue debt, forecast accuracy, and capital efficiency.</p>
+
+                            </div>
+
+                            <div class="bg-white p-4 rounded-lg shadow-lg"><h3 class="font-bold text-gray-700 mb-3" data-key="aging_analysis_title">Payables Aging Analysis</h3><div class="space-y-3"><div><div class="flex justify-between text-sm mb-1"><span class="font-semibold text-green-700" data-key="current">Current</span><span class="font-mono text-xs sm:text-sm" id="aging-value-current">...</span></div><div class="aging-bar-bg w-full h-4 rounded-full overflow-hidden"><div id="aging-bar-current" class="aging-bar h-full bg-green-500" style="width: 0%;"></div></div></div><div><div class="flex justify-between text-sm mb-1"><span class="font-semibold text-red-700" data-key="overdue">Overdue</span><span class="font-mono text-xs sm:text-sm" id="aging-value-overdue">...</span></div><div class="aging-bar-bg w-full h-4 rounded-full overflow-hidden"><div id="aging-bar-overdue" class="aging-bar h-full bg-red-500" style="width: 0%;"></div></div></div></div></div>
+
+                            <div class="bg-white p-4 rounded-lg shadow-lg"><h3 class="font-bold text-gray-700 mb-2" data-key="recommendation_title">Recommendation Engine</h3><div class="flex items-start gap-3 bg-yellow-50 border border-yellow-200 p-3 rounded-lg h-full"><i class="fas fa-lightbulb text-2xl md:text-3xl text-yellow-500 mt-1"></i><div><p id="recommendation-text" class="text-sm text-gray-700"><span class="opacity-50" data-key="analyzing_data">Analyzing data...</span></p></div></div></div>
+
+                        </div>
+
+                        
+                        <!-- Advanced ERP Insights -->
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mt-6">
+                            <div class="insight-card rounded-lg p-4 shadow-md flex items-start gap-4">
+                                <i class="fas fa-brain text-3xl md:text-4xl text-indigo-500 mt-1"></i>
+                                <div>
+                                    <h3 class="font-semibold text-gray-800" data-key="operational_intelligence">Operational Intelligence</h3>
+                                    <p class="text-lg md:text-xl font-bold text-indigo-600" id="insight-operational-iq"><span class="opacity-50">...</span></p>
+                                    <p class="text-xs text-gray-600" data-key="operational_iq_desc">AI-powered operational efficiency score across all business units.</p>
+                    </div>
+
+                            </div>
+                            <div class="insight-card rounded-lg p-4 shadow-md flex items-start gap-4">
+                                <i class="fas fa-shield-alt text-3xl md:text-4xl text-red-500 mt-1"></i>
+                                <div>
+                                    <h3 class="font-semibold text-gray-800" data-key="risk_exposure">Risk Exposure Index</h3>
+                                    <p class="text-lg md:text-xl font-bold text-red-600" id="insight-risk-exposure"><span class="opacity-50">...</span></p>
+                                    <p class="text-xs text-gray-600" data-key="risk_exposure_desc">Comprehensive risk assessment across financial, operational, and supply chain.</p>
+                                </div>
+                            </div>
+                            <div class="insight-card rounded-lg p-4 shadow-md flex items-start gap-4">
+                                <i class="fas fa-rocket text-3xl md:text-4xl text-green-500 mt-1"></i>
+                                <div>
+                                    <h3 class="font-semibold text-gray-800" data-key="growth_potential">Growth Potential Score</h3>
+                                    <p class="text-lg md:text-xl font-bold text-green-600" id="insight-growth-potential"><span class="opacity-50">...</span></p>
+                                    <p class="text-xs text-gray-600" data-key="growth_potential_desc">Strategic growth opportunities based on current performance and market conditions.</p>
+                                </div>
+                            </div>
+                            <div class="insight-card rounded-lg p-4 shadow-md flex items-start gap-4">
+                                <i class="fas fa-cogs text-3xl md:text-4xl text-orange-500 mt-1"></i>
+                                <div>
+                                    <h3 class="font-semibold text-gray-800" data-key="process_optimization">Process Optimization</h3>
+                                    <p class="text-lg md:text-xl font-bold text-orange-600" id="insight-process-optimization"><span class="opacity-50">...</span></p>
+                                    <p class="text-xs text-gray-600" data-key="process_optimization_desc">Automated process improvement recommendations for maximum efficiency.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mb-6"><h3 class="text-xl font-bold text-gray-700" data-key="key_metrics_title">Key Financial Metrics</h3><div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-3"><div class="insight-card rounded-lg p-4 shadow-md flex items-start gap-4"><i class="fas fa-coins text-3xl md:text-4xl text-yellow-500 mt-1"></i><div><h3 class="font-semibold text-gray-800" data-key="cash_outflow_title">Total Near-Term Cash Outflow</h3><p class="text-2xl md:text-3xl font-bold text-red-600" id="insight-outflow"><span class="opacity-50">...</span></p><p class="text-xs text-gray-600" data-key="cash_outflow_desc">Combines current dues with the forecasted purchase budget.</p></div></div><div class="insight-card rounded-lg p-4 shadow-md flex items-start gap-4"><i class="fas fa-lock text-3xl md:text-4xl text-blue-500 mt-1"></i><div><h3 class="font-semibold text-gray-800" data-key="capital_efficiency_title">Non-Productive Capital</h3><p class="text-2xl md:text-3xl font-bold text-blue-600" id="insight-capital-risk"><span class="opacity-50">...</span></p><p class="text-xs text-gray-600" data-key="capital_efficiency_desc">Total cash tied up in overdue payments and overstocked items.</p></div></div></div>
+                    
+                    <!-- Advanced Financial Intelligence -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mt-4">
+                        <div class="insight-card rounded-lg p-4 shadow-md flex items-start gap-4">
+                            <i class="fas fa-chart-pie text-3xl md:text-4xl text-purple-500 mt-1"></i>
+                            <div>
+                                <h3 class="font-semibold text-gray-800" data-key="profitability_index">Profitability Index</h3>
+                                <p class="text-lg md:text-xl font-bold text-purple-600" id="insight-profitability"><span class="opacity-50">...</span></p>
+                                <p class="text-xs text-gray-600" data-key="profitability_desc">Advanced profitability analysis across all business segments.</p>
+                            </div>
+                        </div>
+                        <div class="insight-card rounded-lg p-4 shadow-md flex items-start gap-4">
+                            <i class="fas fa-balance-scale text-3xl md:text-4xl text-teal-500 mt-1"></i>
+                            <div>
+                                <h3 class="font-semibold text-gray-800" data-key="financial_stability">Financial Stability Score</h3>
+                                <p class="text-lg md:text-xl font-bold text-teal-600" id="insight-financial-stability"><span class="opacity-50">...</span></p>
+                                <p class="text-xs text-gray-600" data-key="financial_stability_desc">Comprehensive financial health assessment and stability metrics.</p>
+                            </div>
+                        </div>
+                        <div class="insight-card rounded-lg p-4 shadow-md flex items-start gap-4">
+                            <i class="fas fa-trending-up text-3xl md:text-4xl text-emerald-500 mt-1"></i>
+                            <div>
+                                <h3 class="font-semibold text-gray-800" data-key="revenue_optimization">Revenue Optimization</h3>
+                                <p class="text-lg md:text-xl font-bold text-emerald-600" id="insight-revenue-optimization"><span class="opacity-50">...</span></p>
+                                <p class="text-xs text-gray-600" data-key="revenue_optimization_desc">AI-driven revenue enhancement opportunities and strategies.</p>
+                            </div>
+                        </div>
+                        <div class="insight-card rounded-lg p-4 shadow-md flex items-start gap-4">
+                            <i class="fas fa-piggy-bank text-3xl md:text-4xl text-amber-500 mt-1"></i>
+                            <div>
+                                <h3 class="font-semibold text-gray-800" data-key="cost_efficiency">Cost Efficiency Ratio</h3>
+                                <p class="text-lg md:text-xl font-bold text-amber-600" id="insight-cost-efficiency"><span class="opacity-50">...</span></p>
+                                <p class="text-xs text-gray-600" data-key="cost_efficiency_desc">Advanced cost management and efficiency optimization metrics.</p>
+                            </div>
+                        </div>
+                    </div></div>
+                    <div class="mb-8"><h3 class="text-xl font-bold text-gray-700" data-key="detailed_kpis_title">Detailed Performance Indicators</h3><div class="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 mt-3"><div class="analysis-card border-orange-400 text-center"><h4 class="font-semibold text-sm text-gray-600" data-key="overdue_ratio_title">Overdue Ratio</h4><p class="value text-orange-500" id="insight-overdue-ratio"><span class="opacity-50">...</span></p></div><div class="analysis-card border-teal-400 text-center"><h4 class="font-semibold text-sm text-gray-600" data-key="accuracy_impact_title">1% Accuracy Impact</h4><p class="value text-teal-500" id="insight-accuracy-cost"><span class="opacity-50">...</span></p></div><div class="analysis-card border-purple-400 text-center"><h4 class="font-semibold text-sm text-gray-600" data-key="savings_power_title">Savings Power</h4><p class="value text-purple-500" id="insight-savings-impact"><span class="opacity-50">...</span></p></div><div class="analysis-card border-gray-400 text-center"><h4 class="font-semibold text-sm text-gray-600" data-key="avg_debt_title">Avg. Debt / Supplier</h4><p class="value text-gray-600" id="insight-avg-debt"><span class="opacity-50">...</span></p></div></div>
+                    
+                    <!-- Advanced Performance Analytics -->
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 mt-4">
+                        <div class="analysis-card border-indigo-400 text-center">
+                            <h4 class="font-semibold text-sm text-gray-600" data-key="supply_chain_efficiency">Supply Chain Efficiency</h4>
+                            <p class="value text-indigo-500" id="insight-supply-chain"><span class="opacity-50">...</span></p>
+                        </div>
+                        <div class="analysis-card border-emerald-400 text-center">
+                            <h4 class="font-semibold text-sm text-gray-600" data-key="vendor_performance">Vendor Performance</h4>
+                            <p class="value text-emerald-500" id="insight-vendor-performance"><span class="opacity-50">...</span></p>
+                        </div>
+                        <div class="analysis-card border-rose-400 text-center">
+                            <h4 class="font-semibold text-sm text-gray-600" data-key="demand_accuracy">Demand Accuracy</h4>
+                            <p class="value text-rose-500" id="insight-demand-accuracy"><span class="opacity-50">...</span></p>
+                        </div>
+                        <div class="analysis-card border-cyan-400 text-center">
+                            <h4 class="font-semibold text-sm text-gray-600" data-key="operational_excellence">Operational Excellence</h4>
+                            <p class="value text-cyan-500" id="insight-operational-excellence"><span class="opacity-50">...</span></p>
+                        </div>
+                    </div></div>
+                    
+                    <div class="mb-8"><h2 class="text-xl md:text-2xl font-bold text-gray-800" data-key="cross_data_insights">Cross-Dashboard Business Insights</h2><div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-4"><div class="insight-card rounded-lg p-4 shadow-md flex items-start gap-4"><i class="fas fa-link text-3xl md:text-4xl text-blue-500 mt-1"></i><div><h3 class="font-semibold text-gray-800" data-key="cash_flow_optimization">Cash Flow Optimization</h3><p class="text-lg md:text-xl font-bold text-blue-600" id="insight-cash-flow"><span class="opacity-50">...</span></p><p class="text-xs text-gray-600" data-key="cash_flow_desc">Combined analysis of payables, forecasting, and warehouse data for optimal cash management.</p></div></div><div class="insight-card rounded-lg p-4 shadow-md flex items-start gap-4"><i class="fas fa-chart-line text-3xl md:text-4xl text-green-500 mt-1"></i><div><h3 class="font-semibold text-gray-800" data-key="inventory_efficiency">Inventory Efficiency Score</h3><p class="text-lg md:text-xl font-bold text-green-600" id="insight-inventory-efficiency"><span class="opacity-50">...</span></p><p class="text-xs text-gray-600" data-key="inventory_efficiency_desc">Overall efficiency based on stock levels, turnover, and forecasting accuracy.</p></div></div><div class="insight-card rounded-lg p-4 shadow-md flex items-start gap-4"><i class="fas fa-target text-3xl md:text-4xl text-purple-500 mt-1"></i><div><h3 class="font-semibold text-gray-800" data-key="procurement_alignment">Procurement Alignment</h3><p class="text-lg md:text-xl font-bold text-purple-600" id="insight-procurement"><span class="opacity-50">...</span></p><p class="text-xs text-gray-600" data-key="procurement_desc">Alignment between forecasted needs, actual purchases, and supplier payments.</p></div></div></div></div>
+                    
+                    <div class="mb-6"><h2 class="text-xl md:text-2xl font-bold text-gray-800" data-key="payable_summary">Accounts Payable Summary</h2><div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mt-4"><div class="kpi-card"><div class="icon bg-red-500"><i class="fas fa-dollar-sign"></i></div> <div><p class="title" data-key="total_dues">Total Dues</p><div id="kpi-payable-dues" class="value"><div class="loading-spinner"></div></div></div></div><div class="kpi-card"><div class="icon bg-blue-500"><i class="fas fa-users"></i></div> <div><p class="title" data-key="total_suppliers">Total Suppliers</p><div id="kpi-payable-suppliers" class="value"><div class="loading-spinner"></div></div></div></div><div class="kpi-card"><div class="icon bg-orange-500"><i class="fas fa-exclamation-triangle"></i></div> <div><p class="title" data-key="overdues">Overdues</p><div id="kpi-payable-overdues" class="value"><div class="loading-spinner"></div></div></div></div><div class="kpi-card"><div class="icon bg-purple-500"><i class="fas fa-file-invoice"></i></div> <div><p class="title" data-key="total_transactions">Total Transactions</p><div id="kpi-payable-tx" class="value"><div class="loading-spinner"></div></div></div></div></div></div>
+
+                    <div class="mb-6"><h2 class="text-xl md:text-2xl font-bold text-gray-800" data-key="forecasting_summary">Raw Material Forecasting Summary</h2><div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mt-4"><div class="kpi-card"><div class="icon" style="background-color: #956c2a;"><i class="fas fa-wallet"></i></div> <div><p class="title" data-key="net_purchase_budget">Net Purchase Budget</p><div id="kpi-forecast-budget" class="value"><div class="loading-spinner"></div></div></div></div><div class="kpi-card"><div class="icon" style="background-color: #284b44;"><i class="fas fa-shopping-cart"></i></div> <div><p class="title" data-key="items_to_purchase">Items to Purchase</p><div id="kpi-forecast-items" class="value"><div class="loading-spinner"></div></div></div></div><div class="kpi-card"><div class="icon bg-green-500"><i class="fas fa-piggy-bank"></i></div> <div><p class="title" data-key="potential_savings">Potential Savings</p><div id="kpi-forecast-savings" class="value"><div class="loading-spinner"></div></div></div></div><div class="kpi-card"><div class="icon bg-yellow-500"><i class="fas fa-box-open"></i></div> <div><p class="title" data-key="overstocked_value">Overstocked Value</p><div id="kpi-forecast-overstock" class="value"><div class="loading-spinner"></div></div></div></div><div class="kpi-card col-span-2 md:col-span-1"><div class="icon" style="background-color: #ea8990;"><i class="fas fa-bullseye"></i></div> <div><p class="title" data-key="forecast_accuracy">Forecast Accuracy</p><div id="kpi-forecast-accuracy" class="value"><div class="loading-spinner"></div></div></div></div></div></div>
+
+                    
+                    <div class="mb-6"><h2 class="text-xl md:text-2xl font-bold text-gray-800" data-key="warehouse_summary">Warehouse Management Summary</h2><div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mt-4"><div class="kpi-card"><div class="icon" style="background-color: #284b44;"><i class="fas fa-boxes"></i></div> <div><p class="title" data-key="total_inventory_value">Total Inventory Value</p><div id="kpi-warehouse-inventory" class="value"><div class="loading-spinner"></div></div></div></div><div class="kpi-card"><div class="icon bg-red-500"><i class="fas fa-exclamation-triangle"></i></div> <div><p class="title" data-key="out_of_stock">Out of Stock</p><div id="kpi-warehouse-outstock" class="value"><div class="loading-spinner"></div></div></div></div><div class="kpi-card"><div class="icon bg-orange-500"><i class="fas fa-exclamation-circle"></i></div> <div><p class="title" data-key="low_stock">Low Stock</p><div id="kpi-warehouse-lowstock" class="value"><div class="loading-spinner"></div></div></div></div><div class="kpi-card"><div class="icon bg-green-500"><i class="fas fa-truck"></i></div> <div><p class="title" data-key="transfer_value">Transfer Value</p><div id="kpi-warehouse-transfers" class="value"><div class="loading-spinner"></div></div></div></div><div class="kpi-card col-span-2 md:col-span-1"><div class="icon" style="background-color: #956c2a;"><i class="fas fa-shopping-cart"></i></div> <div><p class="title" data-key="purchase_value">Purchase Value</p><div id="kpi-warehouse-purchases" class="value"><div class="loading-spinner"></div></div></div></div></div></div>
+                </div>
+
+
+                <iframe id="dashboard-frame" class="w-full h-full rounded-lg shadow-inner hidden" src="" frameborder="0"></iframe>
+
+            </div>
+
+
+        </main>
+
+    </div>
+
+
+
+    <div id="settings-modal" class="hidden fixed inset-0 bg-black bg-opacity-60 z-50 flex items-center justify-center p-4 opacity-0 modal-backdrop">
+
+        <div id="settings-modal-content" class="bg-white rounded-xl shadow-2xl p-6 w-full max-w-md scale-95 opacity-0 modal-content">
+
+            <div class="flex justify-between items-center pb-3 border-b">
+
+                <h3 class="text-xl font-bold text-gray-800 flex items-center gap-2"><i class="fas fa-cog text-gray-500"></i><span data-key="settings">Settings</span></h3>
+
+                <button onclick="closeSettingsModal()" class="text-gray-400 hover:text-gray-800 text-2xl">&times;</button>
+
+            </div>
+
+            <div class="mt-6 text-center">
+
+                <label class="text-sm font-medium text-gray-700" data-key="language">Language</label>
+
+                <div class="flex justify-center border border-gray-200 rounded-lg p-1 bg-gray-50 w-min mx-auto mt-2">
+
+                    <button onclick="broadcastLanguageChange('en')" class="lang-btn-modal px-4 py-2 text-sm rounded-md font-bold" data-lang="en">English</button>
+
+                    <button onclick="broadcastLanguageChange('ar')" class="lang-btn-modal px-4 py-2 text-sm rounded-md" data-lang="ar">العربية</button>
+                    
+                    <button id="install-app-btn" class="install-btn-modal px-4 py-2 text-sm rounded-md bg-green-600 text-white hover:bg-green-700 hidden" onclick="installApp()">
+                        <i class="fas fa-download mr-2"></i>Install App
+                    </button>
+
+                </div>
+
+            </div>
+
+            <div class="mt-6 text-center">
+
+                <p class="text-xs text-gray-400" data-key="more_settings">More settings coming soon...</p>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    
+    
+    <div id="chat-window">
+
+        <div id="chat-header"><i class="fas fa-brain"></i><span data-key="ai_analyst_title">Sakura AI Analyst</span></div>
+
+        <div id="chat-messages"><div class="chat-message ai"><p data-key="ai_welcome_message">Hello! How can I help you analyze the dashboard data today?</p></div></div>
+
+        <form id="chat-form"><input type="text" id="chat-input" placeholder="Ask about the data..." autocomplete="off"><button type="submit" id="chat-send"><i class="fas fa-paper-plane"></i></button></form>
+
+    </div>
+
+    <div id="chat-toggle-button"><i class="fas fa-comment-dots"></i></div>
+
+
+
+    <script>
+
+        // Password Protection Configuration
+        const ACCESS_PASSWORD = "Sakura123@@";
+        const LOGIN_KEY = "sakura_portal_access";
+
+        // Tab switching functionality
+        function switchTab(tab) {
+            const signinTab = document.getElementById('signin-tab');
+            const signupTab = document.getElementById('signup-tab');
+            const signinContent = document.getElementById('signin-content');
+            const signupContent = document.getElementById('signup-content');
+            
+            if (tab === 'signin') {
+                signinTab.classList.add('active');
+                signupTab.classList.remove('active');
+                signinContent.classList.add('active');
+                signupContent.classList.remove('active');
+            } else {
+                signupTab.classList.add('active');
+                signinTab.classList.remove('active');
+                signupContent.classList.add('active');
+                signinContent.classList.remove('active');
+            }
+        }
+
+        // Sign Up functionality
+        function handleSignUp() {
+            const nameInput = document.getElementById('signup-name');
+            const emailInput = document.getElementById('signup-email');
+            const passwordInput = document.getElementById('signup-password');
+            const confirmInput = document.getElementById('signup-confirm');
+            const signupError = document.getElementById('signup-error');
+            const signupSuccess = document.getElementById('signup-success');
+            
+            const name = nameInput.value.trim();
+            const email = emailInput.value.trim();
+            const password = passwordInput.value;
+            const confirm = confirmInput.value;
+            
+            // Reset messages
+            signupError.classList.remove('show');
+            signupSuccess.classList.remove('show');
+            signupError.textContent = '';
+            
+            // Validation
+            if (!name || !email || !password || !confirm) {
+                signupError.textContent = 'Please fill in all fields.';
+                signupError.classList.add('show');
+                return;
+            }
+            
+            if (password.length < 6) {
+                signupError.textContent = 'Password must be at least 6 characters.';
+                signupError.classList.add('show');
+                passwordInput.style.borderColor = '#ff6b6b';
+                return;
+            }
+            
+            if (password !== confirm) {
+                signupError.textContent = 'Passwords do not match.';
+                signupError.classList.add('show');
+                confirmInput.style.borderColor = '#ff6b6b';
+                return;
+            }
+            
+            // Email validation
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailRegex.test(email)) {
+                signupError.textContent = 'Please enter a valid email address.';
+                signupError.classList.add('show');
+                emailInput.style.borderColor = '#ff6b6b';
+                return;
+            }
+            
+            // Success - Store user data (in a real app, this would go to a server)
+            const userData = {
+                name: name,
+                email: email,
+                password: password, // In production, this should be hashed
+                createdAt: new Date().toISOString()
+            };
+            
+            // Store in localStorage (for demo purposes)
+            localStorage.setItem('sakura_user_' + email, JSON.stringify(userData));
+            
+            // Show success message
+            signupSuccess.textContent = 'Account created successfully! You can now sign in.';
+            signupSuccess.classList.add('show');
+            
+            // Clear form
+            nameInput.value = '';
+            emailInput.value = '';
+            passwordInput.value = '';
+            confirmInput.value = '';
+            
+            // Reset border colors
+            nameInput.style.borderColor = 'rgba(255, 255, 255, 0.2)';
+            emailInput.style.borderColor = 'rgba(255, 255, 255, 0.2)';
+            passwordInput.style.borderColor = 'rgba(255, 255, 255, 0.2)';
+            confirmInput.style.borderColor = 'rgba(255, 255, 255, 0.2)';
+            
+            // Switch to sign in after 2 seconds
+            setTimeout(() => {
+                switchTab('signin');
+                signupSuccess.classList.remove('show');
+            }, 2000);
+        }
+
+        // Login functionality
+        function initializeLogin() {
+            const loginScreen = document.getElementById('login-screen');
+            const passwordInput = document.getElementById('password-input');
+            const loginButton = document.getElementById('login-button');
+            const loginError = document.getElementById('login-error');
+            const signupButton = document.getElementById('signup-button');
+
+            // Check if user is already logged in
+            if (localStorage.getItem(LOGIN_KEY) === 'true') {
+                hideLoginScreen();
+                return;
+            }
+
+            // Show login screen
+            loginScreen.style.display = 'flex';
+
+            // Login button click handler
+            loginButton.addEventListener('click', handleLogin);
+            
+            // Sign Up button handler
+            if (signupButton) {
+                signupButton.addEventListener('click', handleSignUp);
+            }
+            
+            // Enter key handler
+            passwordInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    handleLogin();
+                }
+            });
+            
+            // Enter key handler for sign up form
+            const signupInputs = ['signup-name', 'signup-email', 'signup-password', 'signup-confirm'];
+            signupInputs.forEach(inputId => {
+                const input = document.getElementById(inputId);
+                if (input) {
+                    input.addEventListener('keypress', function(e) {
+                        if (e.key === 'Enter') {
+                            handleSignUp();
+                        }
+                    });
+                }
+            });
+
+            function handleLogin() {
+                const password = passwordInput.value.trim();
+                
+                if (password === ACCESS_PASSWORD) {
+                    // Correct password
+                    localStorage.setItem(LOGIN_KEY, 'true');
+                    hideLoginScreen();
+                } else {
+                    // Incorrect password
+                    showLoginError();
+                }
+            }
+
+            function showLoginError() {
+                loginError.classList.add('show');
+                passwordInput.style.borderColor = '#ff6b6b';
+                passwordInput.value = '';
+                
+                // Hide error after 3 seconds
+                setTimeout(() => {
+                    loginError.classList.remove('show');
+                    passwordInput.style.borderColor = 'rgba(255, 255, 255, 0.2)';
+                }, 3000);
+            }
+
+            function hideLoginScreen() {
+                loginScreen.classList.add('hidden');
+                setTimeout(() => {
+                    loginScreen.style.display = 'none';
+                    // Initialize the main app
+                    initializeMainApp();
+                }, 800);
+            }
+        }
+
+        // Initialize main app functionality
+        function initializeMainApp() {
+            // Your existing app initialization code goes here
+            console.log('Sakura Portal initialized successfully!');
+        }
+
+        const DATA_URL = "https://script.google.com/macros/s/AKfycbwq7HMf-2gjL3zT7WeoDNtTk-bVNRyvZHBiAU49H4OlJ_5v0dKygv9N3sgZO4SeSsIK/exec";
+        const GEMINI_API_KEY = "AIzaSyBAWM2HN0Dq5-ddOhGhiDJGa2u5xJ-zgl4";
+
+        let currentLang = localStorage.getItem('portalLang') || 'en';
+
+        let payableDataDetail = { suppliers: [], invoices: [], purchases: [], payments: [] };
+
+        let forecastingDataDetail = { forecastDetails: [], tableData: [] };
+
+        let warehouseDataStore = null;
+        let warehouseDataDetail = { inventory: null, transfers: null, purchasing: null, rmDetails: null };
+
+        // Data consistency management
+        let initialDataLoaded = false;
+        let cachedInsights = null;
+        let dataLoadTimestamp = null;
+
+
+
+       
+        const i18n = {
+
+            en: {
+
+                home_portal: 'Home Portal', accounts_payable: 'Accounts Payable', rm_forecasting: 'RM Forecasting', warehouse_dashboard: 'Warehouse Dashboard', portal_footer: 'Sakura Portal © 2025', hub_title: 'Sakura Management Hub', 
+                payable_title: 'Accounts Payable Dashboard', forecasting_title: 'Raw Material Forecasting & Budgeting', warehouse_title: 'Warehouse Management Dashboard',
+                settings: 'Settings', more_settings: 'More settings coming soon...', language: 'Language',
+
+                ai_analyst_title: "Sakura AI Analyst", ai_welcome_message: "Hello! How can I help you analyze the dashboard data today?", ai_thinking: "Thinking...",
+
+                erp_command_center_title: 'Command Center', erp_command_center_subtitle: 'Integrated analytics for strategic decision-making.',
+
+                health_score_title: 'Working Capital Health', score_out_of_100: '/ 100', health_score_desc: 'An overall score based on overdue debt, forecast accuracy, and capital efficiency.',
+
+                aging_analysis_title: 'Payables Aging Analysis', current: 'Current', overdue: 'Overdue',
+
+                recommendation_title: 'Recommendation Engine', analyzing_data: 'Analyzing data...',
+
+                rec_1_part_1: '<strong>Action:</strong> Utilize your ', rec_1_part_2: ' in potential savings to clear ', rec_1_part_3: ' of your overdue balance. This can improve supplier relations.',
+
+                rec_2_part_1: '<strong>Opportunity:</strong> Your non-productive capital (', rec_2_part_2: ') from overstock and overdues is significant. Improving forecasting can unlock this cash.',
+
+                rec_3: '<strong>Status:</strong> Financials are stable. No immediate critical actions are flagged. Continue monitoring forecasting accuracy.',
+
+                key_metrics_title: 'Key Financial Metrics', detailed_kpis_title: 'Detailed Performance Indicators',
+
+                cash_outflow_title: 'Total Near-Term Cash Outflow', cash_outflow_desc: 'Combines current dues with the forecasted purchase budget.',
+
+                capital_efficiency_title: 'Non-Productive Capital', capital_efficiency_desc: 'Total cash tied up in overdue payments and overstocked items.',
+
+                overdue_ratio_title: 'Overdue Ratio', accuracy_impact_title: '1% Accuracy Impact',
+
+                savings_power_title: 'Savings Power', avg_debt_title: 'Avg. Debt / Supplier',
+
+                payable_summary: 'Accounts Payable Summary', forecasting_summary: 'Raw Material Forecasting Summary', warehouse_summary: 'Warehouse Management Summary', cross_data_insights: 'Cross-Dashboard Business Insights',
+                total_dues: 'Total Dues', total_suppliers: 'Total Suppliers', overdues: 'Overdues', total_transactions: 'Total Transactions', net_purchase_budget: 'Net Purchase Budget',
+                items_to_purchase: 'Items to Purchase', potential_savings: 'Potential Savings', overstocked_value: 'Overstocked Value', forecast_accuracy: 'Forecast Accuracy',
+                total_inventory_value: 'Total Inventory Value', out_of_stock: 'Out of Stock', low_stock: 'Low Stock', transfer_value: 'Transfer Value', purchase_value: 'Purchase Value',
+                cash_flow_optimization: 'Cash Flow Optimization', inventory_efficiency: 'Inventory Efficiency Score', procurement_alignment: 'Procurement Alignment',
+                cash_flow_desc: 'Combined analysis of payables, forecasting, and warehouse data for optimal cash management.',
+                inventory_efficiency_desc: 'Overall efficiency based on stock levels, turnover, and forecasting accuracy.',
+                procurement_desc: 'Alignment between forecasted needs, actual purchases, and supplier payments.',
+                operational_intelligence: 'Operational Intelligence', risk_exposure: 'Risk Exposure Index', growth_potential: 'Growth Potential Score', process_optimization: 'Process Optimization',
+                operational_iq_desc: 'AI-powered operational efficiency score across all business units.',
+                risk_exposure_desc: 'Comprehensive risk assessment across financial, operational, and supply chain.',
+                growth_potential_desc: 'Strategic growth opportunities based on current performance and market conditions.',
+                process_optimization_desc: 'Automated process improvement recommendations for maximum efficiency.',
+                profitability_index: 'Profitability Index', financial_stability: 'Financial Stability Score', revenue_optimization: 'Revenue Optimization', cost_efficiency: 'Cost Efficiency Ratio',
+                profitability_desc: 'Advanced profitability analysis across all business segments.',
+                financial_stability_desc: 'Comprehensive financial health assessment and stability metrics.',
+                revenue_optimization_desc: 'AI-driven revenue enhancement opportunities and strategies.',
+                cost_efficiency_desc: 'Advanced cost management and efficiency optimization metrics.',
+                supply_chain_efficiency: 'Supply Chain Efficiency', vendor_performance: 'Vendor Performance', demand_accuracy: 'Demand Accuracy', operational_excellence: 'Operational Excellence'
+            },
+
+            ar: {
+
+                home_portal: 'البوابة الرئيسية', accounts_payable: 'الحسابات الدائنة', rm_forecasting: 'توقع المواد الخام', warehouse_dashboard: 'لوحة تحكم المستودع', portal_footer: 'بوابة ساكورا © 2025', hub_title: 'مركز إدارة ساكورا ', 
+                payable_title: 'لوحة تحكم الحسابات الدائنة', forecasting_title: 'توقع وميزانية المواد الخام', warehouse_title: 'لوحة تحكم إدارة المستودع',
+                settings: 'الإعدادات', more_settings: 'المزيد من الإعدادات قريبا...', language: 'اللغة',
+
+                ai_analyst_title: "محلل ساكورا الذكي", ai_welcome_message: "مرحباً! كيف يمكنني مساعدتك في تحليل بيانات لوحة التحكم اليوم؟", ai_thinking: "أفكر...",
+
+                erp_command_center_title: 'مركز قيادة ', erp_command_center_subtitle: 'تحليلات متكاملة لاتخاذ القرارات الاستراتيجية.',
+
+                health_score_title: 'سلامة رأس المال العامل', score_out_of_100: '/ 100', health_score_desc: 'مؤشر عام يعتمد على الديون المتأخرة ودقة التوقع وكفاءة رأس المال.',
+
+                aging_analysis_title: 'تحليل أعمار الحسابات الدائنة', current: 'حالي', overdue: 'متأخر',
+
+                recommendation_title: 'محرك التوصيات', analyzing_data: 'جاري تحليل البيانات...',
+
+                rec_1_part_1: '<strong>الإجراء:</strong> استفد من وفوراتك المحتملة البالغة ', rec_1_part_2: ' لتسوية ', rec_1_part_3: ' من رصيدك المتأخر. هذا يمكن أن يحسن علاقات الموردين.',
+
+                rec_2_part_1: '<strong>الفرصة:</strong> رأس مالك غير المنتج (', rec_2_part_2: ') من المخزون الزائد والمتأخرات كبير. تحسين التوقع يمكن أن يحرر هذه السيولة.',
+
+                rec_3: '<strong>الحالة:</strong> الأوضاع المالية مستقرة. لا توجد إجراءات حرجة مطلوبة حاليًا. استمر في مراقبة دقة التوقع.',
+
+                key_metrics_title: 'المقاييس المالية الرئيسية', detailed_kpis_title: 'مؤشرات الأداء التفصيلية',
+
+                cash_outflow_title: 'إجمالي التدفقات النقدية الخارجة قصيرة الأجل', cash_outflow_desc: 'يجمع بين المستحقات الحالية وميزانية الشراء المتوقعة.',
+
+                capital_efficiency_title: 'رأس المال غير المنتج', capital_efficiency_desc: 'إجمالي النقد المحجوز في المدفَات المتأخرة والمخزون الزائد.',
+
+                overdue_ratio_title: 'نسبة المتأخرات', accuracy_impact_title: 'تأثير دقة 1%',
+
+                savings_power_title: 'قوة التوفير', avg_debt_title: 'متوسط الدين/مورد',
+
+                payable_summary: 'ملخص الحسابات الدائنة', forecasting_summary: 'ملخص توقع المواد الخام', warehouse_summary: 'ملخص إدارة المستودع', cross_data_insights: 'رؤى الأعمال المتقاطعة',
+                total_dues: 'إجمالي المستحقات', total_suppliers: 'إجمالي الموردين', overdues: 'المتأخرات', total_transactions: 'إجمالي المعاملات', net_purchase_budget: 'صافي ميزانية الشراء',
+                items_to_purchase: 'الأصناف المطلوب شراؤها', potential_savings: 'التوفير المحتمل', overstocked_value: 'قيمة المخزون الزائد', forecast_accuracy: 'دقة التوقع',
+                total_inventory_value: 'إجمالي قيمة المخزون', out_of_stock: 'نفد المخزون', low_stock: 'مخزون منخفض', transfer_value: 'قيمة النقل', purchase_value: 'قيمة الشراء',
+                cash_flow_optimization: 'تحسين التدفق النقدي', inventory_efficiency: 'كفاءة المخزون', procurement_alignment: 'محاذاة المشتريات',
+                cash_flow_desc: 'تحليل متكامل للحسابات الدائنة والتوقع وبيانات المستودع لإدارة نقدية مثلى.',
+                inventory_efficiency_desc: 'الكفاءة العامة بناءً على مستويات المخزون والدوران ودقة التوقع.',
+                procurement_desc: 'المحاذاة بين الاحتياجات المتوقعة والمشتريات الفعلية ومدفوعات الموردين.',
+                operational_intelligence: 'الذكاء التشغيلي', risk_exposure: 'مؤشر التعرض للمخاطر', growth_potential: 'نقاط النمو المحتملة', process_optimization: 'تحسين العمليات',
+                operational_iq_desc: 'نقاط الكفاءة التشغيلية المدعومة بالذكاء الاصطناعي عبر جميع وحدات الأعمال.',
+                risk_exposure_desc: 'تقييم شامل للمخاطر عبر الجوانب المالية والتشغيلية وسلسلة التوريد.',
+                growth_potential_desc: 'فرص النمو الاستراتيجية بناءً على الأداء الحالي وظروف السوق.',
+                process_optimization_desc: 'توصيات تحسين العمليات الآلية لتحقيق أقصى كفاءة.',
+                profitability_index: 'مؤشر الربحية', financial_stability: 'نقاط الاستقرار المالي', revenue_optimization: 'تحسين الإيرادات', cost_efficiency: 'نقاط كفاءة التكلفة',
+                profitability_desc: 'تحليل متقدم للربحية عبر جميع قطاعات الأعمال.',
+                financial_stability_desc: 'تقييم شامل للصحة المالية ومقاييس الاستقرار.',
+                revenue_optimization_desc: 'فرص تعزيز الإيرادات والاستراتيجيات المدعومة بالذكاء الاصطناعي.',
+                cost_efficiency_desc: 'مقاييس إدارة التكلفة وتحسين الكفاءة المتقدمة.',
+                supply_chain_efficiency: 'كفاءة سلسلة التوريد', vendor_performance: 'أداء الموردين', demand_accuracy: 'دقة الطلب', operational_excellence: 'التميز التشغيلي'
+            }
+
+        };
+
+        
+        
+        const mainIframe = document.getElementById('dashboard-frame');
+
+        const homeScreen = document.getElementById('home-screen');
+
+
+        const headerTitle = document.getElementById('header-title');
+
+        const navLinks = document.querySelectorAll('.nav-link');
+
+
+        const sidebar = document.getElementById('sidebar');
+
+        const menuToggle = document.getElementById('menu-toggle');
+
+
+        const sidebarOverlay = document.getElementById('sidebar-overlay');
+
+        const settingsModal = document.getElementById('settings-modal');
+
+        const settingsModalContent = document.getElementById('settings-modal-content');
+
+        const chatWindow = document.getElementById('chat-window');
+
+        const chatToggleButton = document.getElementById('chat-toggle-button');
+
+
+        const chatForm = document.getElementById('chat-form');
+
+
+        const chatInput = document.getElementById('chat-input');
+
+
+        const chatMessages = document.getElementById('chat-messages');
+
+
+
+        function initializePortal() {
+            // Only load data if not already loaded or if it's been more than 5 minutes
+            const now = new Date().getTime();
+            const shouldReload = !initialDataLoaded || !dataLoadTimestamp || (now - dataLoadTimestamp) > 300000; // 5 minutes
+            
+            if (!shouldReload && cachedInsights) {
+                console.log("Using cached insights for consistent First Time view");
+                restoreCachedInsights();
+                return;
+            }
+
+            fetch(DATA_URL + '?cache_bust=' + new Date().getTime())
+                .then(response => {
+                    if (!response.ok) { throw new Error('Network response was not ok'); }
+                    return response.json();
+                })
+                .then(data => {
+                    payableDataStore = data.payableData;
+                    forecastingDataStore = data.forecastingData;
+                    
+                    // Store warehouse data if available
+                    if (data.warehouseData) {
+                        warehouseDataStore = data.warehouseData;
+                    }
+                    
+                    // Cache the insights for consistency
+                    cacheCurrentInsights();
+                    
+                    // Mark as loaded and set timestamp
+                    initialDataLoaded = true;
+                    dataLoadTimestamp = now;
+                    
+                    updateAllInsights();
+                })
+                .catch(error => {
+                    console.error("Fatal: Could not load data.", error);
+                    alert("Error: Could not load dashboard data. Please check the JSON file URL and ensure the Apps Script has run correctly.");
+                });
+        }
+
+
+        function openSettingsModal(event) { event.preventDefault(); settingsModal.classList.remove('hidden'); setTimeout(() => { settingsModal.classList.remove('opacity-0'); settingsModalContent.classList.remove('scale-95', 'opacity-0'); }, 10); if (window.innerWidth < 768 && sidebar.classList.contains('open')) { toggleMenu(); } }
+
+        function closeSettingsModal() { settingsModal.classList.add('opacity-0'); settingsModalContent.classList.add('scale-95', 'opacity-0'); setTimeout(() => { settingsModal.classList.add('hidden'); }, 300); }
+
+        settingsModal.addEventListener('click', function(event) { if (event.target === settingsModal) { closeSettingsModal(); } });
+
+        function toggleMenu() { sidebar.classList.toggle('open'); sidebarOverlay.classList.toggle('open'); document.body.classList.toggle('menu-open'); }
+
+        menuToggle.addEventListener('click', toggleMenu);
+
+        sidebarOverlay.addEventListener('click', toggleMenu);
+
+        
+        
+        chatToggleButton.addEventListener('click', () => { chatWindow.classList.toggle('open'); });
+
+        chatForm.addEventListener('submit', (e) => { e.preventDefault(); const userMessage = chatInput.value.trim(); if (!userMessage) return; addMessageToChat(userMessage, 'user'); chatInput.value = ''; askSakuraAI(userMessage); });
+
+
+
+
+
+        function addMessageToChat(message, sender) { const messageElement = document.createElement('div'); messageElement.classList.add('chat-message', sender); if (sender === 'ai' && message === 'loading') { messageElement.classList.add('loading'); messageElement.innerHTML = `<div class="typing-indicator"><span></span><span></span><span></span></div>`; } else { messageElement.innerHTML = `<p>${message}</p>`; } chatMessages.appendChild(messageElement); chatMessages.scrollTop = chatMessages.scrollHeight; return messageElement; }
+
+
+
+
+
+        async function askSakuraAI(question) {
+
+    const loadingElement = addMessageToChat('loading', 'ai');
+
+
+
+    try {
+
+        const dataContext = buildComprehensiveContext();
+
+        
+        
+        // Simpler, more direct prompt
+
+        let prompt = `You are a helpful and conversational AI assistant named Sakura AI. Your purpose is to answer questions about Sakura Company's financial data.
+        
+        
+        
+CURRENT FINANCIAL DATA: 
+
+${dataContext}
+
+        
+        
+USER QUESTION: ${question}
+
+        
+        
+Provide a concise and direct answer to the user's question in a conversational tone. If you are asked "who are you?", respond with "I am Sakura AI, a helpful assistant built by Google to analyze Sakura Company's financial data." Do not provide any other information unless explicitly asked for. Do not generate reports or emails. Just answer the question directly.`;
+
+
+
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${GEMINI_API_KEY}`, {
+
+            method: 'POST',
+
+            headers: {
+
+                'Content-Type': 'application/json',
+
+            },
+
+            body: JSON.stringify({
+
+                contents: [{
+
+                    parts: [{
+
+                        text: prompt
+
+                    }]
+
+                }],
+
+                generationConfig: {
+
+                    temperature: 0.7,
+
+                    topK: 40,
+
+                    topP: 0.95,
+
+                    maxOutputTokens: 1024,
+
+                }
+
+            })
+
+        });
+
+
+
+        if (!response.ok) {
+
+            throw new Error(`API Error: ${response.status} ${response.statusText}`);
+
+        }
+
+
+
+        const data = await response.json();
+
+        
+        
+        if (data.candidates && data.candidates[0] && data.candidates[0].content) {
+
+            const aiResponse = data.candidates[0].content.parts[0].text;
+
+            const formattedResponse = formatAIResponse(aiResponse);
+
+            
+            
+            loadingElement.classList.remove('loading');
+
+            loadingElement.innerHTML = `<p>${formattedResponse}</p>`;
+
+        } else {
+
+            throw new Error('Invalid response format from Gemini API');
+
+        }
+        
+        
+        
+    } catch (error) {
+
+        console.error('Error calling Gemini API:', error);
+
+        const errorMessage = getSmartErrorMessage(error, question);
+
+        
+        
+        loadingElement.classList.remove('loading');
+
+        loadingElement.innerHTML = `<p>${errorMessage}</p>`;
+
+    }
+
+    
+    
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+
+}
+
+// --- NEW HELPER FUNCTIONS ---
+
+
+
+function detectLanguageFromInput(text) {
+
+    const input = text.toLowerCase();
+
+    const arabicPatterns = [/[\u0600-\u06FF]/g, /إيش|شلون|كيف|وين|شنو|ليش/, /ازاي|ايه|فين|ليه|امتى/, /كيف|وين|شو|ليش|متى/, /كيف|فين|ايش|ليه|امتى/, /واش|فين|علاش|وقتاش/, /ما هو|كيف|أين|لماذا|متى/];
+
+    const englishPatterns = [/\b(what|how|where|when|why|who|which|can|could|would|should|give|show|tell|explain)\b/i, /\b(summary|report|analysis|breakdown|details|overview|insight)\b/i];
+
+    const hindiHinglishPatterns = [/\b(kya|kaise|kahan|kab|kyun|koun|batao|dikhao|bolo|samjhao)\b/i, /\b(summary|report|de|do|kar|hai|hain|mujhe|humein)\b/i, /[\u0900-\u097F]/g];
+
+
+
+    let arabicScore = 0;
+
+    let englishScore = 0;
+
+    let hindiScore = 0;
+
+
+
+    arabicPatterns.forEach(pattern => {
+
+        const matches = input.match(pattern);
+
+        if (matches) arabicScore += matches.length;
+
+    });
+
+
+
+    englishPatterns.forEach(pattern => {
+
+        const matches = input.match(pattern);
+
+        if (matches) englishScore += matches.length;
+
+    });
+
+
+
+    hindiHinglishPatterns.forEach(pattern => {
+
+        const matches = input.match(pattern);
+
+        if (matches) hindiScore += matches.length;
+
+    });
+
+
+
+    if (arabicScore > englishScore && arabicScore > hindiScore) {
+
+        return 'arabic';
+
+    } else if (hindiScore > englishScore && hindiScore > arabicScore) {
+
+        return 'hindi';
+
+    } else if (englishScore > 0 || (arabicScore === 0 && hindiScore === 0)) {
+
+        return 'english';
+
+    } else {
+
+        return 'mixed';
+
+    }
+
+}
+
+
+
+function buildComprehensiveContext() {
+
+            let context = "SAKURA COMPANY FINANCIAL DATA:\n\n";
+
+
+
+            if (payableDataStore) {
+
+                context += "ACCOUNTS PAYABLE SUMMARY:\n";
+
+                context += `Total Dues: ${payableDataStore.totalDues}\n`;
+
+                context += `Overdue Amount: ${payableDataStore.overdues}\n`;
+
+                context += `Total Suppliers: ${payableDataStore.totalSuppliers}\n`;
+
+                context += `Total Transactions: ${payableDataStore.totalTransactions}\n\n`;
+
+            }
+
+
+
+            if (forecastingDataStore) {
+
+                context += "RAW MATERIAL FORECASTING SUMMARY:\n";
+
+                context += `Net Purchase Budget: ${forecastingDataStore.kpiTotalBudget}\n`;
+
+                context += `Items to Purchase: ${forecastingDataStore.kpiItemsToOrder}\n`;
+
+                context += `Potential Savings: ${forecastingDataStore.kpiSavings}\n`;
+
+                context += `Overstocked Value: ${forecastingDataStore.kpiOverstock}\n`;
+
+                context += `Forecast Accuracy: ${forecastingDataStore.kpiForecastAccuracy}\n\n`;
+
+            }
+
+
+
+            if (payableDataDetail.suppliers.length > 0) {
+
+                context += "PAYABLE SUPPLIERS LIST (FILTERED):\n";
+
+                context += "Supplier Name | Outstanding Balance | Total Purchases | Total Payments\n";
+
+                payableDataDetail.suppliers.slice(0, 50).forEach(s => {
+
+                    context += `${s.supplier} | ${s.outstandingBalance} | ${s.totalPurchases} | ${s.totalPayments}\n`;
+
+                });
+
+                context += "\n";
+
+            }
+
+            
+            
+            if (payableDataDetail.invoices.length > 0) {
+
+                context += "PAYABLE INVOICES (FILTERED):\n";
+
+                context += "Invoice Number | Supplier | Amount | Due Status\n";
+
+                payableDataDetail.invoices.slice(0, 50).forEach(inv => {
+
+                    context += `${inv.invoiceNumber} | ${inv.supplier} | ${inv.amount} | ${inv.dueStatus}\n`;
+
+                });
+
+                context += "\n";
+
+            }
+
+
+
+            if (payableDataDetail.purchases.length > 0) {
+
+                context += "PAYABLE PURCHASES (FILTERED):\n";
+
+                context += "Item Name | Quantity | Unit Cost | Total After Tax | Supplier\n";
+
+                payableDataDetail.purchases.slice(0, 50).forEach(p => {
+
+                    context += `${p.itemName} | ${p.quantity} | ${p.unitCost} | ${p.totalAfterTax} | ${p.supplier}\n`;
+
+                });
+
+                context += "\n";
+
+            }
+
+
+
+            if (forecastingDataDetail.tableData.length > 0) {
+
+                context += "FORECASTING TABLE DATA (FILTERED):\n";
+
+                context += "Name | SKU | Net Required Qty | Unit Cost | Purchase Cost\n";
+
+                forecastingDataDetail.tableData.slice(0, 50).forEach(item => {
+
+                    const name = currentLang === 'ar' ? (item.name_localized || item.name) : item.name;
+
+                    context += `${name} | ${item.sku} | ${item.netRequired} | ${item.unitCost} | ${item.purchaseCost}\n`;
+
+                });
+
+                context += "\n";
+
+            }
+
+
+            if (warehouseDataStore) {
+                context += "WAREHOUSE MANAGEMENT SUMMARY:\n";
+                context += `Total Inventory Value: ${warehouseDataStore.totalInventoryValue || 'SAR 0'}\n`;
+                context += `Out of Stock Items: ${warehouseDataStore.outOfStock || '0'}\n`;
+                context += `Low Stock Items: ${warehouseDataStore.lowStock || '0'}\n`;
+                context += `Transfer Value: ${warehouseDataStore.transferValue || 'SAR 0'}\n`;
+                context += `Purchase Value: ${warehouseDataStore.purchaseValue || 'SAR 0'}\n\n`;
+            }
+
+            if (warehouseDataDetail.inventory && warehouseDataDetail.inventory.items) {
+                context += "WAREHOUSE INVENTORY ITEMS (FILTERED):\n";
+                context += "Item Name | SKU | Quantity | Unit | Total Value\n";
+                warehouseDataDetail.inventory.items.slice(0, 50).forEach(item => {
+                    context += `${item.name} | ${item.sku} | ${item.totalQuantity} | ${item.unit} | ${item.totalValue}\n`;
+                });
+                context += "\n";
+            }
+
+            if (warehouseDataDetail.transfers && warehouseDataDetail.transfers.items) {
+                context += "WAREHOUSE TRANSFERS (FILTERED):\n";
+                context += "Item Name | From | To | Quantity | Cost\n";
+                warehouseDataDetail.transfers.items.slice(0, 50).forEach(item => {
+                    context += `${item.name} | ${item.from} | ${item.to} | ${item.quantity} | ${item.cost}\n`;
+                });
+                context += "\n";
+            }
+
+            if (warehouseDataDetail.purchasing && warehouseDataDetail.purchasing.items) {
+                context += "WAREHOUSE PURCHASES (FILTERED):\n";
+                context += "Item Name | SKU | Quantity | Unit | Cost\n";
+                warehouseDataDetail.purchasing.items.slice(0, 50).forEach(item => {
+                    context += `${item.name} | ${item.sku} | ${item.quantity} | ${item.unit} | ${item.cost}\n`;
+                });
+                context += "\n";
+            }
+            
+
+            context += "Please use this data to answer the user's questions. If the data is not present, state that you do not have that specific information.";
+
+            
+            
+            return context;
+
+        }
+
+function createSmartPrompt(question, language, dataContext) {
+
+    let roleDefinition = "";
+
+    let responseInstructions = "";
+
+    switch(language) {
+
+        case 'arabic':
+
+            roleDefinition = "أنت محلل مالي خبير في شركة ساكورا. اسمك 'محلل ساكورا الذكي'. تتحدث العربية بطلاقة وتقدم تحليلات مالية دقيقة ومفيدة.";
+
+            responseInstructions = "أجب باللغة العربية الفصحى أو العامية حسب أسلوب السؤال. كن دقيقاً ومفيداً في تحليلك المالي.";
+
+            break;
+
+        case 'hindi':
+
+            roleDefinition = "आप साकुरा कंपनी के एक विशेषज्ञ वित्तीय विश्लेषक हैं। आपका नाम 'साकुरा AI विश्लेषक' है। आप हिंदी और हिंग्लिश दोनों में धाराप्रवाह बात करते हैं।";
+
+            responseInstructions = "हिंदी या हिंग्लिश में जवाब दें, जैसा कि प्रश्न में इस्तेमाल किया गया है। वित्तीय विश्लेषण में सटीक और उपयोगी बनें।";
+
+            break;
+
+        case 'mixed':
+
+            roleDefinition = "You are Sakura AI Analyst, an expert financial analyst for Sakura Company. You're fluent in multiple languages and can respond in Hinglish, mixing Hindi and English naturally.";
+
+            responseInstructions = "Respond in the same mixed language style as the question (Hinglish). Be natural, conversational, and provide accurate financial insights.";
+
+            break;
+
+        default: // English
+
+            roleDefinition = "You are Sakura AI Analyst, a senior financial analyst and business intelligence expert for Sakura Company. You provide comprehensive, actionable insights.";
+
+            responseInstructions = "Respond in professional English. Be analytical, precise, and provide actionable recommendations based on the financial data.";
+
+    }
+
+
+
+    const questionType = analyzeQuestionType(question);
+
+    const specificInstructions = getInstructionsForQuestionType(questionType, language);
+
+
+
+    return `${roleDefinition}
+
+${responseInstructions}
+
+${specificInstructions}
+
+CURRENT FINANCIAL DATA:
+
+${dataContext}
+
+USER QUESTION: ${question}
+
+Provide a comprehensive, insightful response that directly answers their question using the financial data provided. Be specific with numbers and provide actionable recommendations where appropriate.`;
+
+}
+
+
+
+function analyzeQuestionType(question) {
+
+    const q = question.toLowerCase();
+
+    if (q.includes('summary') || q.includes('overview') || q.includes('samjhao') || q.includes('batao') || q.includes('ملخص') || q.includes('نظرة عامة')) {
+
+        return 'summary';
+
+    } else if (q.includes('recommendation') || q.includes('suggest') || q.includes('improve') || q.includes('توصية') || q.includes('सुझाव')) {
+
+        return 'recommendation';
+
+    } else if (q.includes('risk') || q.includes('problem') || q.includes('issue') || q.includes('خطر') || q.includes('مشكلة') || q.includes('जोखिम')) {
+
+        return 'risk_analysis';
+
+    } else if (q.includes('cash flow') || q.includes('liquidity') || q.includes('تدفق نقدي') || q.includes('نقدية') || q.includes('cash flow')) {
+
+        return 'cash_flow';
+
+    } else if (q.includes('supplier') || q.includes('vendor') || q.includes('مورد') || q.includes('आपूर्तिकर्ता')) {
+
+        return 'supplier_analysis';
+
+    } else {
+
+        return 'general';
+
+    }
+
+}
+
+
+
+function getInstructionsForQuestionType(type, language) {
+
+    const instructions = {
+
+        summary: {
+
+            english: "Provide a concise executive summary highlighting key financial metrics, main concerns, and overall health status.",
+
+            arabic: "قدم ملخصاً تنفيذياً موجزاً يبرز المؤشرات المالية الرئيسية والمخاوف الأساسية والحالة العامة للصحة المالية.",
+
+            hindi: "मुख्य वित्तीय मेट्रिक्स, मुख्य चिंताओं और समग्र स्वास्थ्य स्थिति को उजागर करते हुए एक संक्षिप्त कार्यकारी सारांश प्रदान करें।",
+
+            mixed: "Main financial metrics aur overall health status ka concise summary do, key concerns ke saath."
+
+        },
+
+        recommendation: {
+
+            english: "Provide specific, actionable recommendations with priority levels and expected impact on cash flow and operations.",
+
+            arabic: "قدم توصيات محددة وقابلة للتنفيذ مع مستويات الأولوية والتأثير المتوقع على التدفق النقدي والعمليات.",
+
+            hindi: "प्राथमिकता स्तर और नकदी प्रवाह और संचालन पर अपेक्षित प्रभाव के साथ विशिष्ट, क्रियान्वित करने योग्य सुझाव प्रदान करें।",
+
+            mixed: "Priority levels aur cash flow impact ke saath specific actionable recommendations do."
+
+        },
+
+        risk_analysis: {
+
+            english: "Identify key financial risks, their potential impact, and mitigation strategies with timeline.",
+
+            arabic: "حدد المخاطر المالية الرئيسية وتأثيرها المحتمل واستراتيجيات التخفيف مع الجدول الزمني.",
+
+            hindi: "मुख्य वित्तीय जोखिमों, उनके संभावित प्रभाव और समयसीमा के साथ शमन रणनीतियों की पहचान करें।",
+
+            mixed: "Key financial risks identify karo aur unka potential impact aur mitigation strategies batao."
+
+        },
+
+        cash_flow: {
+
+            english: "Focus on cash flow implications, working capital efficiency, and liquidity management recommendations.",
+
+            arabic: "ركز على تداعيات التدفق النقدي وكفاءة رأس المال العامل وتوصيات إدارة السيولة.",
+
+            hindi: "नकदी प्रवाह के निहितार्थ, कार्यशील पूंजी दक्षता और तरलता प्रबंधन सुझावों पर ध्यान दें।",
+
+            mixed: "Cash flow implications, working capital efficiency aur liquidity management par focus karo."
+
+        },
+
+        supplier_analysis: {
+
+            english: "Analyze supplier relationships, payment patterns, and vendor management optimization opportunities.",
+
+            arabic: "حلل علاقات الموردين وأنماط الدفع وفرص تحسين إدارة البائعين.",
+
+            hindi: "आपूर्तिकर्ता संबंधों, भुगतान पैटर्न और विक्रेता प्रबंधन अनुकूलन के अवसरों का विश्लेषण करें।",
+
+            mixed: "Supplier relationships, payment patterns aur vendor management opportunities analyze karo."
+
+        },
+
+        general: {
+
+            english: "Provide comprehensive analysis relevant to the question with specific data points and actionable insights.",
+
+            arabic: "قدم تحليلاً شاملاً ذا صلة بالسؤال مع نقاط بيانات محددة ورؤى قابلة للتنفيذ.",
+
+            hindi: "विशिष्ट डेटा पॉइंट्स और क्रियान्वित करने योग्य अंतर्दृष्टि के साथ प्रश्न के लिए प्रासंगिक व्यापक विश्लेषण प्रदान करें।",
+
+            mixed: "Question ke liye relevant comprehensive analysis do specific data points aur actionable insights ke saath."
+
+        }
+
+    };
+
+    return instructions[type][language] || instructions[type]['english'];
+
+}
+
+
+
+function formatAIResponse(response, language) {
+
+    let formatted = response.trim();
+
+    formatted = formatted.replace(/\n\n/g, '<br><br>');
+
+    formatted = formatted.replace(/\n/g, '<br>');
+
+    formatted = formatted.replace(/\*\s+/g, '• ');
+
+    formatted = formatted.replace(/\-\s+/g, '• ');
+
+    return formatted;
+
+}
+
+
+
+function getSmartErrorMessage(error, originalQuestion) {
+
+    const detectedLang = detectLanguageFromInput(originalQuestion);
+
+    const errorMessages = {
+
+        '400': {
+
+            english: 'Sorry, I had trouble understanding your request. Could you please rephrase your question more clearly?',
+
+            arabic: 'عذراً، واجهت صعوبة في فهم طلبك. هل يمكنك إعادة صياغة سؤالك بوضوح أكبر؟',
+
+            hindi: 'माफ करें, मुझे आपके प्रश्न को समझने में कठिनाई हुई। क्या आप कृपया अपना प्रश्न और स्पष्ट रूप से पूछ सकते हैं?',
+
+            mixed: 'Sorry, aapka question samajh nahi aaya. Thoda clearly puch sakte hain?'
+
+        },
+
+        '403': {
+
+            english: 'API access error. Please check the configuration.',
+
+            arabic: 'خطأ في الوصول إلى واجهة البرمجة. يرجى التحقق من الإعدادات.',
+
+            hindi: 'API एक्सेस त्रुटि। कृपया कॉन्फ़िगरेशन जांचें।',
+
+            mixed: 'API access mein problem hai. Configuration check karo.'
+
+        },
+
+        '404': {
+
+            english: 'Gemini model or API endpoint was not found. Please make sure the latest Gemini API is enabled and the model name is correct (e.g., gemini-1.5-flash).',
+
+            arabic: 'لم يتم العثور على نموذج Gemini أو نقطة واجهة البرمجة. يرجى التأكد من تفعيل واجهة Gemini الأحدث واستخدام اسم نموذج صحيح مثل gemini-1.5-flash.',
+
+            hindi: 'Gemini मॉडल या API endpoint नहीं मिला। कृपया सुनिश्चित करें कि नवीनतम Gemini API सक्षम है और मॉडल का नाम सही है (जैसे gemini-1.5-flash)।',
+
+            mixed: 'Gemini model ya API endpoint nahi mila. Latest Gemini API enable karo aur model name sahi rakho (jaise gemini-1.5-flash).'
+
+        },
+
+        '429': {
+
+            english: 'Too many requests. Please wait a moment and try again.',
+
+            arabic: 'طلبات كثيرة جداً. يرجى الانتظار قليلاً والمحاولة مرة أخرى.',
+
+            hindi: 'बहुत सारे अनुरोध। कृपया थोड़ा इंतज़ार करें और फिर कोशिश करें।',
+
+            mixed: 'Bahut requests ho gayi. Thoda wait karo aur try karo.'
+
+        },
+
+        'default': {
+
+            english: 'I am temporarily unable to process your request. Please try again in a moment.',
+
+            arabic: 'لا أستطيع معالجة طلبك مؤقتاً. يرجى المحاولة مرة أخرى بعد قليل.',
+
+            hindi: 'मैं अस्थायी रूप से आपके अनुरोध को संसाधित करने में असमर्थ हूं। कृपया थोड़ी देर बाद पुनः प्रयास करें।',
+
+            mixed: 'Abhi aapka request process nahi kar sakta. Thodi der baad try karo.'
+
+        }
+
+    };
+
+
+
+    let errorCode = 'default';
+
+    if (error.message.includes('API Error: 400')) errorCode = '400';
+
+    else if (error.message.includes('API Error: 403')) errorCode = '403';
+
+    else if (error.message.includes('API Error: 404')) errorCode = '404';
+
+    else if (error.message.includes('API Error: 429')) errorCode = '429';
+
+
+
+    return errorMessages[errorCode][detectedLang] || errorMessages[errorCode]['english'];
+
+}
+
+
+
+
+
+        function parseCurrency(valueStr) { if (typeof valueStr !== 'string') return 0; return parseFloat(valueStr.replace(/[^0-9.-]+/g, '')) || 0; }
+
+        function updateAllInsights() { /* ... same as previous version ... */ }
+
+        function updateHeaderTitle(dashboardUrl, lang) { /* ... same as previous version ... */ }
+
+        function loadDashboard(event, dashboardUrl) { /* ... same as previous version ... */ }
+
+        function translatePage(lang) { /* ... same as previous version ... */ }
+
+        function updateDateTime() { /* ... same as previous version ... */ }
+
+
+
+        function broadcastLanguageChange(lang) {
+
+            currentLang = lang;
+
+            localStorage.setItem('portalLang', lang);
+
+            document.documentElement.lang = lang;
+
+            document.documentElement.dir = lang === 'ar' ? 'rtl' : 'ltr';
+            
+            document.body.dir = lang === 'ar' ? 'rtl' : 'ltr';
+
+            translatePage(lang);
+
+            document.querySelectorAll('.lang-btn-modal').forEach(btn => {
+
+                btn.classList.remove('bg-gray-800', 'text-white');
+
+                if (btn.dataset.lang === lang) {
+
+                    btn.classList.add('bg-gray-800', 'text-white');
+
+                }
+
+            });
+
+            const langMessage = { type: 'SET_LANGUAGE', lang: lang };
+
+            if(mainIframe.contentWindow) mainIframe.contentWindow.postMessage(langMessage, '*');
+
+            updateDateTime();
+
+            setTimeout(closeSettingsModal, 200);
+
+        }
+
+
+
+        window.addEventListener('message', (event) => {
+
+    if (event.data && event.data.type) {
+
+        switch (event.data.type) {
+
+            case 'PAYABLE_DATA':
+
+                payableDataStore = event.data.payload;
+
+                // Correctly store detailed data from the payload
+
+                if (event.data.payload.suppliers) payableDataDetail.suppliers = event.data.payload.suppliers;
+
+                if (event.data.payload.invoices) payableDataDetail.invoices = event.data.payload.invoices;
+
+                if (event.data.payload.purchases) payableDataDetail.purchases = event.data.payload.purchases;
+
+                if (event.data.payload.payments) payableDataDetail.payments = event.data.payload.payments;
+
+                updateAllInsights();
+
+                break;
+
+
+            case 'INVOICE_DATA_DETAIL':
+
+
+                payableDataDetail.invoices = event.data.payload;
+
+
+                break;
+
+
+            case 'PURCHASE_DATA_DETAIL':
+
+
+                payableDataDetail.purchases = event.data.payload;
+
+
+                break;
+
+
+            case 'FORECASTING_DATA':
+
+
+                forecastingDataStore = event.data.payload;
+
+
+                if (event.data.payload.forecastDetails) forecastingDataDetail.forecastDetails = event.data.payload.forecastDetails;
+
+                updateAllInsights();
+
+
+                break;
+
+            case 'FORECAST_TABLE_DATA':
+
+                forecastingDataDetail.tableData = event.data.payload;
+
+
+                break;
+
+            case 'WAREHOUSE_DATA':
+                console.log('Received warehouse data:', event.data.payload);
+                warehouseDataStore = event.data.payload;
+                console.log('Updated warehouseDataStore:', warehouseDataStore);
+                if (event.data.payload.inventory) warehouseDataDetail.inventory = event.data.payload.inventory;
+                if (event.data.payload.transfers) warehouseDataDetail.transfers = event.data.payload.transfers;
+                if (event.data.payload.purchasing) warehouseDataDetail.purchasing = event.data.payload.purchasing;
+                if (event.data.payload.rmDetails) warehouseDataDetail.rmDetails = event.data.payload.rmDetails;
+                updateAllInsights();
+                console.log('Updated all insights with warehouse data');
+                break;
+            case 'SET_LANGUAGE':
+
+                broadcastLanguageChange(event.data.lang);
+
+                break;
+
+        }
+
+    }
+
+});
+
+
+
+        document.addEventListener('DOMContentLoaded', () => {
+            // Clear all caches before initializing
+            if ('caches' in window) {
+                caches.keys().then(function(names) {
+                    names.forEach(function(name) {
+                        caches.delete(name);
+                    });
+                });
+            }
+            
+            // Unregister service workers
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.getRegistrations().then(function(registrations) {
+                    for(let registration of registrations) {
+                        registration.unregister();
+                    }
+                });
+            }
+            
+            // Initialize login system first
+            initializeLogin();
+            
+            // Initialize the portal with caching
+            initializePortal();
+            
+            broadcastLanguageChange(currentLang);
+            updateDateTime();
+            setInterval(updateDateTime, 60000);
+        });
+
+
+
+
+        // Duplicated functions for brevity
+
+
+        function cacheCurrentInsights() {
+            if (!payableDataStore || !forecastingDataStore) return;
+            
+            // Calculate all insights and cache them
+            const totalDues = parseCurrency(payableDataStore.totalDues);
+            const overdues = parseCurrency(payableDataStore.overdues);
+            const totalSuppliers = parseInt(payableDataStore.totalSuppliers) || 0;
+            const purchaseBudget = parseCurrency(forecastingDataStore.kpiTotalBudget);
+            const potentialSavings = parseCurrency(forecastingDataStore.kpiSavings);
+            const overstockValue = parseCurrency(forecastingDataStore.kpiOverstock);
+            const forecastAccuracy = parseFloat(forecastingDataStore.kpiForecastAccuracy) || 0;
+            
+            // Calculate warehouse metrics
+            let inventoryValue = 0, transferValue = 0, purchaseValue = 0, outOfStock = 0, lowStock = 0;
+            if (warehouseDataStore) {
+                inventoryValue = parseCurrency(warehouseDataStore.totalInventoryValue) || 0;
+                transferValue = parseCurrency(warehouseDataStore.transferValue) || 0;
+                purchaseValue = parseCurrency(warehouseDataStore.purchaseValue) || 0;
+                outOfStock = parseInt(warehouseDataStore.outOfStock) || 0;
+                lowStock = parseInt(warehouseDataStore.lowStock) || 0;
+            }
+            
+            // Calculate all derived metrics
+            const overdueRatio = totalDues > 0 ? (overdues / totalDues) * 100 : 0;
+            let score = 100 - (overdueRatio * 1.5) + ((forecastAccuracy - 85) * 1) - ((totalDues > 0 ? ((overdues + overstockValue) / totalDues) * 100 : 0) * 0.5);
+            score = Math.max(0, Math.min(100, score));
+            const currentDues = totalDues - overdues;
+            const currentPercent = totalDues > 0 ? (currentDues / totalDues) * 100 : 100;
+            const overduePercent = totalDues > 0 ? (overdues / totalDues) * 100 : 0;
+            const totalOutflow = totalDues + purchaseBudget;
+            const nonProductiveCapital = overdues + overstockValue;
+            const savingsImpact = totalDues > 0 ? (potentialSavings / totalDues) * 100 : 0;
+            const avgDebt = totalSuppliers > 0 ? totalDues / totalSuppliers : 0;
+            const forecastInaccuracy = 100 - forecastAccuracy;
+            const savingsPerPercent = forecastInaccuracy > 0 ? (overstockValue / forecastInaccuracy) : 0;
+            
+            // Advanced insights
+            const operationalIQ = Math.min(100, (forecastAccuracy + (100 - overdueRatio) + (warehouseDataStore ? 85 : 70)) / 3);
+            const riskExposure = Math.min(100, overdueRatio + (100 - forecastAccuracy) + (warehouseDataStore ? 15 : 30));
+            const growthPotential = Math.min(100, forecastAccuracy + (100 - overdueRatio) + (potentialSavings > 100000 ? 20 : 0));
+            const processOptimization = Math.min(100, forecastAccuracy + (100 - overdueRatio) + (warehouseDataStore ? 80 : 60));
+            const profitabilityIndex = Math.min(100, forecastAccuracy + (potentialSavings > 100000 ? 20 : 0) + (warehouseDataStore ? 15 : 0));
+            const financialStability = Math.min(100, score + (forecastAccuracy > 90 ? 10 : 0));
+            const revenueOptimization = Math.min(100, forecastAccuracy + (potentialSavings > 150000 ? 25 : 0));
+            const costEfficiency = Math.min(100, forecastAccuracy + (potentialSavings / totalDues * 100));
+            const supplyChainEfficiency = warehouseDataStore ? Math.min(100, forecastAccuracy + 20) : Math.min(100, forecastAccuracy);
+            const vendorPerformance = Math.min(100, forecastAccuracy + (100 - overdueRatio) + (totalSuppliers > 200 ? 10 : 0));
+            const demandAccuracy = forecastAccuracy;
+            const operationalExcellence = Math.min(100, (forecastAccuracy + (100 - overdueRatio) + (warehouseDataStore ? 85 : 70)) / 3);
+            const inventoryEfficiency = calculateInventoryEfficiency(inventoryValue, outOfStock, lowStock, forecastAccuracy);
+            const procurementAlignment = calculateProcurementAlignment(purchaseBudget, purchaseValue, totalDues);
+            const totalCashFlow = totalDues + purchaseBudget + inventoryValue;
+            
+            // Cache all insights
+            cachedInsights = {
+                // Basic KPIs
+                payableDues: payableDataStore.totalDues,
+                payableSuppliers: payableDataStore.totalSuppliers,
+                payableOverdues: payableDataStore.overdues,
+                payableTx: payableDataStore.totalTransactions,
+                forecastBudget: forecastingDataStore.kpiTotalBudget,
+                forecastItems: forecastingDataStore.kpiItemsToOrder,
+                forecastSavings: forecastingDataStore.kpiSavings,
+                forecastOverstock: forecastingDataStore.kpiOverstock,
+                forecastAccuracy: forecastingDataStore.kpiForecastAccuracy,
+                
+                // Warehouse KPIs
+                warehouseInventory: warehouseDataStore ? warehouseDataStore.totalInventoryValue : 'SAR 0',
+                warehouseOutstock: warehouseDataStore ? warehouseDataStore.outOfStock : '0',
+                warehouseLowstock: warehouseDataStore ? warehouseDataStore.lowStock : '0',
+                warehouseTransfers: warehouseDataStore ? warehouseDataStore.transferValue : 'SAR 0',
+                warehousePurchases: warehouseDataStore ? warehouseDataStore.purchaseValue : 'SAR 0',
+                
+                // Calculated metrics
+                healthScore: Math.round(score),
+                currentDues: currentDues,
+                currentPercent: currentPercent,
+                overduePercent: overduePercent,
+                overdueRatio: overdueRatio,
+                totalOutflow: totalOutflow,
+                nonProductiveCapital: nonProductiveCapital,
+                savingsImpact: savingsImpact,
+                avgDebt: avgDebt,
+                savingsPerPercent: savingsPerPercent,
+                
+                // Advanced insights
+                operationalIQ: operationalIQ,
+                riskExposure: riskExposure,
+                growthPotential: growthPotential,
+                processOptimization: processOptimization,
+                profitabilityIndex: profitabilityIndex,
+                financialStability: financialStability,
+                revenueOptimization: revenueOptimization,
+                costEfficiency: costEfficiency,
+                supplyChainEfficiency: supplyChainEfficiency,
+                vendorPerformance: vendorPerformance,
+                demandAccuracy: demandAccuracy,
+                operationalExcellence: operationalExcellence,
+                inventoryEfficiency: inventoryEfficiency,
+                procurementAlignment: procurementAlignment,
+                totalCashFlow: totalCashFlow,
+                
+                // Recommendation
+                recommendation: generateRecommendation(overdues, potentialSavings, nonProductiveCapital, totalDues)
+            };
+            
+            console.log("Insights cached for consistent First Time view");
+            
+            // Show consistency indicator
+            const indicator = document.getElementById('data-consistency-indicator');
+            if (indicator) {
+                indicator.classList.remove('hidden');
+            }
+        }
+        
+        function restoreCachedInsights() {
+            if (!cachedInsights) return;
+            
+            // Restore all KPIs
+            document.getElementById('kpi-payable-dues').innerHTML = cachedInsights.payableDues;
+            document.getElementById('kpi-payable-suppliers').innerHTML = cachedInsights.payableSuppliers;
+            document.getElementById('kpi-payable-overdues').innerHTML = cachedInsights.payableOverdues;
+            document.getElementById('kpi-payable-tx').innerHTML = cachedInsights.payableTx;
+            document.getElementById('kpi-forecast-budget').innerHTML = cachedInsights.forecastBudget;
+            document.getElementById('kpi-forecast-items').innerHTML = cachedInsights.forecastItems;
+            document.getElementById('kpi-forecast-savings').innerHTML = cachedInsights.forecastSavings;
+            document.getElementById('kpi-forecast-overstock').innerHTML = cachedInsights.forecastOverstock;
+            document.getElementById('kpi-forecast-accuracy').innerHTML = cachedInsights.forecastAccuracy;
+            
+            // Restore warehouse KPIs
+            document.getElementById('kpi-warehouse-inventory').innerHTML = cachedInsights.warehouseInventory;
+            document.getElementById('kpi-warehouse-outstock').innerHTML = cachedInsights.warehouseOutstock;
+            document.getElementById('kpi-warehouse-lowstock').innerHTML = cachedInsights.warehouseLowstock;
+            document.getElementById('kpi-warehouse-transfers').innerHTML = cachedInsights.warehouseTransfers;
+            document.getElementById('kpi-warehouse-purchases').innerHTML = cachedInsights.warehousePurchases;
+            
+            // Restore health gauge
+            const gaugeEl = document.getElementById('health-gauge');
+            document.getElementById('health-score-value').textContent = cachedInsights.healthScore;
+            gaugeEl.style.setProperty('--p', cachedInsights.healthScore);
+            let color1 = '#dc2626';
+            if(cachedInsights.healthScore > 50) color1 = '#f59e0b';
+            if(cachedInsights.healthScore > 75) color1 = '#16a34a';
+            gaugeEl.style.setProperty('--c1', color1);
+            gaugeEl.style.setProperty('--c2', '#e5e7eb');
+            
+            // Restore aging analysis
+            document.getElementById('aging-value-current').textContent = `SAR ${cachedInsights.currentDues.toLocaleString()}`;
+            document.getElementById('aging-bar-current').style.width = `${cachedInsights.currentPercent}%`;
+            document.getElementById('aging-value-overdue').textContent = `SAR ${cachedInsights.overduePercent.toLocaleString()}`;
+            document.getElementById('aging-bar-overdue').style.width = `${cachedInsights.overduePercent}%`;
+            
+            // Restore recommendation
+            document.getElementById('recommendation-text').innerHTML = cachedInsights.recommendation;
+            
+            // Restore key metrics
+            document.getElementById('insight-outflow').textContent = `SAR ${cachedInsights.totalOutflow.toLocaleString()}`;
+            document.getElementById('insight-capital-risk').textContent = `SAR ${cachedInsights.nonProductiveCapital.toLocaleString()}`;
+            document.getElementById('insight-overdue-ratio').textContent = `${cachedInsights.overdueRatio.toFixed(1)}%`;
+            document.getElementById('insight-accuracy-cost').textContent = `≈ SAR ${Math.round(cachedInsights.savingsPerPercent).toLocaleString()}`;
+            document.getElementById('insight-savings-impact').textContent = `${cachedInsights.savingsImpact.toFixed(1)}%`;
+            document.getElementById('insight-avg-debt').textContent = `SAR ${Math.round(cachedInsights.avgDebt).toLocaleString()}`;
+            
+            // Restore advanced ERP insights
+            document.getElementById('insight-operational-iq').textContent = `${cachedInsights.operationalIQ.toFixed(1)}%`;
+            document.getElementById('insight-risk-exposure').textContent = `${cachedInsights.riskExposure.toFixed(1)}%`;
+            document.getElementById('insight-growth-potential').textContent = `${cachedInsights.growthPotential.toFixed(1)}%`;
+            document.getElementById('insight-process-optimization').textContent = `${cachedInsights.processOptimization.toFixed(1)}%`;
+            
+            // Restore advanced financial intelligence
+            document.getElementById('insight-profitability').textContent = `${cachedInsights.profitabilityIndex.toFixed(1)}%`;
+            document.getElementById('insight-financial-stability').textContent = `${cachedInsights.financialStability.toFixed(1)}%`;
+            document.getElementById('insight-revenue-optimization').textContent = `${cachedInsights.revenueOptimization.toFixed(1)}%`;
+            document.getElementById('insight-cost-efficiency').textContent = `${cachedInsights.costEfficiency.toFixed(1)}%`;
+            
+            // Restore advanced performance analytics
+            document.getElementById('insight-supply-chain').textContent = `${cachedInsights.supplyChainEfficiency.toFixed(1)}%`;
+            document.getElementById('insight-vendor-performance').textContent = `${cachedInsights.vendorPerformance.toFixed(1)}%`;
+            document.getElementById('insight-demand-accuracy').textContent = `${cachedInsights.demandAccuracy.toFixed(1)}%`;
+            document.getElementById('insight-operational-excellence').textContent = `${cachedInsights.operationalExcellence.toFixed(1)}%`;
+            
+            // Restore cross-data insights
+            document.getElementById('insight-cash-flow').textContent = `SAR ${cachedInsights.totalCashFlow.toLocaleString()}`;
+            document.getElementById('insight-inventory-efficiency').textContent = `${cachedInsights.inventoryEfficiency.toFixed(1)}%`;
+            document.getElementById('insight-procurement').textContent = `${cachedInsights.procurementAlignment.toFixed(1)}%`;
+            
+            console.log("Cached insights restored for consistent First Time view");
+            
+            // Show consistency indicator
+            const indicator = document.getElementById('data-consistency-indicator');
+            if (indicator) {
+                indicator.classList.remove('hidden');
+            }
+        }
+        
+        function generateRecommendation(overdues, potentialSavings, nonProductiveCapital, totalDues) {
+            if (overdues > 0 && potentialSavings > 0) {
+                const clearablePercent = (potentialSavings / overdues) * 100;
+                return `${i18n[currentLang].rec_1_part_1}SAR ${potentialSavings.toLocaleString()}${i18n[currentLang].rec_1_part_2}${Math.min(100, clearablePercent).toFixed(0)}%${i18n[currentLang].rec_1_part_3}`;
+            } else if (nonProductiveCapital > (totalDues * 0.2)) {
+                return `${i18n[currentLang].rec_2_part_1}SAR ${nonProductiveCapital.toLocaleString()}${i18n[currentLang].rec_2_part_2}`;
+            } else {
+                return i18n[currentLang].rec_3;
+            }
+        }
+
+        function updateAllInsights() { 
+            if (!payableDataStore || !forecastingDataStore) return; 
+            
+            // Update existing KPIs
+            document.getElementById('kpi-payable-dues').innerHTML = payableDataStore.totalDues; 
+            document.getElementById('kpi-payable-suppliers').innerHTML = payableDataStore.totalSuppliers; 
+            document.getElementById('kpi-payable-overdues').innerHTML = payableDataStore.overdues; 
+            document.getElementById('kpi-payable-tx').innerHTML = payableDataStore.totalTransactions; 
+            document.getElementById('kpi-forecast-budget').innerHTML = forecastingDataStore.kpiTotalBudget; 
+            document.getElementById('kpi-forecast-items').innerHTML = forecastingDataStore.kpiItemsToOrder; 
+            document.getElementById('kpi-forecast-savings').innerHTML = forecastingDataStore.kpiSavings; 
+            document.getElementById('kpi-forecast-overstock').innerHTML = forecastingDataStore.kpiOverstock; 
+            document.getElementById('kpi-forecast-accuracy').innerHTML = forecastingDataStore.kpiForecastAccuracy; 
+            
+            // Update warehouse KPIs if data is available
+            console.log('Updating warehouse KPIs, warehouseDataStore:', warehouseDataStore);
+            if (warehouseDataStore) {
+                console.log('Setting warehouse KPI values:', {
+                    inventory: warehouseDataStore.totalInventoryValue,
+                    outOfStock: warehouseDataStore.outOfStock,
+                    lowStock: warehouseDataStore.lowStock,
+                    transfers: warehouseDataStore.transferValue,
+                    purchases: warehouseDataStore.purchaseValue
+                });
+                document.getElementById('kpi-warehouse-inventory').innerHTML = warehouseDataStore.totalInventoryValue || 'SAR 0';
+                document.getElementById('kpi-warehouse-outstock').innerHTML = warehouseDataStore.outOfStock || '0';
+                document.getElementById('kpi-warehouse-lowstock').innerHTML = warehouseDataStore.lowStock || '0';
+                document.getElementById('kpi-warehouse-transfers').innerHTML = warehouseDataStore.transferValue || 'SAR 0';
+                document.getElementById('kpi-warehouse-purchases').innerHTML = warehouseDataStore.purchaseValue || 'SAR 0';
+            } else {
+                console.log('No warehouse data available, showing loading spinners');
+                document.getElementById('kpi-warehouse-inventory').innerHTML = '<div class="loading-spinner"></div>';
+                document.getElementById('kpi-warehouse-outstock').innerHTML = '<div class="loading-spinner"></div>';
+                document.getElementById('kpi-warehouse-lowstock').innerHTML = '<div class="loading-spinner"></div>';
+                document.getElementById('kpi-warehouse-transfers').innerHTML = '<div class="loading-spinner"></div>';
+                document.getElementById('kpi-warehouse-purchases').innerHTML = '<div class="loading-spinner"></div>';
+            }
+            
+            // Calculate existing metrics
+            const totalDues = parseCurrency(payableDataStore.totalDues); 
+            const overdues = parseCurrency(payableDataStore.overdues); 
+            const totalSuppliers = parseInt(payableDataStore.totalSuppliers) || 0; 
+            const purchaseBudget = parseCurrency(forecastingDataStore.kpiTotalBudget); 
+            const potentialSavings = parseCurrency(forecastingDataStore.kpiSavings); 
+            const overstockValue = parseCurrency(forecastingDataStore.kpiOverstock); 
+            const forecastAccuracy = parseFloat(forecastingDataStore.kpiForecastAccuracy) || 0; 
+            
+            // Calculate cross-data insights
+            let inventoryValue = 0;
+            let transferValue = 0;
+            let purchaseValue = 0;
+            let outOfStock = 0;
+            let lowStock = 0;
+            
+            if (warehouseDataStore) {
+                inventoryValue = parseCurrency(warehouseDataStore.totalInventoryValue) || 0;
+                transferValue = parseCurrency(warehouseDataStore.transferValue) || 0;
+                purchaseValue = parseCurrency(warehouseDataStore.purchaseValue) || 0;
+                outOfStock = parseInt(warehouseDataStore.outOfStock) || 0;
+                lowStock = parseInt(warehouseDataStore.lowStock) || 0;
+            }
+            
+            // Cross-data analytics
+            const totalInventoryValue = inventoryValue;
+            const totalCashFlow = totalDues + purchaseBudget + inventoryValue;
+            const inventoryEfficiency = calculateInventoryEfficiency(inventoryValue, outOfStock, lowStock, forecastAccuracy);
+            const procurementAlignment = calculateProcurementAlignment(purchaseBudget, purchaseValue, totalDues);
+            
+            // Update cross-data insights
+            document.getElementById('insight-cash-flow').textContent = `SAR ${totalCashFlow.toLocaleString()}`;
+            document.getElementById('insight-inventory-efficiency').textContent = `${inventoryEfficiency.toFixed(1)}%`;
+            document.getElementById('insight-procurement').textContent = `${procurementAlignment.toFixed(1)}%`;
+            
+            // Existing calculations
+            const overdueRatio = totalDues > 0 ? (overdues / totalDues) * 100 : 0; 
+            let score = 100 - (overdueRatio * 1.5) + ((forecastAccuracy - 85) * 1) - ((totalDues > 0 ? ((overdues + overstockValue) / totalDues) * 100 : 0) * 0.5); 
+            score = Math.max(0, Math.min(100, score)); 
+            const currentDues = totalDues - overdues; 
+            const currentPercent = totalDues > 0 ? (currentDues / totalDues) * 100 : 100; 
+            const overduePercent = totalDues > 0 ? (overdues / totalDues) * 100 : 0; 
+            const totalOutflow = totalDues + purchaseBudget; 
+            const nonProductiveCapital = overdues + overstockValue; 
+            const savingsImpact = totalDues > 0 ? (potentialSavings / totalDues) * 100 : 0; 
+            const avgDebt = totalSuppliers > 0 ? totalDues / totalSuppliers : 0; 
+            const forecastInaccuracy = 100 - forecastAccuracy; 
+            const savingsPerPercent = forecastInaccuracy > 0 ? (overstockValue / forecastInaccuracy) : 0; 
+            
+            // Update existing UI elements
+            const gaugeEl = document.getElementById('health-gauge'); 
+            document.getElementById('health-score-value').textContent = Math.round(score); 
+            gaugeEl.style.setProperty('--p', score); 
+            let color1 = '#dc2626'; 
+            if(score > 50) color1 = '#f59e0b'; 
+            if(score > 75) color1 = '#16a34a'; 
+            gaugeEl.style.setProperty('--c1', color1); 
+            gaugeEl.style.setProperty('--c2', '#e5e7eb'); 
+            document.getElementById('aging-value-current').textContent = `SAR ${currentDues.toLocaleString()}`; 
+            document.getElementById('aging-bar-current').style.width = `${currentPercent}%`; 
+            document.getElementById('aging-value-overdue').textContent = `SAR ${overdues.toLocaleString()}`; 
+            document.getElementById('aging-bar-overdue').style.width = `${overduePercent}%`; 
+            const recommendationEl = document.getElementById('recommendation-text'); 
+            if (overdues > 0 && potentialSavings > 0) { 
+                const clearablePercent = (potentialSavings / overdues) * 100; 
+                recommendationEl.innerHTML = `${i18n[currentLang].rec_1_part_1}SAR ${potentialSavings.toLocaleString()}${i18n[currentLang].rec_1_part_2}${Math.min(100, clearablePercent).toFixed(0)}%${i18n[currentLang].rec_1_part_3}`; 
+            } else if (nonProductiveCapital > (totalDues * 0.2)) { 
+                recommendationEl.innerHTML = `${i18n[currentLang].rec_2_part_1}SAR ${nonProductiveCapital.toLocaleString()}${i18n[currentLang].rec_2_part_2}`; 
+            } else { 
+                recommendationEl.innerHTML = i18n[currentLang].rec_3; 
+            } 
+            document.getElementById('insight-outflow').textContent = `SAR ${totalOutflow.toLocaleString()}`; 
+            document.getElementById('insight-capital-risk').textContent = `SAR ${nonProductiveCapital.toLocaleString()}`; 
+            document.getElementById('insight-overdue-ratio').textContent = `${overdueRatio.toFixed(1)}%`; 
+            document.getElementById('insight-accuracy-cost').textContent = `≈ SAR ${Math.round(savingsPerPercent).toLocaleString()}`; 
+            document.getElementById('insight-savings-impact').textContent = `${savingsImpact.toFixed(1)}%`; 
+            document.getElementById('insight-avg-debt').textContent = `SAR ${Math.round(avgDebt).toLocaleString()}`; 
+            
+            // Advanced ERP Insights
+            const operationalIQ = Math.min(100, (forecastAccuracy + (100 - overdueRatio) + (warehouseDataStore ? 85 : 70)) / 3);
+            const riskExposure = Math.min(100, overdueRatio + (100 - forecastAccuracy) + (warehouseDataStore ? 15 : 30));
+            const growthPotential = Math.min(100, forecastAccuracy + (100 - overdueRatio) + (potentialSavings > 100000 ? 20 : 0));
+            const processOptimization = Math.min(100, forecastAccuracy + (100 - overdueRatio) + (warehouseDataStore ? 80 : 60));
+            
+            document.getElementById('insight-operational-iq').textContent = `${operationalIQ.toFixed(1)}%`;
+            document.getElementById('insight-risk-exposure').textContent = `${riskExposure.toFixed(1)}%`;
+            document.getElementById('insight-growth-potential').textContent = `${growthPotential.toFixed(1)}%`;
+            document.getElementById('insight-process-optimization').textContent = `${processOptimization.toFixed(1)}%`;
+            
+            // Advanced Financial Intelligence
+            const profitabilityIndex = Math.min(100, forecastAccuracy + (potentialSavings > 100000 ? 20 : 0) + (warehouseDataStore ? 15 : 0));
+            const financialStability = Math.min(100, score + (forecastAccuracy > 90 ? 10 : 0));
+            const revenueOptimization = Math.min(100, forecastAccuracy + (potentialSavings > 150000 ? 25 : 0));
+            const costEfficiency = Math.min(100, forecastAccuracy + (potentialSavings / totalDues * 100));
+            
+            document.getElementById('insight-profitability').textContent = `${profitabilityIndex.toFixed(1)}%`;
+            document.getElementById('insight-financial-stability').textContent = `${financialStability.toFixed(1)}%`;
+            document.getElementById('insight-revenue-optimization').textContent = `${revenueOptimization.toFixed(1)}%`;
+            document.getElementById('insight-cost-efficiency').textContent = `${costEfficiency.toFixed(1)}%`;
+            
+            // Advanced Performance Analytics
+            const supplyChainEfficiency = warehouseDataStore ? Math.min(100, forecastAccuracy + 20) : Math.min(100, forecastAccuracy);
+            const vendorPerformance = Math.min(100, forecastAccuracy + (100 - overdueRatio) + (totalSuppliers > 200 ? 10 : 0));
+            const demandAccuracy = forecastAccuracy;
+            const operationalExcellence = Math.min(100, (forecastAccuracy + (100 - overdueRatio) + (warehouseDataStore ? 85 : 70)) / 3);
+            
+            document.getElementById('insight-supply-chain').textContent = `${supplyChainEfficiency.toFixed(1)}%`;
+            document.getElementById('insight-vendor-performance').textContent = `${vendorPerformance.toFixed(1)}%`;
+            document.getElementById('insight-demand-accuracy').textContent = `${demandAccuracy.toFixed(1)}%`;
+            document.getElementById('insight-operational-excellence').textContent = `${operationalExcellence.toFixed(1)}%`;
+        }
+        
+        function calculateInventoryEfficiency(inventoryValue, outOfStock, lowStock, forecastAccuracy) {
+            if (inventoryValue === 0) return 0;
+            const stockHealth = Math.max(0, 100 - (outOfStock * 2) - (lowStock * 0.5));
+            const accuracyBonus = forecastAccuracy * 0.3;
+            return Math.min(100, stockHealth + accuracyBonus);
+        }
+        
+        function calculateProcurementAlignment(forecastBudget, actualPurchases, totalDues) {
+            if (forecastBudget === 0) return 0;
+            const budgetAlignment = Math.min(100, (actualPurchases / forecastBudget) * 100);
+            const paymentHealth = totalDues > 0 ? Math.max(0, 100 - ((totalDues - actualPurchases) / totalDues) * 100) : 100;
+            return (budgetAlignment + paymentHealth) / 2;
+        }
+        function updateHeaderTitle(dashboardUrl, lang) { let key = 'hub_title'; const activeLink = document.querySelector(`.nav-link.active`); if (activeLink) { const newUrl = activeLink.getAttribute('onclick').match(/'([^']+)'/)[1]; if (newUrl === 'payable.html') key = 'payable_title'; else if (newUrl === 'forecasting.html') key = 'forecasting_title'; else if (newUrl === 'Warehouse.html') key = 'warehouse_title'; } headerTitle.textContent = i18n[lang][key] || 'Sakura Hub'; }
+        function loadDashboard(event, dashboardUrl) {
+            event.preventDefault();
+
+            navLinks.forEach(link => link.classList.remove('active'));
+            event.currentTarget.classList.add('active');
+
+            if (window.innerWidth < 768 && sidebar.classList.contains('open')) { 
+                toggleMenu(); 
+            }
+
+            updateHeaderTitle(dashboardUrl, currentLang);
+
+            if (dashboardUrl === 'home') {
+                homeScreen.classList.remove('hidden');
+                mainIframe.style.display = 'none';
+                
+                // When returning to home, restore cached insights for consistency
+                if (cachedInsights) {
+                    console.log("Returning to home - restoring cached insights for consistent First Time view");
+                    restoreCachedInsights();
+                }
+            } else {
+                homeScreen.classList.add('hidden');
+                mainIframe.style.display = 'block';
+
+                if (!mainIframe.src.includes(dashboardUrl)) {
+                    mainIframe.src = dashboardUrl;
+                    mainIframe.onload = () => {
+                        if (mainIframe.contentWindow) {
+                            // Auto-load warehouse data when warehouse dashboard is opened
+                            if (dashboardUrl === 'Warehouse.html') {
+                                setTimeout(() => {
+                                    console.log('Requesting warehouse data from iframe...');
+                                    mainIframe.contentWindow.postMessage({ type: 'AUTO_LOAD_DATA' }, '*');
+                                }, 1000);
+                            }
+                            mainIframe.contentWindow.postMessage({ type: 'REQUEST_DATA_DUMP' }, '*');
+                        }
+                    };
+                } else {
+                    // This case handles when the iframe is already loaded, but the user switches to a different tab and comes back
+                    if (mainIframe.contentWindow) {
+                        if (dashboardUrl === 'Warehouse.html') {
+                            console.log('Requesting warehouse data from already loaded iframe...');
+                            mainIframe.contentWindow.postMessage({ type: 'AUTO_LOAD_DATA' }, '*');
+                        }
+                        mainIframe.contentWindow.postMessage({ type: 'REQUEST_DATA_DUMP' }, '*');
+                    }
+                }
+            }
+        }
+
+        function translatePage(lang) { document.querySelectorAll('[data-key]').forEach(el => { const key = el.dataset.key; if (i18n[lang] && i18n[lang][key]) { el.textContent = i18n[lang][key]; } }); if (payableDataStore && forecastingDataStore) { updateAllInsights(); } updateHeaderTitle(null, lang); }
+
+        function updateDateTime() { const now = new Date(); const locale = currentLang === 'ar' ? 'ar-SA-u-nu-latn' : 'en-US'; const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true }; document.getElementById('current-date-time').textContent = now.toLocaleDateString(locale, options); }
+
+        setInterval(updateDateTime, 1000);
+        
+        // Function to manually force load warehouse data
+        function forceLoadWarehouseData() {
+            console.log('Manually forcing warehouse data load...');
+            loadDashboard('Warehouse.html');
+            setTimeout(() => {
+                const warehouseIframe = document.getElementById('main-iframe');
+                if (warehouseIframe && warehouseIframe.contentWindow) {
+                    console.log('Sending AUTO_LOAD_DATA message to warehouse iframe...');
+                    warehouseIframe.contentWindow.postMessage({ type: 'AUTO_LOAD_DATA' }, '*');
+                } else {
+                    console.log('Warehouse iframe not found or not loaded');
+                }
+            }, 1000);
+        }
+        
+        // Make function globally available for console testing
+        window.forceLoadWarehouseData = forceLoadWarehouseData;
+        
+        // Function to load warehouse data from JSON
+        async function loadWarehouseDataFromJson() {
+            try {
+                console.log('Loading warehouse data from JSON...');
+                const response = await fetch('https://script.google.com/macros/s/AKfycbwXsCmhup6vpAkTywvA0zlMlCIy1pMtlCyq0jEGFMF_QhUSlaOw9_i1qZr_hp8Qh7-/exec');
+                const data = await response.json();
+                
+                if (data.warehouseData) {
+                    console.log('Warehouse data loaded from JSON:', data.warehouseData);
+                    warehouseDataStore = data.warehouseData;
+                    updateAllInsights();
+                } else {
+                    console.log('No warehouse data found in JSON');
+                }
+            } catch (error) {
+                console.error('Error loading warehouse data from JSON:', error);
+            }
+        }
+
+        // Function to force refresh data (for manual refresh when needed)
+        function forceRefreshData() {
+            console.log("Force refreshing data...");
+            initialDataLoaded = false;
+            cachedInsights = null;
+            dataLoadTimestamp = null;
+            
+            // Hide consistency indicator during refresh
+            const indicator = document.getElementById('data-consistency-indicator');
+            if (indicator) {
+                indicator.classList.add('hidden');
+            }
+            
+            initializePortal();
+        }
+        
+        // Make force refresh available globally for debugging
+        window.forceRefreshData = forceRefreshData;
+        
+        // PWA Install functionality
+        let deferredPrompt;
+        
+        // Listen for beforeinstallprompt event
+        window.addEventListener('beforeinstallprompt', (e) => {
+            console.log('PWA: Install prompt triggered');
+            e.preventDefault();
+            deferredPrompt = e;
+            
+            // Show install button
+            const installBtn = document.getElementById('install-app-btn');
+            if (installBtn) {
+                installBtn.classList.remove('hidden');
+            }
+        });
+        
+        // Install app function
+        function installApp() {
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                deferredPrompt.userChoice.then((choiceResult) => {
+                    if (choiceResult.outcome === 'accepted') {
+                        console.log('PWA: User accepted install');
+                    } else {
+                        console.log('PWA: User dismissed install');
+                    }
+                    deferredPrompt = null;
+                    
+                    // Hide install button
+                    const installBtn = document.getElementById('install-app-btn');
+                    if (installBtn) {
+                        installBtn.classList.add('hidden');
+                    }
+                });
+            }
+        }
+        
+        // Listen for app installed event
+        window.addEventListener('appinstalled', (evt) => {
+            console.log('PWA: App installed successfully');
+            
+            // Hide install button
+            const installBtn = document.getElementById('install-app-btn');
+            if (installBtn) {
+                installBtn.classList.add('hidden');
+            }
+            
+            // Show success message
+            alert('Sakura Portal installed successfully! You can now access it from your home screen.');
+        });
+        
+        // Check if app is already installed
+        if (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true) {
+            console.log('PWA: App is running in standalone mode');
+            // Hide install button if already installed
+            const installBtn = document.getElementById('install-app-btn');
+            if (installBtn) {
+                installBtn.classList.add('hidden');
+            }
+        }
+        
+        // Initialize the dashboard
+        window.onload = () => {
+            // Register Service Worker for PWA
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.register('/sw.js')
+                    .then((registration) => {
+                        console.log('Service Worker registered successfully:', registration.scope);
+                        
+                        // Check for updates
+                        registration.addEventListener('updatefound', () => {
+                            const newWorker = registration.installing;
+                            newWorker.addEventListener('statechange', () => {
+                                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                                    // New version available
+                                    if (confirm('New version available! Reload to update?')) {
+                                        window.location.reload();
+                                    }
+                                }
+                            });
+                        });
+                    })
+                    .catch((error) => {
+                        console.log('Service Worker registration failed:', error);
+                    });
+            }
+            
+            // Set initial language and direction
+            document.documentElement.lang = currentLang;
+            document.documentElement.dir = currentLang === 'ar' ? 'rtl' : 'ltr';
+            document.body.dir = currentLang === 'ar' ? 'rtl' : 'ltr';
+            
+            translatePage(currentLang);
+            
+            // Initialize portal with caching
+            initializePortal();
+            
+            // Load warehouse data from JSON immediately
+            loadWarehouseDataFromJson();
+            
+            // Check for warehouse data periodically in case it loads after the main dashboard
+            setInterval(() => {
+                if (!warehouseDataStore) {
+                    console.log('Checking for warehouse data... warehouseDataStore:', warehouseDataStore);
+                    updateAllInsights();
+                } else {
+                    console.log('Warehouse data found:', warehouseDataStore);
+                }
+            }, 2000);
+            
+            // Force load warehouse data after 5 seconds
+            setTimeout(() => {
+                console.log('Force loading warehouse data...');
+                forceLoadWarehouseData();
+            }, 5000);
+        };
+    </script>
+
+</body>
+
+</html>image.png

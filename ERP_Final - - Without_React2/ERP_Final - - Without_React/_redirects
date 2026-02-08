@@ -1,0 +1,4 @@
+# Netlify/Cloudflare Pages Redirects for Router Support
+# This ensures all routes work correctly with client-side routing
+
+/*    /index.html   200

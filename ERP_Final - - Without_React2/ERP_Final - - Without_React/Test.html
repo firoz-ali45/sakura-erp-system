@@ -1,0 +1,628 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sakura Portal - Accounts Payable Management System</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
+    
+    <meta name="application-name" content="Sakura Portal">
+    <meta name="theme-color" content="#284b44">
+
+    <style>
+        /* Critical CSS */
+        body { font-family: 'Cairo', sans-serif; margin: 0; padding: 0; background-color: #f8f4f0; overflow-x: hidden; overflow-y: auto; }
+        body.menu-open { overflow: hidden; }
+
+        /* Login Screen Styles */
+        .login-screen {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            display: flex; align-items: center; justify-content: center;
+            z-index: 10000; transition: all 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+            overflow: hidden;
+        }
+
+        .login-screen.hidden { opacity: 0; transform: scale(1.1); pointer-events: none; }
+
+        .login-background {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: radial-gradient(circle at 30% 20%, rgba(40, 75, 68, 0.3) 0%, transparent 50%),
+                        radial-gradient(circle at 70% 80%, rgba(149, 108, 42, 0.2) 0%, transparent 50%);
+        }
+
+        .login-particles {
+            position: absolute; width: 100%; height: 100%;
+            background-image: 
+                radial-gradient(2px 2px at 20px 30px, rgba(255,255,255,0.3), transparent),
+                radial-gradient(2px 2px at 40px 70px, rgba(255,255,255,0.2), transparent);
+            background-repeat: repeat; background-size: 200px 200px;
+            animation: particles 20s linear infinite;
+        }
+
+        .login-content {
+            text-align: center; color: white; z-index: 10;
+            animation: fadeInUp 1s ease-out 0.5s both;
+            max-width: 400px; width: 90%;
+        }
+
+        /* --- NEW VIDEO LOGO STYLES (ADDED FOR YOU) --- */
+        .video-logo-wrapper {
+            position: relative;
+            width: 250px;
+            height: 250px;
+            margin: 0 auto 2rem auto;
+            border-radius: 40px; /* Squircle shape */
+            overflow: hidden;
+            /* Floating Animation */
+            animation: logoFloat 6s ease-in-out infinite;
+            /* Pinkish Glow to match your video */
+            box-shadow: 
+                0 20px 50px rgba(0, 0, 0, 0.5),
+                0 0 0 2px rgba(255, 255, 255, 0.1),
+                0 0 30px rgba(234, 137, 144, 0.5);
+            transform-style: preserve-3d;
+            background-color: #ffb7b2;
+        }
+
+        .sakura-video-logo {
+            width: 100%; height: 100%;
+            object-fit: cover;
+            display: block;
+            transform: scale(1.02); /* Slight zoom to hide edges */
+        }
+
+        .video-gloss-overlay {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.25) 0%, transparent 50%, transparent 100%);
+            pointer-events: none; z-index: 2;
+        }
+        /* ------------------------------------------- */
+
+        .login-form {
+            background: rgba(255, 255, 255, 0.1); backdrop-filter: blur(10px);
+            border-radius: 20px; padding: 2rem;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+        }
+
+        .login-title { font-size: 1.5rem; font-weight: 600; margin-bottom: 1rem; color: white; }
+
+        .login-input {
+            width: 100%; padding: 1rem; margin-bottom: 1rem;
+            border: none; border-radius: 10px;
+            background: rgba(255, 255, 255, 0.1); color: white;
+            font-size: 1rem; backdrop-filter: blur(5px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            transition: all 0.3s ease;
+        }
+
+        .login-input::placeholder { color: rgba(255, 255, 255, 0.7); }
+        .login-input:focus { outline: none; background: rgba(255, 255, 255, 0.2); border-color: #ea8990; box-shadow: 0 0 20px rgba(234, 137, 144, 0.3); }
+
+        .login-button {
+            width: 100%; padding: 1rem; border: none; border-radius: 10px;
+            background: linear-gradient(135deg, #284b44 0%, #956c2a 100%);
+            color: white; font-size: 1rem; font-weight: 600; cursor: pointer;
+            transition: all 0.3s ease; margin-top: 1rem;
+        }
+
+        .login-button:hover { transform: translateY(-2px); box-shadow: 0 10px 30px rgba(40, 75, 68, 0.4); }
+        .login-button:active { transform: translateY(0); }
+
+        .login-error { color: #ff6b6b; font-size: 0.9rem; margin-top: 0.5rem; display: none; }
+        .login-error.show { display: block; animation: shake 0.5s ease-in-out; }
+
+        /* Animations */
+        @keyframes logoFloat {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+        }
+        @keyframes particles {
+            0% { transform: translate(0, 0); }
+            100% { transform: translate(-200px, -200px); }
+        }
+        @keyframes fadeInUp {
+            0% { opacity: 0; transform: translateY(30px); }
+            100% { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+
+        /* Rest of your dashboard styles */
+        .sidebar { background-color: #284b44; }
+        .sidebar a { transition: background-color 0.2s ease, border-left-color 0.2s ease; }
+        .kpi-card { 
+            background: linear-gradient(145deg, #f0e1cd 0%, #e8d5c0 100%); 
+            border-radius: 0.75rem; padding: 1.5rem; 
+            display: flex; flex-direction: column; justify-content: center; align-items: center; 
+            text-align: center; border: 1px solid rgba(149, 108, 42, 0.2);
+            position: relative; overflow: hidden; transition: all 0.3s ease;
+        }
+        .kpi-card:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15); }
+        
+        .loading-spinner { border: 4px solid rgba(0, 0, 0, 0.1); width: 36px; height: 36px; border-radius: 50%; border-left-color: #284b44; animation: spin 1s ease infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        .gradient-header { background: linear-gradient(135deg, #284b44 0%, #956c2a 100%); color: white; }
+        
+        @property --p{ syntax: '<number>'; inherits: true; initial-value: 0; }
+        .health-gauge { width: 120px; height: 120px; border-radius: 50%; display: grid; place-items: center; background: conic-gradient(from 0deg, var(--c1) calc(var(--p) * 1%), var(--c2) 0); transition: --p 1s ease-in-out; }
+        .health-gauge::before { content: ""; display: block; width: 95px; height: 95px; background: white; border-radius: 50%; }
+        .health-score-text { position: absolute; font-size: 1.875rem; font-weight: 700; }
+        .aging-bar-bg { background-color: #e5e7eb; }
+        .aging-bar { transition: width 0.8s ease-out; }
+        .insight-card { background-color: #ffffff; border-left: 4px solid #956c2a; }
+        .analysis-card { background-color: #f8fafc; border-top: 3px solid; padding: 1rem; border-radius: 0.5rem; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+        .analysis-card .value { font-size: 1.5rem; font-weight: 700; }
+
+        .sidebar { transform: translateX(-100%); left: 0; }
+        .sidebar.open { transform: translateX(0); }
+        html[dir="rtl"] .sidebar { transform: translateX(100%); left: auto; right: 0; }
+        html[dir="rtl"] .sidebar.open { transform: translateX(0); }
+
+        .sidebar a { border-left: 4px solid transparent; }
+        .sidebar a:hover { background-color: #3a685e; }
+        .sidebar a.active { background-color: #956c2a; color: white; font-weight: 700; border-left-color: white; }
+        .sidebar span { margin-left: 1rem; flex-grow: 1; }
+        
+        html[dir="rtl"] .sidebar a { border-left: none; border-right: 4px solid transparent; }
+        html[dir="rtl"] .sidebar a:hover { border-right-color: #956c2a; }
+        html[dir="rtl"] .sidebar a.active { border-right-color: white; }
+        html[dir="rtl"] .sidebar span { margin-left: 0; margin-right: 1rem; }
+        html[dir="rtl"] .insight-card { border-left: none; border-right: 4px solid #956c2a; }
+        
+        .sidebar-overlay { display: none; position: fixed; inset: 0; background-color: rgba(0, 0, 0, 0.5); z-index: 40; }
+        .sidebar-overlay.open { display: block; }
+        
+        .modal-backdrop { transition: opacity 0.3s ease-in-out; }
+        .modal-content { transition: transform 0.3s ease-in-out, opacity 0.3s ease-in-out; }
+
+        /* Chat Widget Styles */
+        #chat-toggle-button { position: fixed; bottom: 2rem; right: 2rem; background-color: #284b44; color: white; width: 60px; height: 60px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 24px; box-shadow: 0 4px 12px rgba(0,0,0,0.2); cursor: pointer; z-index: 1000; transition: transform 0.2s ease; }
+        #chat-toggle-button:hover { transform: scale(1.1); }
+        html[dir="rtl"] #chat-toggle-button { right: auto; left: 2rem; }
+        #chat-window { position: fixed; bottom: 6.5rem; right: 2rem; width: 350px; height: 450px; background-color: white; border-radius: 15px; box-shadow: 0 5px 20px rgba(0,0,0,0.25); display: flex; flex-direction: column; overflow: hidden; z-index: 999; transform-origin: bottom right; transition: transform 0.3s ease, opacity 0.3s ease; transform: scale(0.5); opacity: 0; pointer-events: none; }
+        html[dir="rtl"] #chat-window { right: auto; left: 2rem; transform-origin: bottom left; }
+        #chat-window.open { transform: scale(1); opacity: 1; pointer-events: auto; }
+        #chat-header { background: linear-gradient(135deg, #284b44 0%, #3a685e 100%); color: white; padding: 1rem; font-weight: bold; display: flex; align-items: center; gap: 0.75rem; }
+        #chat-messages { flex-grow: 1; padding: 1rem; overflow-y: auto; }
+        .chat-message { max-width: 85%; padding: 0.5rem 0.75rem; border-radius: 10px; margin-bottom: 0.5rem; line-height: 1.4; }
+        .chat-message.user { background-color: #956c2a; color: white; margin-left: auto; border-bottom-right-radius: 2px; }
+        .chat-message.ai { background-color: #f3f4f6; color: #1f2937; margin-right: auto; border-bottom-left-radius: 2px; }
+        .chat-message.loading { display: flex; align-items: center; gap: 0.5rem; }
+        .typing-indicator span { height: 8px; width: 8px; background-color: #9ca3af; border-radius: 50%; display: inline-block; animation: bounce 1.4s infinite ease-in-out both; }
+        .typing-indicator span:nth-child(1) { animation-delay: -0.32s; }
+        .typing-indicator span:nth-child(2) { animation-delay: -0.16s; }
+        @keyframes bounce { 0%, 80%, 100% { transform: scale(0); } 40% { transform: scale(1.0); } }
+        #chat-form { display: flex; padding: 0.5rem; border-top: 1px solid #e5e7eb; }
+        #chat-input { flex-grow: 1; border: 1px solid #d1d5db; padding: 0.5rem; border-radius: 20px; outline: none; }
+        #chat-send { background: none; border: none; font-size: 1.5rem; color: #284b44; cursor: pointer; padding: 0.5rem; }
+
+        @media (min-width: 768px) {
+            .sidebar { position: static; transform: translateX(0) !important; }
+            #menu-toggle { display: none; }
+            .sidebar-overlay { display: none !important; }
+            .health-gauge { width: 150px; height: 150px; }
+            .health-gauge::before { width: 120px; height: 120px; }
+            .health-score-text { font-size: 2.25rem; }
+            .analysis-card .value { font-size: 1.75rem; }
+        }
+    </style>
+
+    <script src="https://apis.google.com/js/api.js"></script>
+    <script>
+        window.SITE_CONFIG = {
+            name: "Accounts Payable Dashboard",
+            domain: "https://sakura-accounts-payable-dashboard.surge.sh/",
+            description: "Accounts Payable Management System"
+        };
+        document.addEventListener('DOMContentLoaded', () => {
+            document.title = "Accounts Payable Management System - Sakura Portal";
+        });
+    </script>
+</head>
+
+<body class="bg-gray-100">
+
+    <div id="login-screen" class="login-screen">
+        <div class="login-background">
+            <div class="login-particles"></div>
+        </div>
+        <div class="login-content">
+            <div class="logo-container">
+                <div class="video-logo-wrapper">
+                    <video autoplay loop muted playsinline class="sakura-video-logo">
+                        <source src="grok-video-1bd05902-5b64-46bf-9604-0539b99513c7 (4).mp4" type="video/mp4">
+                        Your browser does not support the video tag.
+                    </video>
+                    <div class="video-gloss-overlay"></div>
+                </div>
+                </div>
+            
+            <div class="login-form">
+                <h2 class="login-title">Welcome to Sakura Portal</h2>
+                <input type="password" id="password-input" class="login-input" placeholder="Enter Access Password" autocomplete="current-password">
+                <button id="login-button" class="login-button">Access ERP System</button>
+                <div id="login-error" class="login-error">Incorrect password. Please try again.</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="relative flex h-screen overflow-hidden">
+        <div id="sidebar-overlay" class="sidebar-overlay"></div>
+        
+        <aside id="sidebar" class="sidebar w-64 text-white flex-shrink-0 flex flex-col fixed inset-y-0 z-50 transition-transform duration-300 ease-in-out md:relative">
+            <div class="flex items-center justify-center p-6 border-b border-gray-700">
+                <img src="https://images.deliveryhero.io/image/hungerstation/restaurant/logo/8556a1377e5154c66adf844d9c5ecb9f.jpg" alt="Logo" class="h-16 w-16 rounded-full ring-2 ring-white">
+            </div>
+            <nav class="flex-grow p-4">
+                <a href="#" onclick="loadDashboard(event, 'home')" class="nav-link active flex items-center p-4 my-2 rounded-lg"><i class="fas fa-tachometer-alt w-6 text-center"></i><span data-key="home_portal">Home Portal</span></a>
+                <a href="#" onclick="loadDashboard(event, 'payable.html')" class="nav-link flex items-center p-4 my-2 rounded-lg"><i class="fas fa-file-invoice-dollar w-6 text-center"></i><span data-key="accounts_payable">Accounts Payable</span></a>
+                <a href="#" onclick="loadDashboard(event, 'forecasting.html')" class="nav-link flex items-center p-4 my-2 rounded-lg"><i class="fas fa-chart-line w-6 text-center"></i><span data-key="rm_forecasting">RM Forecasting</span></a>
+                <a href="#" onclick="loadDashboard(event, 'Warehouse.html')" class="nav-link flex items-center p-4 my-2 rounded-lg"><i class="fas fa-warehouse w-6 text-center"></i><span data-key="warehouse_dashboard">Warehouse Dashboard</span></a>
+            </nav>
+            <div class="p-4 mt-auto border-t border-gray-700">
+                <a href="#" onclick="openSettingsModal(event)" class="flex items-center p-2 my-1 text-gray-300 rounded-lg hover:bg-white/10">
+                    <i class="fas fa-cog w-6 text-center"></i><span data-key="settings">Settings</span>
+                </a>
+            </div>
+            <div class="p-4 text-center text-sm text-gray-400 border-t border-gray-700"><p data-key="portal_footer">Sakura Portal &copy; 2025</p></div>
+        </aside>
+
+        <main class="flex-1 flex flex-col overflow-y-auto">
+            <header class="gradient-header shadow-md p-4 flex items-center justify-between z-20 sticky top-0">
+                <div class="flex-1 flex justify-start">
+                    <button id="menu-toggle" class="md:hidden text-white text-2xl"><i class="fas fa-bars"></i></button>
+                </div>
+                <div class="flex items-center justify-center gap-3">
+                    <img src="https://images.deliveryhero.io/image/hungerstation/restaurant/logo/8556a1377e5154c66adf844d9c5ecb9f.jpg" alt="Small Logo" class="h-10 w-10 rounded-full ring-1 ring-white/50">
+                    <h1 id="header-title" class="text-xl md:text-2xl font-bold text-white whitespace-nowrap" data-key="hub_title">Sakura Management Hub</h1>
+                    <div id="data-consistency-indicator" class="hidden ml-2 flex items-center gap-1 text-xs text-white/80"><i class="fas fa-shield-alt text-green-400"></i><span>Consistent</span></div>
+                </div>
+                <div class="flex-1 flex justify-end">
+                    <div class="hidden md:block">
+                        <div class="font-semibold text-white/90 text-xs md:text-base" id="current-date-time"></div>
+                    </div>
+                </div>
+            </header>
+
+            <div class="flex-1 p-2 md:p-4">
+                <div id="home-screen">
+                    <div class="mb-6">
+                        <h2 class="text-2xl md:text-3xl font-bold text-gray-800" data-key="erp_command_center_title">ERP Command Center</h2>
+                        <p class="text-sm text-gray-500 mt-1" data-key="erp_command_center_subtitle">Integrated analytics for strategic decision-making.</p>
+                        <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6 mt-4">
+                            <div class="bg-white p-4 rounded-lg shadow-lg flex flex-col items-center justify-center">
+                                <h3 class="font-bold text-gray-700 mb-2" data-key="health_score_title">Working Capital Health</h3>
+                                <div class="relative"><div id="health-gauge" class="health-gauge relative"><div class="health-score-text flex items-center justify-center flex-col"><span id="health-score-value">--</span><span class="text-xs font-normal" data-key="score_out_of_100">/ 100</span></div></div></div>
+                                <p class="text-xs text-center text-gray-500 mt-2" data-key="health_score_desc">An overall score based on overdue debt, forecast accuracy, and capital efficiency.</p>
+                            </div>
+                            <div class="bg-white p-4 rounded-lg shadow-lg"><h3 class="font-bold text-gray-700 mb-3" data-key="aging_analysis_title">Payables Aging Analysis</h3><div class="space-y-3"><div><div class="flex justify-between text-sm mb-1"><span class="font-semibold text-green-700" data-key="current">Current</span><span class="font-mono text-xs sm:text-sm" id="aging-value-current">...</span></div><div class="aging-bar-bg w-full h-4 rounded-full overflow-hidden"><div id="aging-bar-current" class="aging-bar h-full bg-green-500" style="width: 0%;"></div></div></div><div><div class="flex justify-between text-sm mb-1"><span class="font-semibold text-red-700" data-key="overdue">Overdue</span><span class="font-mono text-xs sm:text-sm" id="aging-value-overdue">...</span></div><div class="aging-bar-bg w-full h-4 rounded-full overflow-hidden"><div id="aging-bar-overdue" class="aging-bar h-full bg-red-500" style="width: 0%;"></div></div></div></div></div>
+                            <div class="bg-white p-4 rounded-lg shadow-lg"><h3 class="font-bold text-gray-700 mb-2" data-key="recommendation_title">Recommendation Engine</h3><div class="flex items-start gap-3 bg-yellow-50 border border-yellow-200 p-3 rounded-lg h-full"><i class="fas fa-lightbulb text-2xl md:text-3xl text-yellow-500 mt-1"></i><div><p id="recommendation-text" class="text-sm text-gray-700"><span class="opacity-50" data-key="analyzing_data">Analyzing data...</span></p></div></div></div>
+                        </div>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mt-6">
+                            <div class="insight-card rounded-lg p-4 shadow-md flex items-start gap-4">
+                                <i class="fas fa-brain text-3xl md:text-4xl text-indigo-500 mt-1"></i>
+                                <div><h3 class="font-semibold text-gray-800" data-key="operational_intelligence">Operational Intelligence</h3><p class="text-lg md:text-xl font-bold text-indigo-600" id="insight-operational-iq"><span class="opacity-50">...</span></p><p class="text-xs text-gray-600" data-key="operational_iq_desc">AI-powered operational efficiency score across all business units.</p></div>
+                            </div>
+                            <div class="insight-card rounded-lg p-4 shadow-md flex items-start gap-4">
+                                <i class="fas fa-shield-alt text-3xl md:text-4xl text-red-500 mt-1"></i>
+                                <div><h3 class="font-semibold text-gray-800" data-key="risk_exposure">Risk Exposure Index</h3><p class="text-lg md:text-xl font-bold text-red-600" id="insight-risk-exposure"><span class="opacity-50">...</span></p><p class="text-xs text-gray-600" data-key="risk_exposure_desc">Comprehensive risk assessment across financial, operational, and supply chain.</p></div>
+                            </div>
+                            <div class="insight-card rounded-lg p-4 shadow-md flex items-start gap-4">
+                                <i class="fas fa-rocket text-3xl md:text-4xl text-green-500 mt-1"></i>
+                                <div><h3 class="font-semibold text-gray-800" data-key="growth_potential">Growth Potential Score</h3><p class="text-lg md:text-xl font-bold text-green-600" id="insight-growth-potential"><span class="opacity-50">...</span></p><p class="text-xs text-gray-600" data-key="growth_potential_desc">Strategic growth opportunities based on current performance and market conditions.</p></div>
+                            </div>
+                            <div class="insight-card rounded-lg p-4 shadow-md flex items-start gap-4">
+                                <i class="fas fa-cogs text-3xl md:text-4xl text-orange-500 mt-1"></i>
+                                <div><h3 class="font-semibold text-gray-800" data-key="process_optimization">Process Optimization</h3><p class="text-lg md:text-xl font-bold text-orange-600" id="insight-process-optimization"><span class="opacity-50">...</span></p><p class="text-xs text-gray-600" data-key="process_optimization_desc">Automated process improvement recommendations for maximum efficiency.</p></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-6"><h3 class="text-xl font-bold text-gray-700" data-key="key_metrics_title">Key Financial Metrics</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-3">
+                            <div class="insight-card rounded-lg p-4 shadow-md flex items-start gap-4"><i class="fas fa-coins text-3xl md:text-4xl text-yellow-500 mt-1"></i><div><h3 class="font-semibold text-gray-800" data-key="cash_outflow_title">Total Near-Term Cash Outflow</h3><p class="text-2xl md:text-3xl font-bold text-red-600" id="insight-outflow"><span class="opacity-50">...</span></p><p class="text-xs text-gray-600" data-key="cash_outflow_desc">Combines current dues with the forecasted purchase budget.</p></div></div>
+                            <div class="insight-card rounded-lg p-4 shadow-md flex items-start gap-4"><i class="fas fa-lock text-3xl md:text-4xl text-blue-500 mt-1"></i><div><h3 class="font-semibold text-gray-800" data-key="capital_efficiency_title">Non-Productive Capital</h3><p class="text-2xl md:text-3xl font-bold text-blue-600" id="insight-capital-risk"><span class="opacity-50">...</span></p><p class="text-xs text-gray-600" data-key="capital_efficiency_desc">Total cash tied up in overdue payments and overstocked items.</p></div></div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-8"><h3 class="text-xl font-bold text-gray-700" data-key="detailed_kpis_title">Detailed Performance Indicators</h3>
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 mt-3">
+                            <div class="analysis-card border-orange-400 text-center"><h4 class="font-semibold text-sm text-gray-600" data-key="overdue_ratio_title">Overdue Ratio</h4><p class="value text-orange-500" id="insight-overdue-ratio"><span class="opacity-50">...</span></p></div>
+                            <div class="analysis-card border-teal-400 text-center"><h4 class="font-semibold text-sm text-gray-600" data-key="accuracy_impact_title">1% Accuracy Impact</h4><p class="value text-teal-500" id="insight-accuracy-cost"><span class="opacity-50">...</span></p></div>
+                            <div class="analysis-card border-purple-400 text-center"><h4 class="font-semibold text-sm text-gray-600" data-key="savings_power_title">Savings Power</h4><p class="value text-purple-500" id="insight-savings-impact"><span class="opacity-50">...</span></p></div>
+                            <div class="analysis-card border-gray-400 text-center"><h4 class="font-semibold text-sm text-gray-600" data-key="avg_debt_title">Avg. Debt / Supplier</h4><p class="value text-gray-600" id="insight-avg-debt"><span class="opacity-50">...</span></p></div>
+                        </div>
+                    </div>
+
+                    <div class="mb-6"><h2 class="text-xl md:text-2xl font-bold text-gray-800" data-key="payable_summary">Accounts Payable Summary</h2>
+                        <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mt-4">
+                            <div class="kpi-card"><div class="icon bg-red-500"><i class="fas fa-dollar-sign"></i></div> <div><p class="title" data-key="total_dues">Total Dues</p><div id="kpi-payable-dues" class="value"><div class="loading-spinner"></div></div></div></div>
+                            <div class="kpi-card"><div class="icon bg-blue-500"><i class="fas fa-users"></i></div> <div><p class="title" data-key="total_suppliers">Total Suppliers</p><div id="kpi-payable-suppliers" class="value"><div class="loading-spinner"></div></div></div></div>
+                            <div class="kpi-card"><div class="icon bg-orange-500"><i class="fas fa-exclamation-triangle"></i></div> <div><p class="title" data-key="overdues">Overdues</p><div id="kpi-payable-overdues" class="value"><div class="loading-spinner"></div></div></div></div>
+                            <div class="kpi-card"><div class="icon bg-purple-500"><i class="fas fa-file-invoice"></i></div> <div><p class="title" data-key="total_transactions">Total Transactions</p><div id="kpi-payable-tx" class="value"><div class="loading-spinner"></div></div></div></div>
+                        </div>
+                    </div>
+                </div>
+                <iframe id="dashboard-frame" class="w-full h-full rounded-lg shadow-inner hidden" src="" frameborder="0"></iframe>
+            </div>
+        </main>
+    </div>
+
+    <div id="settings-modal" class="hidden fixed inset-0 bg-black bg-opacity-60 z-50 flex items-center justify-center p-4 opacity-0 modal-backdrop">
+        <div id="settings-modal-content" class="bg-white rounded-xl shadow-2xl p-6 w-full max-w-md scale-95 opacity-0 modal-content">
+            <div class="flex justify-between items-center pb-3 border-b">
+                <h3 class="text-xl font-bold text-gray-800 flex items-center gap-2"><i class="fas fa-cog text-gray-500"></i><span data-key="settings">Settings</span></h3>
+                <button onclick="closeSettingsModal()" class="text-gray-400 hover:text-gray-800 text-2xl">&times;</button>
+            </div>
+            <div class="mt-6 text-center">
+                <label class="text-sm font-medium text-gray-700" data-key="language">Language</label>
+                <div class="flex justify-center border border-gray-200 rounded-lg p-1 bg-gray-50 w-min mx-auto mt-2">
+                    <button onclick="broadcastLanguageChange('en')" class="lang-btn-modal px-4 py-2 text-sm rounded-md font-bold" data-lang="en">English</button>
+                    <button onclick="broadcastLanguageChange('ar')" class="lang-btn-modal px-4 py-2 text-sm rounded-md" data-lang="ar">العربية</button>
+                    <button id="install-app-btn" class="install-btn-modal px-4 py-2 text-sm rounded-md bg-green-600 text-white hover:bg-green-700 hidden" onclick="installApp()"><i class="fas fa-download mr-2"></i>Install App</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="chat-window">
+        <div id="chat-header"><i class="fas fa-brain"></i><span data-key="ai_analyst_title">Sakura AI Analyst</span></div>
+        <div id="chat-messages"><div class="chat-message ai"><p data-key="ai_welcome_message">Hello! How can I help you analyze the dashboard data today?</p></div></div>
+        <form id="chat-form"><input type="text" id="chat-input" placeholder="Ask about the data..." autocomplete="off"><button type="submit" id="chat-send"><i class="fas fa-paper-plane"></i></button></form>
+    </div>
+    <div id="chat-toggle-button"><i class="fas fa-comment-dots"></i></div>
+
+    <script>
+        // Password Protection
+        const ACCESS_PASSWORD = "Sakura123@@";
+        const LOGIN_KEY = "sakura_portal_access";
+
+        function initializeLogin() {
+            const loginScreen = document.getElementById('login-screen');
+            const passwordInput = document.getElementById('password-input');
+            const loginButton = document.getElementById('login-button');
+            const loginError = document.getElementById('login-error');
+
+            if (localStorage.getItem(LOGIN_KEY) === 'true') {
+                hideLoginScreen();
+                return;
+            }
+            loginScreen.style.display = 'flex';
+            loginButton.addEventListener('click', handleLogin);
+            passwordInput.addEventListener('keypress', function(e) { if (e.key === 'Enter') handleLogin(); });
+
+            function handleLogin() {
+                if (passwordInput.value.trim() === ACCESS_PASSWORD) {
+                    localStorage.setItem(LOGIN_KEY, 'true');
+                    hideLoginScreen();
+                } else {
+                    showLoginError();
+                }
+            }
+
+            function showLoginError() {
+                loginError.classList.add('show');
+                passwordInput.style.borderColor = '#ff6b6b';
+                passwordInput.value = '';
+                setTimeout(() => { loginError.classList.remove('show'); passwordInput.style.borderColor = 'rgba(255, 255, 255, 0.2)'; }, 3000);
+            }
+
+            function hideLoginScreen() {
+                loginScreen.classList.add('hidden');
+                setTimeout(() => { loginScreen.style.display = 'none'; initializeMainApp(); }, 800);
+            }
+        }
+
+        function initializeMainApp() { console.log('Sakura Portal initialized successfully!'); }
+
+        const DATA_URL = "https://script.google.com/macros/s/AKfycbwq7HMf-2gjL3zT7WeoDNtTk-bVNRyvZHBiAU49H4OlJ_5v0dKygv9N3sgZO4SeSsIK/exec";
+        const GEMINI_API_KEY = "AIzaSyBAWM2HN0Dq5-ddOhGhiDJGa2u5xJ-zgl4";
+        let currentLang = localStorage.getItem('portalLang') || 'en';
+        let payableDataStore = null, forecastingDataStore = null, warehouseDataStore = null;
+        let cachedInsights = null;
+
+        const i18n = {
+            en: {
+                home_portal: 'Home Portal', accounts_payable: 'Accounts Payable', rm_forecasting: 'RM Forecasting', warehouse_dashboard: 'Warehouse Dashboard', portal_footer: 'Sakura Portal © 2025', hub_title: 'Sakura Management Hub', 
+                payable_title: 'Accounts Payable Dashboard', forecasting_title: 'Raw Material Forecasting & Budgeting', warehouse_title: 'Warehouse Management Dashboard',
+                settings: 'Settings', language: 'Language', ai_analyst_title: "Sakura AI Analyst", ai_welcome_message: "Hello! How can I help you analyze the dashboard data today?",
+                erp_command_center_title: 'Command Center', erp_command_center_subtitle: 'Integrated analytics for strategic decision-making.',
+                health_score_title: 'Working Capital Health', score_out_of_100: '/ 100', health_score_desc: 'An overall score based on overdue debt, forecast accuracy, and capital efficiency.',
+                aging_analysis_title: 'Payables Aging Analysis', current: 'Current', overdue: 'Overdue', recommendation_title: 'Recommendation Engine', analyzing_data: 'Analyzing data...',
+                rec_1_part_1: '<strong>Action:</strong> Utilize your ', rec_1_part_2: ' in potential savings to clear ', rec_1_part_3: ' of your overdue balance.',
+                rec_2_part_1: '<strong>Opportunity:</strong> Your non-productive capital (', rec_2_part_2: ') from overstock and overdues is significant.',
+                rec_3: '<strong>Status:</strong> Financials are stable. No immediate critical actions are flagged.',
+                key_metrics_title: 'Key Financial Metrics', detailed_kpis_title: 'Detailed Performance Indicators',
+                cash_outflow_title: 'Total Near-Term Cash Outflow', cash_outflow_desc: 'Combines current dues with the forecasted purchase budget.',
+                capital_efficiency_title: 'Non-Productive Capital', capital_efficiency_desc: 'Total cash tied up in overdue payments and overstocked items.',
+                overdue_ratio_title: 'Overdue Ratio', accuracy_impact_title: '1% Accuracy Impact', savings_power_title: 'Savings Power', avg_debt_title: 'Avg. Debt / Supplier',
+                payable_summary: 'Accounts Payable Summary', total_dues: 'Total Dues', total_suppliers: 'Total Suppliers', overdues: 'Overdues', total_transactions: 'Total Transactions',
+                operational_intelligence: 'Operational Intelligence', operational_iq_desc: 'AI-powered operational efficiency score.',
+                risk_exposure: 'Risk Exposure Index', risk_exposure_desc: 'Comprehensive risk assessment.',
+                growth_potential: 'Growth Potential Score', growth_potential_desc: 'Strategic growth opportunities.',
+                process_optimization: 'Process Optimization', process_optimization_desc: 'Automated process improvement recommendations.'
+            },
+            ar: {
+                home_portal: 'البوابة الرئيسية', accounts_payable: 'الحسابات الدائنة', rm_forecasting: 'توقع المواد الخام', warehouse_dashboard: 'لوحة تحكم المستودع', portal_footer: 'بوابة ساكورا © 2025', hub_title: 'مركز إدارة ساكورا ', 
+                payable_title: 'لوحة تحكم الحسابات الدائنة', forecasting_title: 'توقع وميزانية المواد الخام', warehouse_title: 'لوحة تحكم إدارة المستودع',
+                settings: 'الإعدادات', language: 'اللغة', ai_analyst_title: "محلل ساكورا الذكي", ai_welcome_message: "مرحباً! كيف يمكنني مساعدتك؟",
+                erp_command_center_title: 'مركز قيادة ', erp_command_center_subtitle: 'تحليلات متكاملة لاتخاذ القرارات الاستراتيجية.',
+                health_score_title: 'سلامة رأس المال العامل', score_out_of_100: '/ 100', health_score_desc: 'مؤشر عام يعتمد على الديون ودقة التوقع.',
+                aging_analysis_title: 'تحليل أعمار الحسابات', current: 'حالي', overdue: 'متأخر', recommendation_title: 'محرك التوصيات', analyzing_data: 'جاري التحليل...',
+                rec_1_part_1: '<strong>الإجراء:</strong> استفد من وفوراتك المحتملة البالغة ', rec_1_part_2: ' لتسوية ', rec_1_part_3: ' من رصيدك المتأخر.',
+                rec_2_part_1: '<strong>الفرصة:</strong> رأس مالك غير المنتج (', rec_2_part_2: ') من المخزون الزائد والمتأخرات كبير.',
+                rec_3: '<strong>الحالة:</strong> الأوضاع المالية مستقرة.',
+                key_metrics_title: 'المقاييس المالية الرئيسية', detailed_kpis_title: 'مؤشرات الأداء التفصيلية',
+                cash_outflow_title: 'إجمالي التدفقات الخارجة', cash_outflow_desc: 'يجمع بين المستحقات والميزانية المتوقعة.',
+                capital_efficiency_title: 'رأس المال غير المنتج', capital_efficiency_desc: 'النقد المحجوز في المتأخرات والمخزون الزائد.',
+                overdue_ratio_title: 'نسبة المتأخرات', accuracy_impact_title: 'تأثير دقة 1%', savings_power_title: 'قوة التوفير', avg_debt_title: 'متوسط الدين/مورد',
+                payable_summary: 'ملخص الحسابات الدائنة', total_dues: 'إجمالي المستحقات', total_suppliers: 'إجمالي الموردين', overdues: 'المتأخرات', total_transactions: 'إجمالي المعاملات',
+                operational_intelligence: 'الذكاء التشغيلي', operational_iq_desc: 'نقاط الكفاءة التشغيلية.',
+                risk_exposure: 'مؤشر المخاطر', risk_exposure_desc: 'تقييم شامل للمخاطر.',
+                growth_potential: 'نقاط النمو', growth_potential_desc: 'فرص النمو الاستراتيجية.',
+                process_optimization: 'تحسين العمليات', process_optimization_desc: 'توصيات تحسين العمليات.'
+            }
+        };
+
+        const mainIframe = document.getElementById('dashboard-frame');
+        const homeScreen = document.getElementById('home-screen');
+        const headerTitle = document.getElementById('header-title');
+        const sidebar = document.getElementById('sidebar');
+        const settingsModal = document.getElementById('settings-modal');
+
+        function initializePortal() {
+            fetch(DATA_URL + '?cache_bust=' + new Date().getTime())
+                .then(response => response.json())
+                .then(data => {
+                    payableDataStore = data.payableData;
+                    forecastingDataStore = data.forecastingData;
+                    if (data.warehouseData) warehouseDataStore = data.warehouseData;
+                    updateAllInsights();
+                })
+                .catch(error => console.error("Error loading data:", error));
+        }
+
+        function openSettingsModal(event) { event.preventDefault(); settingsModal.classList.remove('hidden'); setTimeout(() => { settingsModal.classList.remove('opacity-0'); document.getElementById('settings-modal-content').classList.remove('scale-95', 'opacity-0'); }, 10); }
+        function closeSettingsModal() { settingsModal.classList.add('opacity-0'); document.getElementById('settings-modal-content').classList.add('scale-95', 'opacity-0'); setTimeout(() => { settingsModal.classList.add('hidden'); }, 300); }
+        function toggleMenu() { sidebar.classList.toggle('open'); document.getElementById('sidebar-overlay').classList.toggle('open'); document.body.classList.toggle('menu-open'); }
+        document.getElementById('menu-toggle').addEventListener('click', toggleMenu);
+        document.getElementById('sidebar-overlay').addEventListener('click', toggleMenu);
+
+        // Chat Logic
+        const chatWindow = document.getElementById('chat-window');
+        document.getElementById('chat-toggle-button').addEventListener('click', () => { chatWindow.classList.toggle('open'); });
+        document.getElementById('chat-form').addEventListener('submit', (e) => { 
+            e.preventDefault(); 
+            const input = document.getElementById('chat-input');
+            const msg = input.value.trim();
+            if (!msg) return;
+            addMessageToChat(msg, 'user');
+            input.value = '';
+            setTimeout(() => addMessageToChat("I am a demo AI. Real integration requires backend.", 'ai'), 1000);
+        });
+
+        function addMessageToChat(message, sender) {
+            const el = document.createElement('div');
+            el.classList.add('chat-message', sender);
+            el.innerHTML = `<p>${message}</p>`;
+            document.getElementById('chat-messages').appendChild(el);
+            document.getElementById('chat-messages').scrollTop = document.getElementById('chat-messages').scrollHeight;
+        }
+
+        function parseCurrency(valueStr) { if (typeof valueStr !== 'string') return 0; return parseFloat(valueStr.replace(/[^0-9.-]+/g, '')) || 0; }
+        
+        function updateAllInsights() {
+            if (!payableDataStore || !forecastingDataStore) return;
+            // Populate Basic KPIs
+            document.getElementById('kpi-payable-dues').innerHTML = payableDataStore.totalDues;
+            document.getElementById('kpi-payable-suppliers').innerHTML = payableDataStore.totalSuppliers;
+            document.getElementById('kpi-payable-overdues').innerHTML = payableDataStore.overdues;
+            document.getElementById('kpi-payable-tx').innerHTML = payableDataStore.totalTransactions;
+            
+            // Calculations
+            const totalDues = parseCurrency(payableDataStore.totalDues);
+            const overdues = parseCurrency(payableDataStore.overdues);
+            const forecastAccuracy = parseFloat(forecastingDataStore.kpiForecastAccuracy) || 0;
+            const overdueRatio = totalDues > 0 ? (overdues / totalDues) * 100 : 0;
+            
+            // Health Score
+            let score = 100 - (overdueRatio * 1.5) + ((forecastAccuracy - 85) * 1);
+            score = Math.max(0, Math.min(100, score));
+            document.getElementById('health-score-value').textContent = Math.round(score);
+            const gauge = document.getElementById('health-gauge');
+            gauge.style.setProperty('--p', score);
+            gauge.style.setProperty('--c1', score > 75 ? '#16a34a' : score > 50 ? '#f59e0b' : '#dc2626');
+            gauge.style.setProperty('--c2', '#e5e7eb');
+
+            // Aging Bar
+            const currentDues = totalDues - overdues;
+            const currentPercent = totalDues > 0 ? (currentDues / totalDues) * 100 : 100;
+            const overduePercent = totalDues > 0 ? (overdues / totalDues) * 100 : 0;
+            document.getElementById('aging-value-current').textContent = `SAR ${currentDues.toLocaleString()}`;
+            document.getElementById('aging-bar-current').style.width = `${currentPercent}%`;
+            document.getElementById('aging-value-overdue').textContent = `SAR ${overdues.toLocaleString()}`;
+            document.getElementById('aging-bar-overdue').style.width = `${overduePercent}%`;
+
+            // Recommendation
+            const recText = document.getElementById('recommendation-text');
+            if (overdues > 0) recText.innerHTML = i18n[currentLang].rec_1_part_1 + "savings" + i18n[currentLang].rec_1_part_2 + "part" + i18n[currentLang].rec_1_part_3;
+            else recText.innerHTML = i18n[currentLang].rec_3;
+
+            // Update Insights Text
+            document.getElementById('insight-operational-iq').textContent = `${(forecastAccuracy + 10).toFixed(1)}%`;
+            document.getElementById('insight-risk-exposure').textContent = `${(overdueRatio).toFixed(1)}%`;
+            document.getElementById('insight-growth-potential').textContent = `${(100 - overdueRatio).toFixed(1)}%`;
+            document.getElementById('insight-process-optimization').textContent = `${(forecastAccuracy).toFixed(1)}%`;
+        }
+
+        function loadDashboard(event, dashboardUrl) {
+            event.preventDefault();
+            document.querySelectorAll('.nav-link').forEach(link => link.classList.remove('active'));
+            event.currentTarget.classList.add('active');
+            
+            if (window.innerWidth < 768 && sidebar.classList.contains('open')) toggleMenu();
+
+            if (dashboardUrl === 'home') {
+                homeScreen.classList.remove('hidden');
+                mainIframe.style.display = 'none';
+            } else {
+                homeScreen.classList.add('hidden');
+                mainIframe.style.display = 'block';
+                if (!mainIframe.src.includes(dashboardUrl)) mainIframe.src = dashboardUrl;
+            }
+            updateHeaderTitle(dashboardUrl, currentLang);
+        }
+
+        function updateHeaderTitle(dashboardUrl, lang) {
+            let key = 'hub_title';
+            if (dashboardUrl === 'payable.html') key = 'payable_title';
+            else if (dashboardUrl === 'forecasting.html') key = 'forecasting_title';
+            else if (dashboardUrl === 'Warehouse.html') key = 'warehouse_title';
+            headerTitle.textContent = i18n[lang][key];
+        }
+
+        function broadcastLanguageChange(lang) {
+            currentLang = lang;
+            localStorage.setItem('portalLang', lang);
+            document.documentElement.lang = lang;
+            document.documentElement.dir = lang === 'ar' ? 'rtl' : 'ltr';
+            document.body.dir = lang === 'ar' ? 'rtl' : 'ltr';
+            
+            document.querySelectorAll('[data-key]').forEach(el => {
+                if (i18n[lang] && i18n[lang][el.dataset.key]) el.innerHTML = i18n[lang][el.dataset.key];
+            });
+            updateAllInsights();
+            closeSettingsModal();
+        }
+
+        function updateDateTime() {
+            const now = new Date();
+            const locale = currentLang === 'ar' ? 'ar-SA' : 'en-US';
+            document.getElementById('current-date-time').textContent = now.toLocaleDateString(locale, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            initializeLogin();
+            initializePortal();
+            broadcastLanguageChange(currentLang);
+            updateDateTime();
+            setInterval(updateDateTime, 60000);
+        });
+
+        // PWA
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            document.getElementById('install-app-btn').classList.remove('hidden');
+        });
+    </script>
+</body>
+</html>

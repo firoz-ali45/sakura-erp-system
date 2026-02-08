@@ -1,0 +1,1561 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Item Details - Sakura Portal</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Font Awesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Supabase SDK -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
+    <style>
+        body {
+            font-family: 'Cairo', sans-serif;
+            background-color: #f0e1cd;
+            margin: 0;
+            padding: 0;
+        }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 10000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            animation: fadeIn 0.3s ease;
+        }
+        
+        .modal.show {
+            display: flex !important;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .modal-content {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+            max-width: 700px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+            animation: slideIn 0.3s ease;
+            position: relative;
+            z-index: 10001;
+            pointer-events: auto;
+        }
+        
+        .modal-content button,
+        .modal-content a,
+        .modal-content input,
+        .modal-content select {
+            pointer-events: auto !important;
+            cursor: pointer !important;
+            position: relative;
+            z-index: 10002;
+        }
+        
+        .modal-content form {
+            pointer-events: auto !important;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        @keyframes slideIn {
+            from { transform: translateY(-50px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        
+        .section-card {
+            background: #f9fafb;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        /* Custom Notification System */
+        .sakura-notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 10000;
+            min-width: 350px;
+            max-width: 500px;
+            animation: slideInRight 0.3s ease-out;
+            font-family: 'Cairo', sans-serif;
+        }
+        
+        @keyframes slideInRight {
+            from {
+                transform: translateX(400px);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+        
+        .sakura-notification-content {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 16px 20px;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+            color: white;
+            backdrop-filter: blur(10px);
+        }
+        
+        .sakura-notification-icon {
+            font-size: 24px;
+            flex-shrink: 0;
+        }
+        
+        .sakura-notification-message {
+            flex: 1;
+            font-size: 15px;
+            font-weight: 500;
+        }
+        
+        .sakura-notification-close {
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            color: white;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            cursor: pointer;
+        }
+    </style>
+    <script>
+        // Custom Notification System
+        const SAKURA_COLORS = {
+            primary: '#284b44',
+            success: '#4ade80',
+            error: '#ef4444',
+            warning: '#fbbf24',
+            info: '#60a5fa'
+        };
+
+        function showNotification(message, type = 'success', duration = 4000) {
+            const existingNotifications = document.querySelectorAll('.sakura-notification');
+            existingNotifications.forEach(n => n.remove());
+
+            const notification = document.createElement('div');
+            notification.className = 'sakura-notification';
+
+            let icon = 'fa-check-circle';
+            let bgColor = SAKURA_COLORS.success;
+            let borderColor = SAKURA_COLORS.primary;
+
+            switch(type) {
+                case 'error':
+                    icon = 'fa-exclamation-circle';
+                    bgColor = SAKURA_COLORS.error;
+                    borderColor = '#dc2626';
+                    break;
+                case 'warning':
+                    icon = 'fa-exclamation-triangle';
+                    bgColor = SAKURA_COLORS.warning;
+                    borderColor = '#d97706';
+                    break;
+                case 'info':
+                    icon = 'fa-info-circle';
+                    bgColor = SAKURA_COLORS.info;
+                    borderColor = '#2563eb';
+                    break;
+            }
+
+            notification.innerHTML = `
+                <div class="sakura-notification-content" style="background: linear-gradient(135deg, ${bgColor} 0%, ${bgColor}dd 100%); border-left: 4px solid ${borderColor};">
+                    <div class="sakura-notification-icon">
+                        <i class="fas ${icon}"></i>
+                    </div>
+                    <div class="sakura-notification-message">
+                        <p style="margin: 0;">${message}</p>
+                    </div>
+                    <button class="sakura-notification-close" onclick="this.closest('.sakura-notification').remove()">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            `;
+
+            document.body.appendChild(notification);
+
+            if (duration > 0) {
+                setTimeout(() => {
+                    notification.style.animation = 'slideInRight 0.3s ease-out reverse';
+                    setTimeout(() => notification.remove(), 300);
+                }, duration);
+            }
+        }
+
+        // Custom Confirm Dialog
+        function showConfirmDialog(message, title = 'Confirm', type = 'confirm') {
+            return new Promise((resolve) => {
+                const overlay = document.createElement('div');
+                overlay.className = 'sakura-confirm-overlay';
+                overlay.style.cssText = 'position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.5); z-index: 10001; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(4px);';
+
+                const icon = type === 'danger' ? 'fa-exclamation-triangle' : 'fa-question-circle';
+                const confirmBtnClass = type === 'danger' ? 'sakura-confirm-btn-danger' : 'sakura-confirm-btn-confirm';
+                const confirmBtnText = type === 'danger' ? 'Delete' : 'Confirm';
+
+                overlay.innerHTML = `
+                    <div class="sakura-confirm-dialog" style="background: white; border-radius: 16px; padding: 0; min-width: 400px; max-width: 500px; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);">
+                        <div style="background: linear-gradient(135deg, #284b44 0%, #3d6b5f 100%); color: white; padding: 20px 24px; border-radius: 16px 16px 0 0; display: flex; align-items: center; gap: 12px;">
+                            <div style="font-size: 24px; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; background: rgba(255, 255, 255, 0.2); border-radius: 50%;">
+                                <i class="fas ${icon}"></i>
+                            </div>
+                            <div style="font-size: 18px; font-weight: 600; flex: 1;">${title}</div>
+                        </div>
+                        <div style="padding: 24px; color: #1f2937; font-size: 15px; line-height: 1.6;">
+                            ${message}
+                        </div>
+                        <div style="padding: 16px 24px; border-top: 1px solid #e5e7eb; display: flex; justify-content: flex-end; gap: 12px;">
+                            <button class="sakura-confirm-btn-cancel" data-action="cancel" style="padding: 10px 24px; border-radius: 8px; font-weight: 500; cursor: pointer; border: none; background: #f3f4f6; color: #374151;">Cancel</button>
+                            <button class="${confirmBtnClass}" data-action="confirm" style="padding: 10px 24px; border-radius: 8px; font-weight: 500; cursor: pointer; border: none; background: linear-gradient(135deg, #284b44 0%, #3d6b5f 100%); color: white;">${confirmBtnText}</button>
+                        </div>
+                    </div>
+                `;
+
+                document.body.appendChild(overlay);
+
+                overlay.querySelectorAll('button').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        const action = e.target.getAttribute('data-action');
+                        overlay.remove();
+                        resolve(action === 'confirm');
+                    });
+                });
+
+                overlay.addEventListener('click', (e) => {
+                    if (e.target === overlay) {
+                        overlay.remove();
+                        resolve(false);
+                    }
+                });
+            });
+        }
+    </script>
+</head>
+<body>
+    <!-- Main Container -->
+    <div class="container mx-auto px-6 py-6">
+        <!-- Header Section -->
+        <div class="flex justify-between items-center mb-6">
+            <div class="flex items-center gap-4">
+                <a href="#" onclick="goBack()" class="text-blue-600 hover:text-blue-800 flex items-center gap-2">
+                    <i class="fas fa-arrow-left"></i>
+                    <span>Back</span>
+                </a>
+                <div class="flex items-center gap-3">
+                    <h1 class="text-3xl font-bold text-gray-800" id="item-title">كريمة سيفون / Whipped Cream Siphon</h1>
+                    <span id="deleted-badge" class="hidden px-3 py-1 bg-red-100 text-red-800 rounded-full text-sm font-semibold">Deleted</span>
+                </div>
+            </div>
+            <div class="flex items-center gap-3">
+                <button id="restore-item-btn" onclick="restoreItemFromDetail()" class="hidden px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center gap-2 font-semibold">
+                    <i class="fas fa-undo"></i>
+                    <span>Restore Item</span>
+                </button>
+                <button id="edit-item-btn" onclick="openEditModal()" class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2 font-semibold">
+                    <i class="fas fa-edit"></i>
+                    <span>Edit Item</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Item Details Card -->
+        <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+            <h2 class="text-xl font-bold text-gray-800 mb-4">Item Details</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Left Column -->
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-600 mb-1">Name</label>
+                        <p class="text-gray-900 font-medium" id="item-name">كريمة سيفون / Whipped Cream Siphon</p>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-600 mb-1">SKU</label>
+                        <p class="text-gray-900 font-mono" id="item-sku">sk-19587</p>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-600 mb-1">Minimum Level</label>
+                        <p class="text-gray-900" id="item-min-level">-</p>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-600 mb-1">Maximum Level</label>
+                        <p class="text-gray-900" id="item-max-level">-</p>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-600 mb-1">Ingredient Unit</label>
+                        <p class="text-gray-900" id="item-ingredient-unit">Pcs</p>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-600 mb-1">Costing Method</label>
+                        <p class="text-gray-900" id="item-costing-method">From Transactions</p>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-600 mb-1">Total Cost of Production</label>
+                        <p class="text-gray-900 font-semibold" id="item-total-cost">0 SAR</p>
+                    </div>
+                </div>
+                
+                <!-- Right Column -->
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-600 mb-1">Name Localized</label>
+                        <p class="text-gray-900 font-medium" id="item-name-localized">كريمة سيفون / Whipped Cream Siphon</p>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-600 mb-1">Barcode</label>
+                        <p class="text-gray-900" id="item-barcode">-</p>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-600 mb-1">Par Level</label>
+                        <p class="text-gray-900" id="item-par-level">-</p>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-600 mb-1">Storage Unit</label>
+                        <p class="text-gray-900" id="item-storage-unit">Pcs</p>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-600 mb-1">Factor</label>
+                        <p class="text-gray-900" id="item-factor">1 Pcs = 1 Pcs</p>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-600 mb-1">Category</label>
+                        <p class="text-gray-900" id="item-category">Equipments</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tags Section -->
+        <div class="section-card">
+            <div class="flex justify-between items-center mb-3">
+                <h3 class="text-lg font-semibold text-gray-800">Tags</h3>
+                <button onclick="addTags()" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300">
+                    Add Tags
+                </button>
+            </div>
+            <p class="text-sm text-gray-600 text-center py-4">
+                Add tags to help you filter and group items easily. You can create tags such as Weekly Stocktaking, Vegetables, etc.
+            </p>
+            <div id="tags-display" class="flex flex-wrap gap-2 mt-4">
+                <!-- Linked tags will be displayed here -->
+            </div>
+        </div>
+
+        <!-- Ingredients Section -->
+        <div class="section-card">
+            <div class="flex justify-between items-center mb-3">
+                <h3 class="text-lg font-semibold text-gray-800">Ingredients</h3>
+                <button onclick="addIngredients()" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300">
+                    Add Ingredients
+                </button>
+            </div>
+            <p class="text-sm text-gray-600 text-center py-4">
+                To produce this item, add the ingredients needed to produce 1 Pcs of this item here from your inventory items list.
+            </p>
+            <div id="ingredients-list" class="mt-4">
+                <!-- Ingredients will be displayed here -->
+            </div>
+        </div>
+
+        <!-- Suppliers Section -->
+        <div class="section-card">
+            <div class="flex justify-between items-center mb-3">
+                <h3 class="text-lg font-semibold text-gray-800">Suppliers</h3>
+                <button onclick="linkSuppliers()" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300">
+                    Link Suppliers
+                </button>
+            </div>
+            <p class="text-sm text-gray-600 text-center py-4">
+                Link this item to the suppliers you purchase from, and you can assign different order units and cost to each supplier.
+            </p>
+            <div id="suppliers-list" class="mt-4">
+                <!-- Suppliers will be displayed here -->
+            </div>
+        </div>
+
+        <!-- Custom Level Section -->
+        <div class="section-card">
+            <div class="flex justify-between items-center mb-3">
+                <h3 class="text-lg font-semibold text-gray-800">Custom Level</h3>
+                <button onclick="selectBranches()" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300">
+                    Select Branches
+                </button>
+            </div>
+            <p class="text-sm text-gray-600 text-center py-4">
+                You can apply custom inventory levels to some branches instead of the default levels (such as high traffic branches) and specify the minimum and maximum levels for them.
+            </p>
+            <div id="custom-levels-list" class="mt-4">
+                <!-- Custom levels will be displayed here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Item Modal -->
+    <div id="edit-item-modal" class="modal">
+        <div class="modal-content">
+            <div class="p-6">
+                <!-- Modal Header -->
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-2xl font-bold text-gray-800">Edit item</h2>
+                    <button onclick="closeEditModal()" class="text-gray-500 hover:text-gray-700 text-2xl">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+
+                <!-- Modal Body -->
+                <form id="edit-item-form" class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">
+                            Name <span class="text-red-500">*</span>
+                        </label>
+                        <input type="text" id="edit-name" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Name Localized</label>
+                        <input type="text" id="edit-name-localized" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">
+                            SKU <span class="text-red-500">*</span>
+                        </label>
+                        <div class="flex gap-2">
+                            <input type="text" id="edit-sku" class="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+                            <button type="button" onclick="generateSKU()" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300">
+                                Generate
+                            </button>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Category</label>
+                        <select id="edit-category" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <option value="">Choose...</option>
+                            <!-- Categories will be loaded dynamically -->
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">
+                            Storage Unit <span class="text-red-500">*</span>
+                        </label>
+                        <input type="text" id="edit-storage-unit" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">
+                            Ingredient Unit <span class="text-red-500">*</span>
+                        </label>
+                        <input type="text" id="edit-ingredient-unit" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">
+                            Storage To Ingredient <span class="text-red-500">*</span>
+                        </label>
+                        <input type="text" id="edit-storage-to-ingredient" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">
+                            Costing Method <span class="text-red-500">*</span>
+                        </label>
+                        <select id="edit-costing-method" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+                            <option value="From Transactions">From Transactions</option>
+                            <option value="Manual">Manual</option>
+                            <option value="Average">Average</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Cost (Per Pcs)</label>
+                        <input type="number" step="0.01" id="edit-cost" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+
+                    <!-- Modal Footer -->
+                    <div class="flex justify-between items-center pt-4 border-t border-gray-200 mt-6">
+                        <div class="flex gap-4">
+                            <a href="#" onclick="event.preventDefault(); showAdvancedOptions(); return false;" class="text-blue-600 hover:text-blue-800 cursor-pointer">Advanced Options</a>
+                            <button type="button" onclick="deleteItemFromModal()" class="text-red-600 hover:text-red-800">
+                                Delete Item
+                            </button>
+                        </div>
+                        <div class="flex gap-3">
+                            <button type="button" onclick="closeEditModal()" class="px-6 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">
+                                Close
+                            </button>
+                            <button type="submit" class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                                Save
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Tags Modal -->
+    <div id="add-tags-modal" class="modal">
+        <div class="modal-content" style="max-width: 600px;">
+            <div class="p-6">
+                <!-- Modal Header -->
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-2xl font-bold text-gray-800">Add tags</h2>
+                    <button onclick="closeAddTagsModal()" class="text-gray-500 hover:text-gray-700 text-2xl">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+
+                <!-- Modal Body -->
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">
+                            Tags
+                            <i class="fas fa-info-circle text-gray-400 ml-1" title="Select tags to link to this item"></i>
+                        </label>
+                        <select id="tag-select-dropdown" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 mb-2" onchange="handleTagSelect()">
+                            <option value="">Choose...</option>
+                        </select>
+                        <input 
+                            type="text" 
+                            id="tag-search-input" 
+                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" 
+                            placeholder="Type something to start searching"
+                            onkeyup="loadAvailableTags()"
+                            onfocus="loadAvailableTags()"
+                        >
+                    </div>
+
+                    <!-- Tags Dropdown List -->
+                    <div id="tags-dropdown-list" class="border border-gray-300 rounded-lg max-h-64 overflow-y-auto bg-white">
+                        <!-- Tags will be loaded here -->
+                    </div>
+                </div>
+
+                <!-- Modal Footer -->
+                <div class="flex justify-end gap-3 pt-4 border-t border-gray-200 mt-6">
+                    <button type="button" onclick="closeAddTagsModal()" class="px-6 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">
+                        Close
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Ingredients Modal -->
+    <div id="add-ingredients-modal" class="modal">
+        <div class="modal-content" style="max-width: 600px;">
+            <div class="p-6">
+                <!-- Modal Header -->
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-2xl font-bold text-gray-800">Add Items</h2>
+                    <button onclick="closeAddIngredientsModal()" class="text-gray-500 hover:text-gray-700 text-2xl">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+
+                <!-- Modal Body -->
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">
+                            Items
+                            <i class="fas fa-info-circle text-gray-400 ml-1" title="Select items to add as ingredients"></i>
+                        </label>
+                        <!-- By Item Mode -->
+                        <div id="ingredients-item-select">
+                            <select 
+                                id="ingredients-item-dropdown" 
+                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 mb-2" 
+                                onchange="handleIngredientItemSelect()"
+                            >
+                                <option value="">Choose...</option>
+                            </select>
+                            <input 
+                                type="text" 
+                                id="ingredients-item-search" 
+                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" 
+                                placeholder="Type something to start searching"
+                                onkeyup="loadAvailableItems()"
+                                onfocus="loadAvailableItems()"
+                            >
+                            <div class="mt-2 text-right">
+                                <a href="#" onclick="switchToTagMode(); return false;" id="ingredient-select-by-tag-link" class="text-blue-600 hover:text-blue-800 text-sm">
+                                    Select by tags ?
+                                </a>
+                                <a href="#" onclick="switchToItemMode(); return false;" id="ingredient-select-by-item-link" class="text-blue-600 hover:text-blue-800 text-sm" style="display: none;">
+                                    Select <span id="ingredient-mode">by Item</span> ?
+                                </a>
+                            </div>
+                        </div>
+                        <!-- By Tag Mode -->
+                        <div id="ingredients-tag-select" style="display: none;">
+                            <div class="mt-2 text-right mb-2">
+                                <a href="#" onclick="switchToItemMode(); return false;" class="text-blue-600 hover:text-blue-800 text-sm">
+                                    Select by Item ?
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Items List (By Item Mode) -->
+                    <div id="ingredients-items-list" class="border border-gray-300 rounded-lg max-h-64 overflow-y-auto bg-white">
+                        <!-- Items will be loaded here -->
+                    </div>
+
+                    <!-- Tags List (By Tag Mode) -->
+                    <div id="ingredients-tags-list" class="border border-gray-300 rounded-lg max-h-64 overflow-y-auto bg-white" style="display: none;">
+                        <!-- Tags will be loaded here -->
+                    </div>
+                </div>
+
+                <!-- Modal Footer -->
+                <div class="flex justify-end gap-3 pt-4 border-t border-gray-200 mt-6">
+                    <button type="button" onclick="closeAddIngredientsModal()" class="px-6 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">
+                        Close
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Supabase Configuration (MUST BE FIRST)
+        const SUPABASE_URL = 'https://kexwnurwavszvmlpifsf.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtleHdudXJ3YXZzenZtbHBpZnNmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjUyNzk5OTksImV4cCI6MjA4MDg1NTk5OX0.w7RlFdXVFdKtqJJ99L0Q1ofzUiwillyy-g1ASEj1q-U';
+        
+        // Initialize Supabase Client (MUST BE EARLY)
+        let supabaseClient = null;
+        if (typeof supabase !== 'undefined') {
+            try {
+                supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+                console.log('✅ Supabase initialized for Item Detail');
+            } catch (error) {
+                console.error('❌ Supabase initialization failed:', error);
+            }
+        } else {
+            console.warn('⚠️ Supabase SDK not loaded yet');
+        }
+
+        // Get item ID from URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const itemId = urlParams.get('id');
+        const editMode = urlParams.get('edit') === 'true';
+
+        if (!itemId) {
+            console.error('❌ No item ID provided in URL');
+            // Notification will be shown by loadItemData
+        }
+
+        // Load item data from Supabase
+        async function loadItemData() {
+            if (!itemId) {
+                console.error('❌ No item ID to load');
+                return;
+            }
+
+            if (!supabaseClient) {
+                console.error('❌ Supabase not available');
+                showNotification('Error: Database connection not available. Please refresh the page.', 'error', 5000);
+                return;
+            }
+
+            try {
+                console.log('🔍 Loading item from Supabase with ID:', itemId);
+                const { data, error } = await supabaseClient
+                    .from('inventory_items')
+                    .select('*')
+                    .eq('id', itemId)
+                    .single();
+
+                if (error) {
+                    console.error('❌ Error loading item:', error);
+                    showNotification('Error loading item: ' + (error.message || 'Unknown error'), 'error', 5000);
+                    return;
+                }
+
+                if (!data) {
+                    console.error('❌ Item not found');
+                    showNotification('Item not found. Please go back and select a valid item.', 'error', 5000);
+                    return;
+                }
+
+                const item = data;
+                currentItemData = item; // Store globally
+                console.log('✅ Item loaded from Supabase:', item);
+            
+                // Check if item is deleted
+                const isDeleted = item.deleted === true;
+            
+                // Update title
+                document.getElementById('item-title').textContent = `${item.name_localized || item.name} / ${item.name}`;
+                
+                // Show/hide deleted badge
+                const deletedBadge = document.getElementById('deleted-badge');
+                if (deletedBadge) {
+                    if (isDeleted) {
+                        deletedBadge.classList.remove('hidden');
+                    } else {
+                        deletedBadge.classList.add('hidden');
+                    }
+                }
+                
+                // Show/hide restore and edit buttons
+                const restoreBtn = document.getElementById('restore-item-btn');
+                const editBtn = document.getElementById('edit-item-btn');
+                if (restoreBtn) {
+                    if (isDeleted) {
+                        restoreBtn.classList.remove('hidden');
+                    } else {
+                        restoreBtn.classList.add('hidden');
+                    }
+                }
+                if (editBtn) {
+                    if (isDeleted) {
+                        editBtn.classList.add('hidden');
+                    } else {
+                        editBtn.classList.remove('hidden');
+                    }
+                }
+            
+                // Populate item details
+                document.getElementById('item-name').textContent = item.name;
+                document.getElementById('item-name-localized').textContent = item.name_localized || item.name;
+                document.getElementById('item-sku').textContent = item.sku || 'N/A';
+                document.getElementById('item-category').textContent = item.category || 'Uncategorized';
+                document.getElementById('item-storage-unit').textContent = item.storage_unit || 'N/A';
+                document.getElementById('item-ingredient-unit').textContent = item.ingredient_unit || 'N/A';
+                // Display Factor based on actual units
+                const storageUnit = item.storage_unit || 'Pcs';
+                const ingredientUnit = item.ingredient_unit || 'Pcs';
+                const factor = item.storage_to_ingredient || '1';
+                
+                if (factor && factor !== '1') {
+                    // Show conversion: e.g., "1 Litre = 1000 ML" or "1000 ML = 1 Litre"
+                    document.getElementById('item-factor').textContent = `1 ${storageUnit} = ${factor} ${ingredientUnit}`;
+                } else {
+                    // If factor is 1 or not set, show simple 1:1 conversion
+                    document.getElementById('item-factor').textContent = `1 ${storageUnit} = 1 ${ingredientUnit}`;
+                }
+                document.getElementById('item-costing-method').textContent = item.costing_method || 'From Transactions';
+                document.getElementById('item-total-cost').textContent = item.cost ? `${item.cost} SAR` : '0 SAR';
+                document.getElementById('item-min-level').textContent = item.min_level || '-';
+                document.getElementById('item-max-level').textContent = item.max_level || '-';
+                document.getElementById('item-par-level').textContent = item.par_level || '-';
+                document.getElementById('item-barcode').textContent = item.barcode || '-';
+
+                // Populate edit form (only if not deleted and form fields exist)
+                if (!isDeleted) {
+                    const editName = document.getElementById('edit-name');
+                    const editNameLocalized = document.getElementById('edit-name-localized');
+                    const editSku = document.getElementById('edit-sku');
+                    const editCategory = document.getElementById('edit-category');
+                    const editStorageUnit = document.getElementById('edit-storage-unit');
+                    const editIngredientUnit = document.getElementById('edit-ingredient-unit');
+                    const editStorageToIngredient = document.getElementById('edit-storage-to-ingredient');
+                    const editCostingMethod = document.getElementById('edit-costing-method');
+                    const editCost = document.getElementById('edit-cost');
+                    const editMinLevel = document.getElementById('edit-min-level');
+                    const editMaxLevel = document.getElementById('edit-max-level');
+                    const editParLevel = document.getElementById('edit-par-level');
+                    const editBarcode = document.getElementById('edit-barcode');
+                    
+                    // Only set values if elements exist (modal might not be open yet)
+                    if (editName) editName.value = item.name || '';
+                    if (editNameLocalized) editNameLocalized.value = item.name_localized || item.name || '';
+                    if (editSku) editSku.value = item.sku || '';
+                    if (editCategory) editCategory.value = item.category || '';
+                    if (editStorageUnit) editStorageUnit.value = item.storage_unit || '';
+                    if (editIngredientUnit) editIngredientUnit.value = item.ingredient_unit || '';
+                    if (editStorageToIngredient) editStorageToIngredient.value = item.storage_to_ingredient || '1';
+                    if (editCostingMethod) editCostingMethod.value = item.costing_method || 'From Transactions';
+                    if (editCost) editCost.value = item.cost || '0';
+                    if (editMinLevel) editMinLevel.value = item.min_level || '';
+                    if (editMaxLevel) editMaxLevel.value = item.max_level || '';
+                    if (editParLevel) editParLevel.value = item.par_level || '';
+                    if (editBarcode) editBarcode.value = item.barcode || '';
+                }
+            } catch (error) {
+                console.error('❌ Exception loading item:', error);
+                showNotification('Error loading item: ' + (error.message || 'Unknown error'), 'error', 5000);
+            }
+        }
+
+        // Load categories for edit modal
+        async function loadCategoriesForEdit() {
+            // Load from Supabase only
+            let categories = [];
+            if (supabaseClient) {
+                try {
+                    const { data, error } = await supabaseClient
+                        .from('inventory_categories')
+                        .select('*')
+                        .eq('deleted', false)
+                        .order('name', { ascending: true });
+                    
+                    if (!error && data) {
+                        categories = data;
+                    }
+                } catch (error) {
+                    console.error('Error loading categories from Supabase:', error);
+                }
+            }
+            
+            const categorySelect = document.getElementById('edit-category');
+            if (categorySelect) {
+                // Keep "Choose..." option and add categories
+                categorySelect.innerHTML = '<option value="">Choose...</option>' + 
+                    categories.map(cat => 
+                        `<option value="${cat.name}">${cat.name}</option>`
+                    ).join('');
+            }
+        }
+
+        // Open edit modal
+        async function openEditModal() {
+            const modal = document.getElementById('edit-item-modal');
+            modal.classList.add('show');
+            // Load categories and refresh item data
+            await loadCategoriesForEdit();
+            await loadItemData();
+        }
+
+        // Close edit modal
+        function closeEditModal() {
+            const modal = document.getElementById('edit-item-modal');
+            modal.classList.remove('show');
+        }
+
+        // Generate SKU
+        function generateSKU() {
+            const sku = 'sk-' + Math.floor(Math.random() * 100000);
+            document.getElementById('edit-sku').value = sku;
+        }
+
+        // Delete item from modal
+        async function deleteItemFromModal() {
+            const confirmed = await showConfirmDialog(
+                'Are you sure you want to delete this item? This action cannot be undone.',
+                'Delete Item',
+                'danger'
+            );
+
+            if (!confirmed) return;
+
+            if (!itemId || !supabaseClient) {
+                showNotification('Error: Cannot delete item. Please refresh the page.', 'error', 5000);
+                return;
+            }
+
+            try {
+                const { error } = await supabaseClient
+                    .from('inventory_items')
+                    .update({ 
+                        deleted: true,
+                        deleted_at: new Date().toISOString()
+                    })
+                    .eq('id', itemId);
+
+                if (error) {
+                    console.error('❌ Error deleting item:', error);
+                    showNotification('Error deleting item. Please try again.', 'error', 5000);
+                    return;
+                }
+
+                showNotification('Item deleted successfully!', 'success', 3000);
+                closeEditModal();
+                
+                // Navigate back after delay
+                setTimeout(() => {
+                    goBack();
+                }, 1500);
+            } catch (error) {
+                console.error('❌ Exception deleting item:', error);
+                showNotification('Error deleting item. Please try again.', 'error', 5000);
+            }
+        }
+
+        // Add tags
+        function addTags() {
+            openAddTagsModal();
+        }
+
+        // Open Add Tags Modal
+        function openAddTagsModal() {
+            const modal = document.getElementById('add-tags-modal');
+            modal.classList.add('show');
+            // Clear search input
+            const searchInput = document.getElementById('tag-search-input');
+            if (searchInput) {
+                searchInput.value = '';
+            }
+            loadAvailableTags();
+            loadItemTags();
+        }
+
+        // Close Add Tags Modal
+        function closeAddTagsModal() {
+            document.getElementById('add-tags-modal').classList.remove('show');
+        }
+
+        // Handle tag select dropdown
+        function handleTagSelect() {
+            const select = document.getElementById('tag-select-dropdown');
+            const tagId = select.value;
+            if (tagId) {
+                toggleTagLink(tagId);
+                select.value = '';
+            }
+        }
+
+        // Load available tags
+        function loadAvailableTags() {
+            const tags = JSON.parse(localStorage.getItem('inventory_item_tags') || '[]');
+            const searchInput = document.getElementById('tag-search-input');
+            const tagsDropdown = document.getElementById('tags-dropdown-list');
+            const selectDropdown = document.getElementById('tag-select-dropdown');
+            
+            // Populate select dropdown
+            selectDropdown.innerHTML = '<option value="">Choose...</option>' + tags.map(tag => 
+                `<option value="${tag.id}">${tag.name}</option>`
+            ).join('');
+            
+            if (tags.length === 0) {
+                tagsDropdown.innerHTML = '<div class="p-4 text-center text-gray-500">No tags available. Create tags from Manage > More > Tags</div>';
+                return;
+            }
+            
+            // Filter tags based on search
+            const searchTerm = searchInput ? searchInput.value.toLowerCase() : '';
+            const filteredTags = tags.filter(tag => 
+                tag.name.toLowerCase().includes(searchTerm) || 
+                (tag.nameLocalized && tag.nameLocalized.toLowerCase().includes(searchTerm))
+            );
+            
+            if (filteredTags.length === 0 && searchTerm) {
+                tagsDropdown.innerHTML = '<div class="p-4 text-center text-gray-500">No tags found matching your search</div>';
+                return;
+            }
+            
+            // Show all tags if no search term, or filtered if searching
+            const tagsToShow = searchTerm ? filteredTags : tags;
+            
+            tagsDropdown.innerHTML = tagsToShow.map(tag => {
+                const isLinked = getItemTags().includes(tag.id);
+                return `
+                    <div class="tag-option p-3 hover:bg-gray-100 cursor-pointer flex justify-between items-center border-b border-gray-100 ${isLinked ? 'bg-blue-50' : ''}" 
+                         onclick="toggleTagLink('${tag.id}')">
+                        <div class="flex-1">
+                            <div class="font-medium text-gray-900">${tag.name}</div>
+                            ${tag.nameLocalized && tag.nameLocalized !== tag.name ? `<div class="text-sm text-gray-600">${tag.nameLocalized}</div>` : ''}
+                        </div>
+                        ${isLinked ? '<i class="fas fa-check text-blue-600 ml-3"></i>' : ''}
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Get current item's tags
+        function getItemTags() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const itemId = urlParams.get('id') || '1';
+            const items = JSON.parse(localStorage.getItem('inventory_items') || '[]');
+            const item = items.find(i => i.id === itemId);
+            return item ? (item.tags || []) : [];
+        }
+
+        // Toggle tag link
+        function toggleTagLink(tagId) {
+            const urlParams = new URLSearchParams(window.location.search);
+            const itemId = urlParams.get('id') || '1';
+            
+            // Get or create items array
+            let items = JSON.parse(localStorage.getItem('inventory_items') || '[]');
+            let item = items.find(i => i.id === itemId);
+            
+            if (!item) {
+                item = { id: itemId, tags: [] };
+                items.push(item);
+            }
+            
+            if (!item.tags) {
+                item.tags = [];
+            }
+            
+            // Toggle tag
+            const index = item.tags.indexOf(tagId);
+            if (index > -1) {
+                item.tags.splice(index, 1);
+            } else {
+                item.tags.push(tagId);
+            }
+            
+            // Update items
+            const itemIndex = items.findIndex(i => i.id === itemId);
+            if (itemIndex > -1) {
+                items[itemIndex] = item;
+            } else {
+                items.push(item);
+            }
+            localStorage.setItem('inventory_items', JSON.stringify(items));
+            
+            // Update tag counts
+            updateTagCounts();
+            
+            // Reload UI
+            loadItemTags();
+            loadAvailableTags();
+            
+            // Show success message
+            const tag = tags.find(t => t.id === tagId);
+            if (tag) {
+                const action = index > -1 ? 'unlinked' : 'linked';
+                console.log(`Tag "${tag.name}" ${action} successfully`);
+            }
+        }
+
+        // Update tag counts
+        function updateTagCounts() {
+            const items = JSON.parse(localStorage.getItem('inventory_items') || '[]');
+            const tags = JSON.parse(localStorage.getItem('inventory_item_tags') || '[]');
+            
+            tags.forEach(tag => {
+                tag.itemCount = items.filter(item => item.tags && item.tags.includes(tag.id)).length;
+            });
+            
+            localStorage.setItem('inventory_item_tags', JSON.stringify(tags));
+        }
+
+        // Load item tags display
+        function loadItemTags() {
+            const itemTags = getItemTags();
+            const tags = JSON.parse(localStorage.getItem('inventory_item_tags') || '[]');
+            const linkedTags = tags.filter(tag => itemTags.includes(tag.id));
+            
+            // Update main tags display
+            const tagsDisplay = document.getElementById('tags-display');
+            if (linkedTags.length === 0) {
+                tagsDisplay.innerHTML = '';
+            } else {
+                tagsDisplay.innerHTML = linkedTags.map(tag => `
+                    <span class="inline-flex items-center gap-2 px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm">
+                        ${tag.name}
+                        <button onclick="removeTagFromItem('${tag.id}')" class="hover:text-blue-900">
+                            <i class="fas fa-times text-xs"></i>
+                        </button>
+                    </span>
+                `).join('');
+            }
+        }
+
+        // Remove tag from item
+        function removeTagFromItem(tagId) {
+            toggleTagLink(tagId);
+        }
+
+        // Close modal on outside click
+        document.getElementById('add-tags-modal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeAddTagsModal();
+            }
+        });
+
+        // Add ingredients
+        function addIngredients() {
+            openAddIngredientsModal();
+        }
+
+        // Open Add Ingredients Modal
+        function openAddIngredientsModal() {
+            const modal = document.getElementById('add-ingredients-modal');
+            modal.classList.add('show');
+            // Reset to "by Item" mode
+            switchToItemMode();
+            loadAvailableItems();
+        }
+
+        // Close Add Ingredients Modal
+        function closeAddIngredientsModal() {
+            document.getElementById('add-ingredients-modal').classList.remove('show');
+        }
+
+        // Switch to "by Item" mode
+        function switchToItemMode() {
+            document.getElementById('ingredient-select-by-tag-link').style.display = 'inline';
+            document.getElementById('ingredient-select-by-item-link').style.display = 'none';
+            document.getElementById('ingredients-item-select').style.display = 'block';
+            document.getElementById('ingredients-tag-select').style.display = 'none';
+            document.getElementById('ingredients-items-list').style.display = 'block';
+            document.getElementById('ingredients-tags-list').style.display = 'none';
+            loadAvailableItems();
+        }
+
+        // Switch to "by Tag" mode
+        function switchToTagMode() {
+            document.getElementById('ingredient-select-by-tag-link').style.display = 'none';
+            document.getElementById('ingredient-select-by-item-link').style.display = 'none';
+            document.getElementById('ingredients-item-select').style.display = 'none';
+            document.getElementById('ingredients-tag-select').style.display = 'block';
+            document.getElementById('ingredients-items-list').style.display = 'none';
+            document.getElementById('ingredients-tags-list').style.display = 'block';
+            loadAvailableTagsForIngredients();
+        }
+
+        // Load available items for selection
+        function loadAvailableItems() {
+            const items = JSON.parse(localStorage.getItem('inventory_items') || '[]');
+            const currentItemId = urlParams.get('id') || '1';
+            const selectDropdown = document.getElementById('ingredients-item-dropdown');
+            const itemsList = document.getElementById('ingredients-items-list');
+            const searchInput = document.getElementById('ingredients-item-search');
+            
+            // Filter out current item and already added ingredients
+            const currentIngredients = getItemIngredients();
+            const availableItems = items.filter(item => 
+                item.id !== currentItemId && !currentIngredients.some(ing => ing.itemId === item.id)
+            );
+            
+            // Populate dropdown
+            selectDropdown.innerHTML = '<option value="">Choose...</option>' + availableItems.map(item => 
+                `<option value="${item.id}">${item.name || item.nameLocalized || 'Item ' + item.id}</option>`
+            ).join('');
+            
+            // Filter based on search
+            const searchTerm = searchInput ? searchInput.value.toLowerCase() : '';
+            const filteredItems = availableItems.filter(item => {
+                const name = (item.name || item.nameLocalized || '').toLowerCase();
+                const sku = (item.sku || '').toLowerCase();
+                return name.includes(searchTerm) || sku.includes(searchTerm);
+            });
+            
+            if (filteredItems.length === 0) {
+                itemsList.innerHTML = '<div class="p-4 text-center text-gray-500">No items available</div>';
+                return;
+            }
+            
+            itemsList.innerHTML = filteredItems.map(item => `
+                <div class="ingredient-item-option p-3 hover:bg-gray-100 cursor-pointer flex justify-between items-center border-b border-gray-100" 
+                     onclick="selectItemAsIngredient('${item.id}')">
+                    <div class="flex-1">
+                        <div class="font-medium text-gray-900">${item.name || item.nameLocalized || 'Item ' + item.id}</div>
+                        ${item.sku ? `<div class="text-sm text-gray-600">SKU: ${item.sku}</div>` : ''}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Load available tags for ingredient selection
+        function loadAvailableTagsForIngredients() {
+            const tags = JSON.parse(localStorage.getItem('inventory_item_tags') || '[]');
+            const tagsList = document.getElementById('ingredients-tags-list');
+            
+            if (tags.length === 0) {
+                tagsList.innerHTML = '<div class="p-4 text-center text-gray-500">No tags available. Create tags from Manage > More > Tags</div>';
+                return;
+            }
+            
+            tagsList.innerHTML = tags.map(tag => `
+                <div class="ingredient-tag-option p-3 hover:bg-gray-100 cursor-pointer flex justify-between items-center border-b border-gray-100" 
+                     onclick="selectTagForIngredients('${tag.id}')">
+                    <div class="flex-1">
+                        <div class="font-medium text-gray-900">${tag.name}</div>
+                        ${tag.nameLocalized && tag.nameLocalized !== tag.name ? `<div class="text-sm text-gray-600">${tag.nameLocalized}</div>` : ''}
+                    </div>
+                    <i class="fas fa-chevron-right text-gray-400"></i>
+                </div>
+            `).join('');
+        }
+
+        // Select item as ingredient
+        function selectItemAsIngredient(itemId) {
+            const items = JSON.parse(localStorage.getItem('inventory_items') || '[]');
+            const item = items.find(i => i.id === itemId);
+            
+            if (!item) return;
+            
+            // Add ingredient
+            addIngredientToItem(itemId, item.name || item.nameLocalized || 'Item ' + itemId);
+            closeAddIngredientsModal();
+        }
+
+        // Select tag for ingredients
+        function selectTagForIngredients(tagId) {
+            const tags = JSON.parse(localStorage.getItem('inventory_item_tags') || '[]');
+            const tag = tags.find(t => t.id === tagId);
+            const items = JSON.parse(localStorage.getItem('inventory_items') || '[]');
+            const currentItemId = urlParams.get('id') || '1';
+            const currentIngredients = getItemIngredients();
+            
+            // Get items with this tag
+            const taggedItems = items.filter(item => 
+                item.tags && item.tags.includes(tagId) && 
+                item.id !== currentItemId &&
+                !currentIngredients.some(ing => ing.itemId === item.id)
+            );
+            
+            if (taggedItems.length === 0) {
+                alert(`No items found with tag "${tag.name}"`);
+                return;
+            }
+            
+            // Add all tagged items as ingredients
+            taggedItems.forEach(item => {
+                addIngredientToItem(item.id, item.name || item.nameLocalized || 'Item ' + item.id);
+            });
+            
+            alert(`Added ${taggedItems.length} item(s) from tag "${tag.name}" as ingredients`);
+            closeAddIngredientsModal();
+        }
+
+        // Add ingredient to item
+        function addIngredientToItem(itemId, itemName) {
+            const currentItemId = urlParams.get('id') || '1';
+            let items = JSON.parse(localStorage.getItem('inventory_items') || '[]');
+            let item = items.find(i => i.id === currentItemId);
+            
+            if (!item) {
+                item = { id: currentItemId, ingredients: [] };
+                items.push(item);
+            }
+            
+            if (!item.ingredients) {
+                item.ingredients = [];
+            }
+            
+            // Check if already added
+            if (item.ingredients.some(ing => ing.itemId === itemId)) {
+                alert('This item is already added as an ingredient');
+                return;
+            }
+            
+            // Add ingredient
+            item.ingredients.push({
+                itemId: itemId,
+                itemName: itemName,
+                quantity: 1,
+                unit: 'Pcs'
+            });
+            
+            // Update items
+            const itemIndex = items.findIndex(i => i.id === currentItemId);
+            if (itemIndex > -1) {
+                items[itemIndex] = item;
+            } else {
+                items.push(item);
+            }
+            localStorage.setItem('inventory_items', JSON.stringify(items));
+            
+            // Reload display
+            loadItemIngredients();
+        }
+
+        // Get current item's ingredients
+        function getItemIngredients() {
+            const currentItemId = urlParams.get('id') || '1';
+            const items = JSON.parse(localStorage.getItem('inventory_items') || '[]');
+            const item = items.find(i => i.id === currentItemId);
+            return item ? (item.ingredients || []) : [];
+        }
+
+        // Load item ingredients display
+        function loadItemIngredients() {
+            const ingredients = getItemIngredients();
+            const ingredientsList = document.getElementById('ingredients-list');
+            
+            if (ingredients.length === 0) {
+                ingredientsList.innerHTML = '';
+                return;
+            }
+            
+            ingredientsList.innerHTML = ingredients.map(ing => `
+                <div class="flex justify-between items-center p-3 bg-gray-50 rounded-lg mb-2">
+                    <div class="flex-1">
+                        <div class="font-medium text-gray-900">${ing.itemName}</div>
+                        <div class="text-sm text-gray-600">Quantity: ${ing.quantity} ${ing.unit}</div>
+                    </div>
+                    <button onclick="removeIngredient('${ing.itemId}')" class="text-red-600 hover:text-red-800 ml-3">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            `).join('');
+        }
+
+        // Remove ingredient
+        function removeIngredient(itemId) {
+            const currentItemId = urlParams.get('id') || '1';
+            let items = JSON.parse(localStorage.getItem('inventory_items') || '[]');
+            let item = items.find(i => i.id === currentItemId);
+            
+            if (!item || !item.ingredients) return;
+            
+            item.ingredients = item.ingredients.filter(ing => ing.itemId !== itemId);
+            
+            const itemIndex = items.findIndex(i => i.id === currentItemId);
+            if (itemIndex > -1) {
+                items[itemIndex] = item;
+            }
+            localStorage.setItem('inventory_items', JSON.stringify(items));
+            
+            loadItemIngredients();
+        }
+
+        // Handle item select dropdown
+        function handleIngredientItemSelect() {
+            const select = document.getElementById('ingredients-item-dropdown');
+            const itemId = select.value;
+            if (itemId) {
+                selectItemAsIngredient(itemId);
+                select.value = '';
+            }
+        }
+
+        // Link suppliers
+        function linkSuppliers() {
+            alert('Link Suppliers functionality - To be implemented');
+        }
+
+        // Select branches
+        function selectBranches() {
+            alert('Select Branches functionality - To be implemented');
+        }
+
+        // Handle form submission
+        const editForm = document.getElementById('edit-item-form');
+        if (editForm) {
+            editForm.addEventListener('submit', async function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                
+                if (!itemId || !supabaseClient) {
+                    showNotification('Error: Cannot save item. Please refresh the page.', 'error', 5000);
+                    return;
+                }
+                
+                // Get form elements with null checks
+                const editName = document.getElementById('edit-name');
+                const editNameLocalized = document.getElementById('edit-name-localized');
+                const editSku = document.getElementById('edit-sku');
+                const editCategory = document.getElementById('edit-category');
+                const editStorageUnit = document.getElementById('edit-storage-unit');
+                const editIngredientUnit = document.getElementById('edit-ingredient-unit');
+                const editStorageToIngredient = document.getElementById('edit-storage-to-ingredient');
+                const editCostingMethod = document.getElementById('edit-costing-method');
+                const editCost = document.getElementById('edit-cost');
+                // Check if all required fields exist
+                if (!editName || !editSku) {
+                    showNotification('Error: Form fields not found. Please refresh the page.', 'error', 5000);
+                    return;
+                }
+                
+                // Get form values with safe access (only include fields that exist)
+                const formData = {
+                    name: (editName.value || '').trim(),
+                    name_localized: (editNameLocalized ? editNameLocalized.value : '').trim(),
+                    sku: (editSku.value || '').trim(),
+                    category: (editCategory ? editCategory.value : '').trim(),
+                    storage_unit: (editStorageUnit ? editStorageUnit.value : '').trim(),
+                    ingredient_unit: (editIngredientUnit ? editIngredientUnit.value : '').trim(),
+                    storage_to_ingredient: (editStorageToIngredient ? editStorageToIngredient.value : '').trim(),
+                    costing_method: (editCostingMethod ? editCostingMethod.value : 'From Transactions'),
+                    cost: parseFloat(editCost ? editCost.value : '0') || 0
+                };
+                
+                // Only add optional fields if they exist in the form
+                const editMinLevel = document.getElementById('edit-min-level');
+                const editMaxLevel = document.getElementById('edit-max-level');
+                const editParLevel = document.getElementById('edit-par-level');
+                const editBarcode = document.getElementById('edit-barcode');
+                
+                if (editMinLevel) {
+                    const minLevelValue = editMinLevel.value.trim();
+                    formData.min_level = minLevelValue || null;
+                }
+                if (editMaxLevel) {
+                    const maxLevelValue = editMaxLevel.value.trim();
+                    formData.max_level = maxLevelValue || null;
+                }
+                if (editParLevel) {
+                    const parLevelValue = editParLevel.value.trim();
+                    formData.par_level = parLevelValue || null;
+                }
+                if (editBarcode) {
+                    formData.barcode = editBarcode.value.trim() || '';
+                }
+
+                // Validate required fields
+                if (!formData.name || !formData.sku) {
+                    showNotification('Please fill in all required fields (Name and SKU).', 'warning', 3000);
+                    return;
+                }
+
+                try {
+                    // Update item in Supabase
+                    const { error } = await supabaseClient
+                        .from('inventory_items')
+                        .update(formData)
+                        .eq('id', itemId);
+
+                    if (error) {
+                        console.error('❌ Error updating item:', error);
+                        showNotification('Error saving item: ' + (error.message || 'Unknown error'), 'error', 5000);
+                        return;
+                    }
+
+                    showNotification('Item saved successfully!', 'success', 3000);
+                    
+                    // Update display
+                    await loadItemData();
+                    closeEditModal();
+                } catch (error) {
+                    console.error('❌ Exception saving item:', error);
+                    showNotification('Error saving item. Please try again.', 'error', 5000);
+                }
+            });
+        }
+
+        // Close modal on outside click (only on backdrop, not on content)
+        const editModal = document.getElementById('edit-item-modal');
+        if (editModal) {
+            editModal.addEventListener('click', function(e) {
+                // Only close if clicking directly on the modal backdrop (not on modal-content)
+                if (e.target === this) {
+                    closeEditModal();
+                }
+            });
+        }
+        
+        // Prevent modal content clicks from closing modal
+        const modalContent = document.querySelector('#edit-item-modal .modal-content');
+        if (modalContent) {
+            modalContent.addEventListener('click', function(e) {
+                e.stopPropagation();
+            });
+        }
+
+        // Restore Item from Detail Page
+        async function restoreItemFromDetail() {
+            if (!itemId) {
+                showNotification('Error: No item ID available.', 'error', 5000);
+                return;
+            }
+
+            const confirmed = await showConfirmDialog(
+                'Are you sure you want to restore this item?',
+                'Restore Item',
+                'confirm'
+            );
+
+            if (!confirmed) return;
+
+            if (!supabaseClient) {
+                showNotification('Error: Database not initialized. Please refresh the page.', 'error', 5000);
+                return;
+            }
+
+            try {
+                const { error } = await supabaseClient
+                    .from('inventory_items')
+                    .update({ 
+                        deleted: false,
+                        deleted_at: null
+                    })
+                    .eq('id', itemId);
+
+                if (error) {
+                    console.error('❌ Error restoring item:', error);
+                    showNotification('Error restoring item. Please try again.', 'error', 5000);
+                    return;
+                }
+
+                showNotification('Item restored successfully!', 'success', 3000);
+                
+                // Reload item data to update UI
+                await loadItemData();
+                
+                // Navigate back to items list after a delay
+                setTimeout(() => {
+                    goBack();
+                }, 1500);
+            } catch (error) {
+                console.error('❌ Exception restoring item:', error);
+                showNotification('Error restoring item. Please try again.', 'error', 5000);
+            }
+        }
+
+        // Advanced Options handler
+        function showAdvancedOptions() {
+            showNotification('Advanced Options feature coming soon!', 'info', 3000);
+        }
+
+        // Go back function
+        function goBack() {
+            // If loaded in iframe, communicate with parent to go back
+            if (window.parent && window.parent !== window) {
+                window.parent.postMessage({
+                    type: 'LOAD_DASHBOARD',
+                    url: 'inventory/items.html'
+                }, '*');
+            } else {
+                // Direct navigation if not in iframe
+                window.location.href = 'items.html';
+            }
+        }
+
+        // Close ingredients modal on outside click
+        document.getElementById('add-ingredients-modal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeAddIngredientsModal();
+            }
+        });
+
+        // Initialize Supabase Client on DOM Ready (in case SDK loads late)
+        document.addEventListener('DOMContentLoaded', function() {
+            // Re-initialize Supabase if not already done
+            if (!supabaseClient && typeof supabase !== 'undefined') {
+                try {
+                    supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+                    console.log('✅ Supabase initialized on DOM ready');
+                } catch (error) {
+                    console.error('❌ Supabase initialization failed on DOM ready:', error);
+                }
+            }
+        });
+
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', async function() {
+            await loadItemData();
+            loadItemTags();
+            loadItemIngredients();
+            
+            // If edit mode, open modal automatically
+            if (editMode) {
+                setTimeout(() => openEditModal(), 300);
+            }
+        });
+    </script>
+</body>
+</html>

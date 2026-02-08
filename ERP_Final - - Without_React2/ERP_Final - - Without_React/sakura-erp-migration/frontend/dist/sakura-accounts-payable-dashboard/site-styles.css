@@ -1,0 +1,16 @@
+
+/* Accounts Payable Dashboard Custom Styles */
+:root {
+    --site-primary: #dc2626;
+    --site-secondary: #ef4444;
+    --site-accent: #fca5a5;
+}
+
+.site-branding::before {
+    content: "💰 ";
+}
+
+.page-header h1::before {
+    content: "Accounts Payable ";
+    color: var(--site-primary);
+}

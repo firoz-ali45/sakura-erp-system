@@ -1,0 +1,3423 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Inventory Items - Sakura Portal</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Font Awesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Supabase SDK -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
+    <!-- SheetJS for Excel Import/Export -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    
+    <style>
+        body {
+            font-family: 'Cairo', sans-serif;
+            background-color: #f0e1cd;
+            margin: 0;
+            padding: 0;
+        }
+        
+        /* ==================== SAKURA CUSTOM NOTIFICATION SYSTEM ==================== */
+        .sakura-notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 10000;
+            min-width: 350px;
+            max-width: 500px;
+            animation: slideInRight 0.3s ease-out;
+            font-family: 'Cairo', sans-serif;
+        }
+        
+        @keyframes slideInRight {
+            from {
+                transform: translateX(400px);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+        
+        @keyframes slideOutRight {
+            from {
+                transform: translateX(0);
+                opacity: 1;
+            }
+            to {
+                transform: translateX(400px);
+                opacity: 0;
+            }
+        }
+        
+        .sakura-notification-content {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 16px 20px;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2), 0 4px 10px rgba(0, 0, 0, 0.1);
+            color: white;
+            backdrop-filter: blur(10px);
+            position: relative;
+        }
+        
+        .sakura-notification-icon {
+            font-size: 24px;
+            flex-shrink: 0;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 50%;
+        }
+        
+        .sakura-notification-message {
+            flex: 1;
+            font-size: 15px;
+            font-weight: 500;
+            line-height: 1.5;
+        }
+        
+        .sakura-notification-message p {
+            margin: 0;
+            word-wrap: break-word;
+        }
+        
+        .sakura-notification-close {
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            color: white;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            flex-shrink: 0;
+        }
+        
+        .sakura-notification-close:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: scale(1.1);
+        }
+        
+        /* Confirm Dialog Styles */
+        .sakura-confirm-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 10001;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(4px);
+        }
+        
+        .sakura-confirm-dialog {
+            background: white;
+            border-radius: 16px;
+            padding: 0;
+            min-width: 400px;
+            max-width: 500px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            animation: scaleIn 0.2s ease-out;
+            font-family: 'Cairo', sans-serif;
+        }
+        
+        @keyframes scaleIn {
+            from {
+                transform: scale(0.9);
+                opacity: 0;
+            }
+            to {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+        
+        .sakura-confirm-header {
+            background: linear-gradient(135deg, #284b44 0%, #3d6b5f 100%);
+            color: white;
+            padding: 20px 24px;
+            border-radius: 16px 16px 0 0;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .sakura-confirm-icon {
+            font-size: 24px;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 50%;
+        }
+        
+        .sakura-confirm-title {
+            font-size: 18px;
+            font-weight: 600;
+            flex: 1;
+        }
+        
+        .sakura-confirm-body {
+            padding: 24px;
+            color: #1f2937;
+            font-size: 15px;
+            line-height: 1.6;
+        }
+        
+        .sakura-confirm-footer {
+            padding: 16px 24px;
+            border-top: 1px solid #e5e7eb;
+            display: flex;
+            justify-content: flex-end;
+            gap: 12px;
+        }
+        
+        .sakura-confirm-btn {
+            padding: 10px 24px;
+            border-radius: 8px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: none;
+            font-size: 14px;
+        }
+        
+        .sakura-confirm-btn-cancel {
+            background: #f3f4f6;
+            color: #374151;
+        }
+        
+        .sakura-confirm-btn-cancel:hover {
+            background: #e5e7eb;
+        }
+        
+        .sakura-confirm-btn-confirm {
+            background: linear-gradient(135deg, #284b44 0%, #3d6b5f 100%);
+            color: white;
+        }
+        
+        .sakura-confirm-btn-confirm:hover {
+            background: linear-gradient(135deg, #1e3a35 0%, #2d4f45 100%);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(40, 75, 68, 0.3);
+        }
+        
+        .sakura-confirm-btn-danger {
+            background: linear-gradient(135deg, #dc2626 0%, #ef4444 100%);
+            color: white;
+        }
+        
+        .sakura-confirm-btn-danger:hover {
+            background: linear-gradient(135deg, #b91c1c 0%, #dc2626 100%);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3);
+        }
+        
+        .table-container {
+            max-height: calc(100vh - 300px);
+            overflow-y: auto;
+            overflow-x: auto;
+        }
+        
+        .table-container::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        
+        .table-container::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 4px;
+        }
+        
+        .table-container::-webkit-scrollbar-thumb {
+            background: #956c2a;
+            border-radius: 4px;
+        }
+        
+        .table-container::-webkit-scrollbar-thumb:hover {
+            background: #7a5a22;
+        }
+        
+        table {
+            border-collapse: separate;
+            border-spacing: 0;
+        }
+        
+        thead th {
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            background: #284b44;
+        }
+        
+        /* Review Data Table Header Fix */
+        #review-data-modal .table-container thead th {
+            background: #f3f4f6 !important;
+            color: #1f2937 !important;
+            font-weight: 600 !important;
+            padding: 12px 16px !important;
+            white-space: nowrap !important;
+            overflow: visible !important;
+            text-overflow: clip !important;
+            height: auto !important;
+            line-height: 1.5 !important;
+            vertical-align: middle !important;
+        }
+        
+        #review-data-modal .table-container tbody td {
+            vertical-align: middle !important;
+            padding: 12px 16px !important;
+        }
+        
+        tbody tr:hover {
+            background-color: #f9fafb;
+        }
+        
+        .tab-button {
+            transition: all 0.2s ease;
+        }
+        
+        .tab-button.active {
+            border-bottom: 3px solid #956c2a;
+            font-weight: 600;
+        }
+        
+        .dropdown-menu {
+            display: none;
+            position: absolute;
+            background: white;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            border-radius: 8px;
+            z-index: 100;
+            min-width: 180px;
+            margin-top: 8px;
+        }
+        
+        .dropdown-menu.show {
+            display: block;
+        }
+        
+        .dropdown-menu a {
+            display: block;
+            padding: 12px 16px;
+            color: #1f2937;
+            text-decoration: none;
+            transition: background-color 0.2s;
+        }
+        
+        .dropdown-menu a:hover {
+            background-color: #f3f4f6;
+        }
+        
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 9999;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            animation: fadeIn 0.3s ease;
+            overflow-y: auto;
+        }
+        
+        .modal.show {
+            display: flex !important;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .modal-content {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+            max-width: 900px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+            animation: slideIn 0.3s ease;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        @keyframes slideIn {
+            from { transform: translateY(-50px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        
+        .advanced-options {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease-out;
+        }
+        
+        .advanced-options.expanded {
+            max-height: 2000px;
+        }
+    </style>
+</head>
+<body>
+    <!-- Main Container -->
+    <div class="container mx-auto px-6 py-6">
+        <!-- Header Section -->
+        <div class="flex justify-between items-center mb-6">
+            <div class="flex items-center gap-3">
+                <h1 class="text-3xl font-bold text-gray-800">Inventory Items</h1>
+                <button class="text-gray-500 hover:text-gray-700" title="Help">
+                    <i class="fas fa-question-circle"></i>
+                </button>
+            </div>
+            <div class="flex items-center gap-3">
+                <!-- Import/Export Dropdown -->
+                <div class="relative">
+                    <button onclick="toggleDropdown(event, 'import-export-menu')" class="px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center gap-2">
+                        <i class="fas fa-cloud"></i>
+                        <span>Import / Export</span>
+                        <i class="fas fa-chevron-down text-xs"></i>
+                    </button>
+                    <div id="import-export-menu" class="dropdown-menu">
+                        <a href="#" onclick="event.preventDefault(); openImportModal();"><i class="fas fa-upload mr-2"></i>↑ Import Items</a>
+                        <a href="#" onclick="event.preventDefault(); event.stopPropagation(); exportItems(); return false;"><i class="fas fa-download mr-2"></i>↓ Export Items</a>
+                        <a href="#" onclick="event.preventDefault(); event.stopPropagation(); window.downloadExcelTemplate(); return false;"><i class="fas fa-file-excel mr-2"></i>Download Template</a>
+                    </div>
+                </div>
+                <!-- Create Item Button -->
+                <button onclick="createItem(event)" class="px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 flex items-center gap-2 font-semibold">
+                    <i class="fas fa-plus"></i>
+                    <span>Create Item</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Tabs and Filter Section -->
+        <div class="bg-white rounded-lg shadow-md p-4 mb-4">
+            <div class="flex justify-between items-center">
+                <div class="flex gap-6 border-b border-gray-200">
+                    <button onclick="switchTab('all')" class="tab-button active px-4 py-2 text-gray-700" data-tab="all">
+                        All
+                    </button>
+                    <button onclick="switchTab('items')" class="tab-button px-4 py-2 text-gray-700" data-tab="items">
+                        Items
+                    </button>
+                    <button onclick="switchTab('products')" class="tab-button px-4 py-2 text-gray-700" data-tab="products">
+                        Products
+                    </button>
+                    <button onclick="switchTab('deleted')" class="tab-button px-4 py-2 text-gray-700" data-tab="deleted">
+                        Deleted
+                    </button>
+                </div>
+                <div class="flex items-center gap-3">
+                    <button onclick="openFilter()" class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center gap-2">
+                        <i class="fas fa-filter"></i>
+                        <span>Filter</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bulk Actions Bar (Hidden by default) -->
+        <div id="bulk-actions-bar" class="bg-yellow-50 border border-yellow-200 rounded-lg shadow-md p-4 mb-4 hidden">
+            <div class="flex justify-between items-center">
+                <div class="flex items-center gap-4">
+                    <span id="selected-count" class="font-semibold text-gray-700">0 Selected</span>
+                    <div class="relative">
+                        <button onclick="toggleBulkActionsMenu(event)" class="px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center gap-2">
+                            <i class="fas fa-tasks"></i>
+                            <span>Actions</span>
+                            <i class="fas fa-chevron-down text-xs"></i>
+                        </button>
+                        <div id="bulk-actions-menu" class="dropdown-menu">
+                            <a href="#" id="bulk-restore-option" onclick="event.preventDefault(); bulkRestoreItems();" class="hidden"><i class="fas fa-undo mr-2 text-green-600"></i>Bulk Restore</a>
+                            <a href="#" id="bulk-delete-option" onclick="event.preventDefault(); bulkDeleteItems();"><i class="fas fa-trash mr-2 text-red-600"></i>Delete</a>
+                            <a href="#" onclick="event.preventDefault(); bulkAddTags();"><i class="fas fa-tags mr-2 text-blue-600"></i>Add Tags</a>
+                            <a href="#" onclick="event.preventDefault(); bulkRemoveTags();"><i class="fas fa-tag mr-2 text-orange-600"></i>Remove Tags</a>
+                            <a href="#" onclick="event.preventDefault(); bulkExportItems();"><i class="fas fa-download mr-2 text-green-600"></i>Export Selected</a>
+                            <a href="#" onclick="event.preventDefault(); bulkChangeCategory();"><i class="fas fa-folder mr-2 text-purple-600"></i>Change Category</a>
+                        </div>
+                    </div>
+                </div>
+                <button onclick="clearSelection()" class="text-gray-600 hover:text-gray-800">
+                    <i class="fas fa-times"></i> Clear Selection
+                </button>
+            </div>
+        </div>
+
+        <!-- Items Table -->
+        <div class="bg-white rounded-lg shadow-md overflow-hidden">
+            <div class="table-container">
+                <table class="w-full">
+                    <thead>
+                        <tr class="bg-[#284b44] text-white">
+                            <th class="px-6 py-4 text-left">
+                                <input type="checkbox" id="select-all" onchange="toggleSelectAll()" class="rounded">
+                            </th>
+                            <th class="px-6 py-4 text-left font-semibold">Name</th>
+                            <th class="px-6 py-4 text-left font-semibold">SKU</th>
+                            <th class="px-6 py-4 text-left font-semibold">Category</th>
+                            <th class="px-6 py-4 text-left font-semibold">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="items-table-body" class="bg-white divide-y divide-gray-200">
+                        <!-- Items will be loaded dynamically from Supabase -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Pagination (Optional) -->
+        <div class="mt-4 flex justify-between items-center">
+            <div class="text-sm text-gray-600">
+                Showing <span id="showing-from">1</span> to <span id="showing-to">7</span> of <span id="total-items">7</span> items
+            </div>
+            <div class="flex gap-2">
+                <button class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50" disabled>
+                    <i class="fas fa-chevron-left"></i>
+                </button>
+                <button class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">
+                    <i class="fas fa-chevron-right"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ==================== SAKURA CUSTOM NOTIFICATION SYSTEM ====================
+        
+        // Sakura Brand Colors
+        const SAKURA_COLORS = {
+            primary: '#284b44',      // Dark green (main brand)
+            secondary: '#3d6b5f',    // Medium green
+            accent: '#ea8990',       // Pink/Coral
+            success: '#4ade80',      // Green for success
+            warning: '#fbbf24',      // Yellow for warnings
+            error: '#ef4444',        // Red for errors
+            info: '#60a5fa'          // Blue for info
+        };
+        
+        // Show Custom Notification (Sakura Branding)
+        function showNotification(message, type = 'success', duration = 4000) {
+            // Remove any existing notifications
+            const existingNotifications = document.querySelectorAll('.sakura-notification');
+            existingNotifications.forEach(n => {
+                n.style.animation = 'slideOutRight 0.3s ease-out';
+                setTimeout(() => n.remove(), 300);
+            });
+            
+            const notification = document.createElement('div');
+            notification.className = 'sakura-notification';
+            
+            // Determine icon and color based on type
+            let icon = 'fa-check-circle';
+            let bgColor = SAKURA_COLORS.success;
+            let borderColor = SAKURA_COLORS.primary;
+            
+            switch(type) {
+                case 'error':
+                    icon = 'fa-exclamation-circle';
+                    bgColor = SAKURA_COLORS.error;
+                    borderColor = '#dc2626';
+                    break;
+                case 'warning':
+                    icon = 'fa-exclamation-triangle';
+                    bgColor = SAKURA_COLORS.warning;
+                    borderColor = '#d97706';
+                    break;
+                case 'info':
+                    icon = 'fa-info-circle';
+                    bgColor = SAKURA_COLORS.info;
+                    borderColor = '#2563eb';
+                    break;
+                case 'success':
+                default:
+                    icon = 'fa-check-circle';
+                    bgColor = SAKURA_COLORS.success;
+                    borderColor = SAKURA_COLORS.primary;
+                    break;
+            }
+            
+            notification.innerHTML = `
+                <div class="sakura-notification-content" style="background: linear-gradient(135deg, ${bgColor} 0%, ${bgColor}dd 100%); border-left: 4px solid ${borderColor};">
+                    <div class="sakura-notification-icon">
+                        <i class="fas ${icon}"></i>
+                    </div>
+                    <div class="sakura-notification-message">
+                        <p>${message}</p>
+                    </div>
+                    <button class="sakura-notification-close" onclick="this.closest('.sakura-notification').style.animation='slideOutRight 0.3s ease-out'; setTimeout(() => this.closest('.sakura-notification').remove(), 300);">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            `;
+            
+            document.body.appendChild(notification);
+            
+            // Auto remove after duration
+            if (duration > 0) {
+                setTimeout(() => {
+                    notification.style.animation = 'slideOutRight 0.3s ease-out';
+                    setTimeout(() => notification.remove(), 300);
+                }, duration);
+            }
+        }
+        
+        // Show Custom Confirm Dialog (Sakura Branding)
+        function showConfirmDialog(message, title = 'Confirm', type = 'confirm') {
+            return new Promise((resolve) => {
+                const overlay = document.createElement('div');
+                overlay.className = 'sakura-confirm-overlay';
+                
+                const icon = type === 'danger' ? 'fa-exclamation-triangle' : 'fa-question-circle';
+                const confirmBtnClass = type === 'danger' ? 'sakura-confirm-btn-danger' : 'sakura-confirm-btn-confirm';
+                const confirmBtnText = type === 'danger' ? 'Delete' : 'Confirm';
+                
+                overlay.innerHTML = `
+                    <div class="sakura-confirm-dialog">
+                        <div class="sakura-confirm-header">
+                            <div class="sakura-confirm-icon">
+                                <i class="fas ${icon}"></i>
+                            </div>
+                            <div class="sakura-confirm-title">${title}</div>
+                        </div>
+                        <div class="sakura-confirm-body">
+                            ${message}
+                        </div>
+                        <div class="sakura-confirm-footer">
+                            <button class="sakura-confirm-btn sakura-confirm-btn-cancel" data-action="cancel">Cancel</button>
+                            <button class="sakura-confirm-btn ${confirmBtnClass}" data-action="confirm">${confirmBtnText}</button>
+                        </div>
+                    </div>
+                `;
+                
+                document.body.appendChild(overlay);
+                
+                // Handle button clicks
+                overlay.querySelectorAll('.sakura-confirm-btn').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        const action = e.target.getAttribute('data-action');
+                        overlay.style.animation = 'scaleIn 0.2s ease-out reverse';
+                        setTimeout(() => {
+                            overlay.remove();
+                            resolve(action === 'confirm');
+                        }, 200);
+                    });
+                });
+                
+                // Close on overlay click (outside dialog)
+                overlay.addEventListener('click', (e) => {
+                    if (e.target === overlay) {
+                        overlay.style.animation = 'scaleIn 0.2s ease-out reverse';
+                        setTimeout(() => {
+                            overlay.remove();
+                            resolve(false);
+                        }, 200);
+                    }
+                });
+            });
+        }
+        
+        // Supabase Configuration (MUST BE FIRST)
+        const SUPABASE_URL = 'https://kexwnurwavszvmlpifsf.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtleHdudXJ3YXZzenZtbHBpZnNmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjUyNzk5OTksImV4cCI6MjA4MDg1NTk5OX0.w7RlFdXVFdKtqJJ99L0Q1ofzUiwillyy-g1ASEj1q-U';
+        
+        // Initialize Supabase Client (MUST BE EARLY)
+        let supabaseClient = null;
+        if (typeof supabase !== 'undefined') {
+            try {
+                supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+                console.log('✅ Supabase initialized for Items');
+            } catch (error) {
+                console.error('❌ Supabase initialization failed:', error);
+            }
+        } else {
+            console.warn('⚠️ Supabase SDK not loaded yet');
+        }
+
+        // Create item - Open modal (GLOBAL FUNCTION - Must be accessible)
+        window.createItem = function(event) {
+            if (event) {
+                event.preventDefault();
+                event.stopPropagation();
+            }
+            console.log('✅ Create Item button clicked');
+            if (typeof openCreateItemModal === 'function') {
+                openCreateItemModal();
+            } else {
+                console.error('❌ openCreateItemModal function not found');
+                showNotification('Error: Please refresh the page. Modal function not loaded.', 'error', 5000);
+            }
+        };
+
+        // Tab switching
+        function switchTab(tabName) {
+            // Remove active class from all tabs
+            document.querySelectorAll('.tab-button').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            
+            // Add active class to clicked tab
+            document.querySelector(`[data-tab="${tabName}"]`).classList.add('active');
+            
+            // Clear selection when switching tabs
+            clearSelection();
+            
+            // Update bulk actions menu based on new tab
+            updateBulkActionsBar();
+            
+            // Filter items based on tab
+            filterItemsByTab(tabName);
+        }
+
+        // Filter items by tab
+        async function filterItemsByTab(tabName) {
+            // Reload table to ensure proper filtering with fresh data
+            await loadItemsTable();
+        }
+
+        // Restore item function (called from button)
+        window.restoreItem = async function(itemId) {
+            const confirmed = await showConfirmDialog('Are you sure you want to restore this item?', 'Restore Item', 'confirm');
+            if (!confirmed) {
+                return;
+            }
+            
+            const result = await restoreItemInternal(itemId);
+            if (result.success) {
+                showNotification('Item restored successfully!', 'success', 3000);
+                await loadItemsTable();
+            } else {
+                showNotification('Error restoring item. Please try again.', 'error', 5000);
+            }
+        };
+
+        // Dropdown toggle
+        function toggleDropdown(event, menuId) {
+            event.stopPropagation();
+            const menu = document.getElementById(menuId);
+            const isShowing = menu.classList.contains('show');
+            
+            // Close all dropdowns
+            document.querySelectorAll('.dropdown-menu').forEach(m => m.classList.remove('show'));
+            
+            // Toggle current dropdown
+            if (!isShowing) {
+                menu.classList.add('show');
+            }
+            
+            // Close on outside click
+            setTimeout(() => {
+                document.addEventListener('click', function closeDropdown() {
+                    menu.classList.remove('show');
+                    document.removeEventListener('click', closeDropdown);
+                });
+            }, 0);
+        }
+
+        // Select all checkbox
+        function toggleSelectAll() {
+            const selectAll = document.getElementById('select-all');
+            const checkboxes = document.querySelectorAll('.item-checkbox');
+            checkboxes.forEach(cb => {
+                cb.checked = selectAll.checked;
+            });
+            updateBulkActionsBar();
+        }
+
+        // Attach checkbox listeners for bulk actions
+        function attachCheckboxListeners() {
+            const checkboxes = document.querySelectorAll('.item-checkbox');
+            checkboxes.forEach(cb => {
+                cb.removeEventListener('change', handleCheckboxChange);
+                cb.addEventListener('change', handleCheckboxChange);
+            });
+        }
+
+        // Handle individual checkbox change
+        function handleCheckboxChange() {
+            updateBulkActionsBar();
+            updateSelectAllCheckbox();
+        }
+
+        // Update select all checkbox state
+        function updateSelectAllCheckbox() {
+            const checkboxes = document.querySelectorAll('.item-checkbox');
+            const selectAll = document.getElementById('select-all');
+            if (!selectAll || checkboxes.length === 0) return;
+            
+            const checkedCount = Array.from(checkboxes).filter(cb => cb.checked).length;
+            selectAll.checked = checkedCount === checkboxes.length;
+            selectAll.indeterminate = checkedCount > 0 && checkedCount < checkboxes.length;
+        }
+
+        // Update bulk actions bar visibility
+        function updateBulkActionsBar() {
+            const selectedCount = getSelectedItemIds().length;
+            const bulkActionsBar = document.getElementById('bulk-actions-bar');
+            const selectedCountEl = document.getElementById('selected-count');
+            
+            if (bulkActionsBar && selectedCountEl) {
+                if (selectedCount > 0) {
+                    bulkActionsBar.classList.remove('hidden');
+                    selectedCountEl.textContent = `${selectedCount} Selected`;
+                } else {
+                    bulkActionsBar.classList.add('hidden');
+                }
+            }
+        }
+
+        // Get selected item IDs
+        function getSelectedItemIds() {
+            const checkboxes = document.querySelectorAll('.item-checkbox:checked');
+            return Array.from(checkboxes).map(cb => cb.getAttribute('data-item-id'));
+        }
+
+        // Clear selection
+        function clearSelection() {
+            const checkboxes = document.querySelectorAll('.item-checkbox');
+            checkboxes.forEach(cb => cb.checked = false);
+            const selectAll = document.getElementById('select-all');
+            if (selectAll) selectAll.checked = false;
+            updateBulkActionsBar();
+        }
+
+        // Toggle bulk actions menu
+        function toggleBulkActionsMenu(event) {
+            if (event) {
+                event.stopPropagation();
+            }
+            const menu = document.getElementById('bulk-actions-menu');
+            if (menu) {
+                menu.classList.toggle('show');
+            }
+        }
+
+        // Close bulk actions menu when clicking outside
+        document.addEventListener('click', function(event) {
+            const menu = document.getElementById('bulk-actions-menu');
+            const button = event.target.closest('[onclick*="toggleBulkActionsMenu"]');
+            if (menu && !menu.contains(event.target) && !button) {
+                menu.classList.remove('show');
+            }
+        });
+
+        // Bulk Restore Items
+        async function bulkRestoreItems() {
+            const selectedIds = getSelectedItemIds();
+            if (selectedIds.length === 0) {
+                showNotification('Please select items to restore.', 'warning', 3000);
+                return;
+            }
+
+            const confirmed = await showConfirmDialog(
+                `Are you sure you want to restore ${selectedIds.length} item(s)?`,
+                'Bulk Restore Items',
+                'confirm'
+            );
+
+            if (!confirmed) return;
+
+            let successCount = 0;
+            let errorCount = 0;
+
+            for (const itemId of selectedIds) {
+                const result = await restoreItemInternal(itemId);
+                if (result.success) {
+                    successCount++;
+                } else {
+                    errorCount++;
+                }
+            }
+
+            if (successCount > 0) {
+                showNotification(`Successfully restored ${successCount} item(s)!${errorCount > 0 ? ` ${errorCount} item(s) failed.` : ''}`, 'success', 4000);
+                clearSelection();
+                await loadItemsTable();
+            } else {
+                showNotification(`Failed to restore items. Please try again.`, 'error', 5000);
+            }
+        }
+
+        // Bulk Delete Items
+        async function bulkDeleteItems() {
+            const selectedIds = getSelectedItemIds();
+            if (selectedIds.length === 0) {
+                showNotification('Please select items to delete.', 'warning', 3000);
+                return;
+            }
+
+            const confirmed = await showConfirmDialog(
+                `Are you sure you want to delete ${selectedIds.length} item(s)? This action cannot be undone.`,
+                'Bulk Delete Items',
+                'danger'
+            );
+
+            if (!confirmed) return;
+
+            let successCount = 0;
+            let errorCount = 0;
+
+            for (const itemId of selectedIds) {
+                const result = await deleteItemFromSupabase(itemId);
+                if (result.success) {
+                    successCount++;
+                } else {
+                    errorCount++;
+                }
+            }
+
+            if (successCount > 0) {
+                showNotification(`Successfully deleted ${successCount} item(s)!${errorCount > 0 ? ` ${errorCount} item(s) failed.` : ''}`, 'success', 4000);
+                clearSelection();
+                await loadItemsTable();
+            } else {
+                showNotification(`Failed to delete items. Please try again.`, 'error', 5000);
+            }
+        }
+
+        // Bulk Add Tags
+        async function bulkAddTags() {
+            const selectedIds = getSelectedItemIds();
+            if (selectedIds.length === 0) {
+                showNotification('Please select items to add tags to.', 'warning', 3000);
+                return;
+            }
+
+            // Store selected IDs for modal
+            window.bulkAddTagsSelectedIds = selectedIds;
+
+            // Show modal
+            const modal = document.getElementById('bulk-add-tags-modal');
+            if (modal) {
+                modal.classList.add('show');
+                const input = document.getElementById('bulk-tags-input');
+                if (input) {
+                    input.value = '';
+                    input.focus();
+                }
+            }
+        }
+
+        // Close Bulk Add Tags Modal
+        function closeBulkAddTagsModal() {
+            const modal = document.getElementById('bulk-add-tags-modal');
+            if (modal) {
+                modal.classList.remove('show');
+            }
+        }
+
+        // Confirm Bulk Add Tags
+        async function confirmBulkAddTags() {
+            const input = document.getElementById('bulk-tags-input');
+            if (!input || !input.value.trim()) {
+                showNotification('Please enter tags to add.', 'warning', 3000);
+                return;
+            }
+
+            const selectedIds = window.bulkAddTagsSelectedIds || [];
+            if (selectedIds.length === 0) {
+                closeBulkAddTagsModal();
+                return;
+            }
+
+            const tagsToAdd = input.value.split(',').map(t => t.trim()).filter(t => t !== '');
+
+            if (tagsToAdd.length === 0) {
+                showNotification('No valid tags provided.', 'warning', 3000);
+                return;
+            }
+
+            closeBulkAddTagsModal();
+
+            let successCount = 0;
+            let errorCount = 0;
+
+            for (const itemId of selectedIds) {
+                try {
+                    // Get current item
+                    const { data: item, error: fetchError } = await supabaseClient
+                        .from('inventory_items')
+                        .select('tags')
+                        .eq('id', itemId)
+                        .single();
+
+                    if (fetchError) {
+                        errorCount++;
+                        continue;
+                    }
+
+                    // Merge tags
+                    const currentTags = item.tags || [];
+                    const newTags = [...new Set([...currentTags, ...tagsToAdd])];
+
+                    // Update item
+                    const { error: updateError } = await supabaseClient
+                        .from('inventory_items')
+                        .update({ tags: newTags })
+                        .eq('id', itemId);
+
+                    if (updateError) {
+                        errorCount++;
+                    } else {
+                        successCount++;
+                    }
+                } catch (error) {
+                    errorCount++;
+                }
+            }
+
+            if (successCount > 0) {
+                showNotification(`Successfully added tags to ${successCount} item(s)!${errorCount > 0 ? ` ${errorCount} item(s) failed.` : ''}`, 'success', 4000);
+                clearSelection();
+                await loadItemsTable();
+            } else {
+                showNotification(`Failed to add tags. Please try again.`, 'error', 5000);
+            }
+        }
+
+        // Bulk Remove Tags
+        async function bulkRemoveTags() {
+            const selectedIds = getSelectedItemIds();
+            if (selectedIds.length === 0) {
+                showNotification('Please select items to remove tags from.', 'warning', 3000);
+                return;
+            }
+
+            // Store selected IDs for modal
+            window.bulkRemoveTagsSelectedIds = selectedIds;
+
+            // Show modal
+            const modal = document.getElementById('bulk-remove-tags-modal');
+            if (modal) {
+                modal.classList.add('show');
+                const input = document.getElementById('bulk-remove-tags-input');
+                if (input) {
+                    input.value = '';
+                    input.focus();
+                }
+            }
+        }
+
+        // Close Bulk Remove Tags Modal
+        function closeBulkRemoveTagsModal() {
+            const modal = document.getElementById('bulk-remove-tags-modal');
+            if (modal) {
+                modal.classList.remove('show');
+            }
+        }
+
+        // Confirm Bulk Remove Tags
+        async function confirmBulkRemoveTags() {
+            const input = document.getElementById('bulk-remove-tags-input');
+            if (!input || !input.value.trim()) {
+                showNotification('Please enter tags to remove.', 'warning', 3000);
+                return;
+            }
+
+            const selectedIds = window.bulkRemoveTagsSelectedIds || [];
+            if (selectedIds.length === 0) {
+                closeBulkRemoveTagsModal();
+                return;
+            }
+
+            const tagsToRemove = input.value.split(',').map(t => t.trim()).filter(t => t !== '');
+
+            if (tagsToRemove.length === 0) {
+                showNotification('No valid tags provided.', 'warning', 3000);
+                return;
+            }
+
+            closeBulkRemoveTagsModal();
+
+            let successCount = 0;
+            let errorCount = 0;
+
+            for (const itemId of selectedIds) {
+                try {
+                    // Get current item
+                    const { data: item, error: fetchError } = await supabaseClient
+                        .from('inventory_items')
+                        .select('tags')
+                        .eq('id', itemId)
+                        .single();
+
+                    if (fetchError) {
+                        errorCount++;
+                        continue;
+                    }
+
+                    // Remove tags
+                    const currentTags = item.tags || [];
+                    const newTags = currentTags.filter(tag => !tagsToRemove.includes(tag));
+
+                    // Update item
+                    const { error: updateError } = await supabaseClient
+                        .from('inventory_items')
+                        .update({ tags: newTags })
+                        .eq('id', itemId);
+
+                    if (updateError) {
+                        errorCount++;
+                    } else {
+                        successCount++;
+                    }
+                } catch (error) {
+                    errorCount++;
+                }
+            }
+
+            if (successCount > 0) {
+                showNotification(`Successfully removed tags from ${successCount} item(s)!${errorCount > 0 ? ` ${errorCount} item(s) failed.` : ''}`, 'success', 4000);
+                clearSelection();
+                await loadItemsTable();
+            } else {
+                showNotification(`Failed to remove tags. Please try again.`, 'error', 5000);
+            }
+        }
+
+        // Bulk Export Items
+        async function bulkExportItems() {
+            const selectedIds = getSelectedItemIds();
+            if (selectedIds.length === 0) {
+                showNotification('Please select items to export.', 'warning', 3000);
+                return;
+            }
+
+            try {
+                // Get selected items from Supabase
+                const { data: items, error } = await supabaseClient
+                    .from('inventory_items')
+                    .select('*')
+                    .in('id', selectedIds);
+
+                if (error) {
+                    showNotification('Error fetching items for export.', 'error', 5000);
+                    return;
+                }
+
+                if (items.length === 0) {
+                    showNotification('No items found to export.', 'warning', 3000);
+                    return;
+                }
+
+                // Create workbook
+                const wb = XLSX.utils.book_new();
+                const wsData = [
+                    ['Inventory Item ID', 'Item Name', 'Name Localized', 'SKU', 'Barcode', 'Storage Unit', 'Ingredient Unit', 'Storage To Ingredient Conversion', 'Cost', 'Minimum Level', 'PAR Level', 'Maximum Level', 'Category Reference']
+                ];
+
+                items.forEach(item => {
+                    wsData.push([
+                        item.inventory_item_id || '',
+                        item.name || '',
+                        item.name_localized || item.name || '',
+                        item.sku || '',
+                        item.barcode || '',
+                        item.storage_unit || '',
+                        item.ingredient_unit || '',
+                        item.storage_to_ingredient || 1,
+                        item.cost || 0,
+                        item.min_level || '',
+                        item.par_level || '',
+                        item.max_level || '',
+                        item.category || ''
+                    ]);
+                });
+
+                const ws = XLSX.utils.aoa_to_sheet(wsData);
+                XLSX.utils.book_append_sheet(wb, ws, 'Selected Items');
+
+                // Download (SYNCHRONOUS in user context)
+                const fileName = `Selected_Items_${new Date().toISOString().split('T')[0]}.xlsx`;
+                
+                // Convert workbook immediately
+                const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+                const blob = new Blob([wbout], { 
+                    type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
+                });
+                
+                // Check if we're in an iframe - if yes, send to parent for download
+                if (window.parent && window.parent !== window) {
+                    console.log('📤 Sending bulk download request to parent window (iframe context)');
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        window.parent.postMessage({
+                            type: 'DOWNLOAD_FILE',
+                            fileName: fileName,
+                            fileData: e.target.result,
+                            fileType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+                        }, '*');
+                    };
+                    reader.readAsDataURL(blob);
+                    showNotification(`Exporting ${items.length} item(s)! Check your downloads folder.`, 'success', 4000);
+                    clearSelection();
+                    return;
+                }
+                
+                // Direct download (not in iframe)
+                const url = window.URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = fileName;
+                link.style.display = 'none';
+                document.body.appendChild(link);
+                link.click();
+                
+                // Cleanup after download
+                setTimeout(() => {
+                    try {
+                        if (link.parentNode) document.body.removeChild(link);
+                        window.URL.revokeObjectURL(url);
+                    } catch (e) {}
+                }, 1000);
+                
+                console.log('✅ Bulk items exported to Excel');
+                showNotification(`Successfully exported ${items.length} item(s)! Check your downloads folder.`, 'success', 4000);
+                clearSelection();
+            } catch (error) {
+                console.error('Error exporting items:', error);
+                showNotification('Error exporting items. Please try again.', 'error', 5000);
+            }
+        }
+
+        // Load Categories from Supabase
+        async function loadCategoriesFromSupabase() {
+            if (!supabaseClient) {
+                console.error('❌ Supabase not available');
+                return [];
+            }
+
+            try {
+                const { data, error } = await supabaseClient
+                    .from('inventory_categories')
+                    .select('*')
+                    .order('name', { ascending: true });
+
+                if (error) {
+                    console.error('Error loading categories:', error);
+                    return [];
+                }
+
+                return data || [];
+            } catch (error) {
+                console.error('Exception loading categories:', error);
+                return [];
+            }
+        }
+
+        // Bulk Change Category
+        async function bulkChangeCategory() {
+            const selectedIds = getSelectedItemIds();
+            if (selectedIds.length === 0) {
+                showNotification('Please select items to change category.', 'warning', 3000);
+                return;
+            }
+
+            // Load categories
+            const categories = await loadCategoriesFromSupabase();
+            
+            // Also get unique categories from existing items
+            const { data: items } = await supabaseClient
+                .from('inventory_items')
+                .select('category')
+                .not('category', 'is', null);
+            
+            const uniqueCategories = [...new Set(items?.map(item => item.category).filter(c => c) || [])];
+            const allCategories = [...new Set([...categories.map(c => c.name), ...uniqueCategories])].sort();
+
+            if (allCategories.length === 0) {
+                showNotification('No categories available. Please create a category first.', 'warning', 4000);
+                return;
+            }
+
+            // Show category selection
+            const categoryList = allCategories.map((cat, idx) => `${idx + 1}. ${cat}`).join('\n');
+            const categoryInput = prompt(`Select category (enter number):\n\n${categoryList}\n\nSelected items: ${selectedIds.length}`);
+            
+            if (!categoryInput) return;
+
+            const categoryIndex = parseInt(categoryInput) - 1;
+            if (isNaN(categoryIndex) || categoryIndex < 0 || categoryIndex >= allCategories.length) {
+                showNotification('Invalid category selection.', 'error', 3000);
+                return;
+            }
+
+            const selectedCategory = allCategories[categoryIndex];
+
+            const confirmed = await showConfirmDialog(
+                `Change category to "${selectedCategory}" for ${selectedIds.length} item(s)?`,
+                'Bulk Change Category',
+                'confirm'
+            );
+
+            if (!confirmed) return;
+
+            let successCount = 0;
+            let errorCount = 0;
+
+            for (const itemId of selectedIds) {
+                const { error } = await supabaseClient
+                    .from('inventory_items')
+                    .update({ category: selectedCategory })
+                    .eq('id', itemId);
+
+                if (error) {
+                    errorCount++;
+                } else {
+                    successCount++;
+                }
+            }
+
+            if (successCount > 0) {
+                showNotification(`Successfully changed category for ${successCount} item(s)!${errorCount > 0 ? ` ${errorCount} item(s) failed.` : ''}`, 'success', 4000);
+                clearSelection();
+                await loadItemsTable();
+            } else {
+                showNotification(`Failed to change category. Please try again.`, 'error', 5000);
+            }
+        }
+
+        // Open Create Item Modal
+        async function openCreateItemModal() {
+            console.log('Opening Create Item Modal...');
+            const modal = document.getElementById('create-item-modal');
+            if (!modal) {
+                console.error('❌ Create Item Modal not found!');
+                showNotification('Error: Create Item modal not found. Please refresh the page.', 'error', 5000);
+                return;
+            }
+            
+            modal.classList.add('show');
+            console.log('✅ Modal opened');
+            
+            // Generate initial SKU
+            generateSKU();
+            
+            // Reset form
+            const form = document.getElementById('create-item-form');
+            if (form) {
+                form.reset();
+            }
+            
+            // Hide advanced options
+            const advancedOptions = document.getElementById('advanced-options');
+            const toggle = document.getElementById('advanced-options-toggle');
+            if (advancedOptions) {
+                advancedOptions.classList.remove('expanded');
+            }
+            if (toggle) {
+                toggle.textContent = 'Advanced Options';
+            }
+            
+            // Load categories
+            await loadCategoriesForItem();
+        }
+
+        // Load categories for item dropdown
+        async function loadCategoriesForItem() {
+            // Load from Supabase only
+            let categories = [];
+            if (supabaseClient) {
+                try {
+                    const { data, error } = await supabaseClient
+                        .from('inventory_categories')
+                        .select('*')
+                        .eq('deleted', false)
+                        .order('name', { ascending: true });
+                    
+                    if (!error && data) {
+                        categories = data;
+                    }
+                } catch (error) {
+                    console.error('Error loading categories from Supabase:', error);
+                }
+            }
+            
+            const categorySelect = document.getElementById('item-category');
+            if (categorySelect) {
+                // Keep "Choose..." option and add categories
+                categorySelect.innerHTML = '<option value="">Choose...</option>' + 
+                    categories.map(cat => 
+                        `<option value="${cat.name}">${cat.name}</option>`
+                    ).join('');
+            }
+        }
+
+        // Close Create Item Modal
+        function closeCreateItemModal() {
+            document.getElementById('create-item-modal').classList.remove('show');
+            document.getElementById('create-item-form').reset();
+        }
+
+        // Toggle Advanced Options
+        function toggleAdvancedOptions() {
+            const options = document.getElementById('advanced-options');
+            const toggle = document.getElementById('advanced-options-toggle');
+            
+            if (options.classList.contains('expanded')) {
+                options.classList.remove('expanded');
+                toggle.textContent = 'Advanced Options';
+            } else {
+                options.classList.add('expanded');
+                toggle.textContent = 'Basic Options';
+            }
+        }
+
+        // Generate SKU
+        async function generateSKU() {
+            // Get existing items from Supabase to generate next SKU
+            const items = await loadItemsFromSupabase();
+            let maxSKUNumber = 19587; // Starting number
+            
+            items.forEach(item => {
+                if (item.sku) {
+                    const match = item.sku.match(/sk-(\d+)/);
+                    if (match) {
+                        const num = parseInt(match[1]);
+                        if (num > maxSKUNumber) {
+                            maxSKUNumber = num;
+                        }
+                    }
+                }
+            });
+            
+            const nextSKU = `sk-${maxSKUNumber + 1}`;
+            const skuInput = document.getElementById('item-sku');
+            if (skuInput) {
+                skuInput.value = nextSKU;
+            }
+        }
+
+        // Save new item
+        async function saveNewItem() {
+            const form = document.getElementById('create-item-form');
+            
+            // Get form values
+            const name = document.getElementById('item-name').value.trim();
+            const nameLocalized = document.getElementById('item-name-localized').value.trim();
+            const sku = document.getElementById('item-sku').value.trim();
+            const category = document.getElementById('item-category').value;
+            const storageUnit = document.getElementById('item-storage-unit').value.trim();
+            const ingredientUnit = document.getElementById('item-ingredient-unit').value.trim();
+            const storageToIngredient = document.getElementById('item-storage-to-ingredient').value;
+            const costingMethod = document.getElementById('item-costing-method').value;
+            const cost = document.getElementById('item-cost').value || '0';
+            
+            // Advanced options
+            const barcode = document.getElementById('item-barcode').value.trim();
+            const minLevel = document.getElementById('item-min-level').value || '';
+            const maxLevel = document.getElementById('item-max-level').value || '';
+            const parLevel = document.getElementById('item-par-level').value || '';
+            
+            // Validation
+            if (!name) {
+                showNotification('Please enter item name', 'warning', 3000);
+                return;
+            }
+            if (!sku) {
+                showNotification('Please enter or generate SKU', 'warning', 3000);
+                return;
+            }
+            if (!storageUnit) {
+                showNotification('Please enter storage unit', 'warning', 3000);
+                return;
+            }
+            if (!ingredientUnit) {
+                showNotification('Please enter ingredient unit', 'warning', 3000);
+                return;
+            }
+            if (!storageToIngredient) {
+                showNotification('Please enter storage to ingredient ratio', 'warning', 3000);
+                return;
+            }
+            if (!costingMethod) {
+                showNotification('Please select costing method', 'warning', 3000);
+                return;
+            }
+            
+            // Check if SKU already exists in Supabase
+            const existingItems = await loadItemsFromSupabase();
+            if (existingItems.some(item => item.sku === sku)) {
+                showNotification('SKU already exists. Please use a different SKU.', 'error', 4000);
+                return;
+            }
+            
+            // Generate Inventory Item ID
+            const inventoryItemID = await generateInventoryItemID();
+            
+            // Create new item
+            const newItem = {
+                inventory_item_id: inventoryItemID,
+                name: name,
+                name_localized: nameLocalized || name,
+                sku: sku,
+                category: category || 'Uncategorized',
+                storage_unit: storageUnit,
+                ingredient_unit: ingredientUnit,
+                storage_to_ingredient: parseFloat(storageToIngredient) || 1,
+                costing_method: costingMethod,
+                cost: parseFloat(cost) || 0,
+                barcode: barcode || '',
+                min_level: minLevel || null,
+                max_level: maxLevel || null,
+                par_level: parLevel || null,
+                tags: [],
+                ingredients: [],
+                suppliers: [],
+                deleted: false
+            };
+            
+            // Save to Supabase
+            const result = await saveItemToSupabase(newItem);
+            
+            if (result.success) {
+                showNotification('Item created successfully!', 'success', 3000);
+                closeCreateItemModal();
+                // Reload items table
+                await loadItemsTable();
+            } else {
+                showNotification('Error creating item. Please try again.', 'error', 5000);
+            }
+        }
+
+        // Supabase Helper Functions for Items
+        async function loadItemsFromSupabase() {
+            if (!supabaseClient) {
+                console.warn('⚠️ Supabase not available');
+                return [];
+            }
+            
+            try {
+                const { data, error } = await supabaseClient
+                    .from('inventory_items')
+                    .select('*')
+                    .order('created_at', { ascending: false });
+                
+                if (error) {
+                    console.error('❌ Error loading items from Supabase:', error);
+                    return [];
+                }
+                
+                console.log('✅ Items loaded from Supabase:', data?.length || 0);
+                return data || [];
+            } catch (error) {
+                console.error('❌ Exception loading items:', error);
+                return [];
+            }
+        }
+
+        async function saveItemToSupabase(item) {
+            if (!supabaseClient) {
+                console.error('❌ Supabase not available');
+                return { success: false, error: 'Supabase not configured' };
+            }
+            
+            try {
+                const { data, error } = await supabaseClient
+                    .from('inventory_items')
+                    .insert([item])
+                    .select()
+                    .single();
+                
+                if (error) {
+                    console.error('❌ Error saving item to Supabase:', error);
+                    return { success: false, error };
+                }
+                
+                console.log('✅ Item saved to Supabase:', data);
+                return { success: true, data };
+            } catch (error) {
+                console.error('❌ Exception saving item:', error);
+                return { success: false, error };
+            }
+        }
+
+        async function updateItemInSupabase(itemId, updates) {
+            if (!supabaseClient) {
+                console.error('❌ Supabase not available');
+                return { success: false, error: 'Supabase not configured' };
+            }
+            
+            try {
+                const { data, error } = await supabaseClient
+                    .from('inventory_items')
+                    .update(updates)
+                    .eq('id', itemId)
+                    .select()
+                    .single();
+                
+                if (error) {
+                    console.error('❌ Error updating item in Supabase:', error);
+                    return { success: false, error };
+                }
+                
+                console.log('✅ Item updated in Supabase:', data);
+                return { success: true, data };
+            } catch (error) {
+                console.error('❌ Exception updating item:', error);
+                return { success: false, error };
+            }
+        }
+
+        async function deleteItemFromSupabase(itemId) {
+            if (!supabaseClient) {
+                console.error('❌ Supabase not available');
+                return { success: false, error: 'Supabase not configured' };
+            }
+            
+            try {
+                // Soft delete: Set deleted=true and deleted_at timestamp, but keep the item and its ID
+                const { error } = await supabaseClient
+                    .from('inventory_items')
+                    .update({ 
+                        deleted: true,
+                        deleted_at: new Date().toISOString()
+                    })
+                    .eq('id', itemId);
+                
+                if (error) {
+                    console.error('❌ Error soft deleting item from Supabase:', error);
+                    return { success: false, error };
+                }
+                
+                console.log('✅ Item soft deleted from Supabase (ID preserved)');
+                return { success: true };
+            } catch (error) {
+                console.error('❌ Exception soft deleting item:', error);
+                return { success: false, error };
+            }
+        }
+
+        // Restore deleted item (internal function)
+        async function restoreItemInternal(itemId) {
+            if (!supabaseClient) {
+                console.error('❌ Supabase not available');
+                return { success: false, error: 'Supabase not configured' };
+            }
+            
+            try {
+                const { error } = await supabaseClient
+                    .from('inventory_items')
+                    .update({ 
+                        deleted: false,
+                        deleted_at: null
+                    })
+                    .eq('id', itemId);
+                
+                if (error) {
+                    console.error('❌ Error restoring item:', error);
+                    return { success: false, error };
+                }
+                
+                console.log('✅ Item restored successfully');
+                return { success: true };
+            } catch (error) {
+                console.error('❌ Exception restoring item:', error);
+                return { success: false, error };
+            }
+        }
+
+        // Remove default items initialization - no longer needed
+        function initializeSampleItems() {
+            // Clear localStorage to remove old default items
+            localStorage.removeItem('inventory_items');
+            console.log('✅ Cleared localStorage - Items will be loaded from Supabase only');
+        }
+
+        // Load items table from Supabase
+        async function loadItemsTable() {
+            const storedItems = await loadItemsFromSupabase();
+            const tbody = document.getElementById('items-table-body');
+            
+            if (!tbody) {
+                console.error('❌ Items table body not found');
+                return;
+            }
+            
+            // Clear existing rows
+            tbody.innerHTML = '';
+            
+            // Get current active tab
+            const activeTab = document.querySelector('.tab-button.active')?.getAttribute('data-tab') || 'all';
+            
+            // Filter items based on tab
+            let filteredItems = storedItems;
+            if (activeTab === 'deleted') {
+                // ONLY show deleted items in Deleted tab
+                filteredItems = storedItems.filter(item => item.deleted === true);
+            } else if (activeTab === 'products') {
+                // Products tab - ALWAYS show "Coming Soon" (feature not implemented yet)
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="5" class="px-6 py-12 text-center">
+                            <div class="flex flex-col items-center justify-center space-y-4">
+                                <div class="text-6xl mb-4">🚀</div>
+                                <h3 class="text-2xl font-bold text-gray-800 mb-2">Coming Soon</h3>
+                                <p class="text-gray-600 text-lg">Products feature is under development. Stay tuned!</p>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+                updateItemCount();
+                return;
+            } else {
+                // For All, Items tabs - EXCLUDE deleted items completely
+                filteredItems = storedItems.filter(item => item.deleted !== true);
+            }
+            
+            if (filteredItems.length === 0) {
+                const message = activeTab === 'deleted' 
+                    ? 'No deleted items found.' 
+                    : 'No items found. Click "Create Item" to add your first item.';
+                tbody.innerHTML = `<tr><td colspan="5" class="px-6 py-4 text-center text-gray-500">${message}</td></tr>`;
+                updateItemCount();
+                return;
+            }
+            
+            // Render filtered items from Supabase
+            const rows = filteredItems.map(item => {
+                // Handle both Supabase (snake_case) and localStorage (camelCase) formats
+                const itemId = item.id;
+                const inventoryItemID = item.inventory_item_id || 'N/A';
+                const itemName = item.name_localized || item.nameLocalized || item.name;
+                const itemNameEng = item.name;
+                const itemSku = item.sku;
+                const itemCategory = item.category || 'Uncategorized';
+                const isDeleted = item.deleted === true;
+                
+                // Determine category badge color
+                let categoryClass = 'bg-green-100 text-green-800';
+                if (itemCategory === 'Equipments') {
+                    categoryClass = 'bg-blue-100 text-blue-800';
+                } else if (itemCategory === 'FG & WIP Items from Production Section') {
+                    categoryClass = 'bg-purple-100 text-purple-800';
+                } else if (itemCategory === 'tools / ادوات') {
+                    categoryClass = 'bg-yellow-100 text-yellow-800';
+                }
+                
+                return `
+                    <tr onclick="viewItemDetail('${itemId}')" class="cursor-pointer hover:bg-gray-50 ${isDeleted ? 'deleted opacity-60' : ''}">
+                        <td class="px-6 py-4" onclick="event.stopPropagation()">
+                            <input type="checkbox" class="item-checkbox rounded" data-item-id="${itemId}" onclick="event.stopPropagation()">
+                        </td>
+                        <td class="px-6 py-4">
+                            <div class="flex items-center gap-2">
+                                <div class="font-medium text-gray-900">${itemNameEng || itemName || 'N/A'}</div>
+                                ${isDeleted ? '<span class="px-2 py-1 bg-red-100 text-red-800 rounded-full text-xs font-semibold">Deleted</span>' : ''}
+                            </div>
+                            ${itemName && itemName !== itemNameEng ? `<div class="text-sm text-gray-500">${itemName}</div>` : ''}
+                        </td>
+                        <td class="px-6 py-4 text-gray-600 font-mono">${itemSku || 'N/A'}</td>
+                        <td class="px-6 py-4">
+                            <span class="px-3 py-1 ${categoryClass} rounded-full text-sm">${itemCategory}</span>
+                        </td>
+                        <td class="px-6 py-4" onclick="event.stopPropagation()">
+                            <div class="flex gap-2">
+                                ${!isDeleted ? `
+                                    <button onclick="event.stopPropagation(); viewItemDetail('${itemId}')" class="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 text-sm" title="View">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                    <button onclick="event.stopPropagation(); deleteItem('${itemId}', event)" class="px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600 text-sm" title="Delete">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                ` : `
+                                    <button onclick="event.stopPropagation(); viewItemDetail('${itemId}')" class="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 text-sm" title="View Details">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                    <button onclick="event.stopPropagation(); restoreItem('${itemId}')" class="px-3 py-1 bg-green-500 text-white rounded hover:bg-green-600 text-sm font-semibold" title="Restore">
+                                        <i class="fas fa-undo mr-1"></i> Restore
+                                    </button>
+                                `}
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+            
+            tbody.innerHTML = rows;
+            
+            // Attach checkbox change listeners for bulk actions
+            attachCheckboxListeners();
+            
+            // Update item count display
+            await updateItemCount();
+            
+            // Update pagination info
+            const showingFrom = filteredItems.length > 0 ? 1 : 0;
+            const showingTo = filteredItems.length;
+            const totalItems = filteredItems.length;
+            
+            const showingFromEl = document.getElementById('showing-from');
+            const showingToEl = document.getElementById('showing-to');
+            const totalItemsEl = document.getElementById('total-items');
+            
+            if (showingFromEl) showingFromEl.textContent = showingFrom;
+            if (showingToEl) showingToEl.textContent = showingTo;
+            if (totalItemsEl) totalItemsEl.textContent = totalItems;
+        }
+
+        // Update item count display
+        async function updateItemCount() {
+            // Get items from Supabase instead of localStorage
+            const items = await loadItemsFromSupabase();
+            const activeTab = document.querySelector('.tab-button.active')?.getAttribute('data-tab') || 'all';
+            
+            // Filter based on active tab
+            let filteredItems = items;
+            if (activeTab === 'deleted') {
+                // ONLY show deleted items in Deleted tab
+                filteredItems = items.filter(item => item.deleted === true);
+            } else {
+                // For All, Items, Products tabs - EXCLUDE deleted items completely
+                filteredItems = items.filter(item => item.deleted !== true);
+            }
+            
+            const totalItems = filteredItems.length;
+            const showingFrom = document.getElementById('showing-from');
+            const showingTo = document.getElementById('showing-to');
+            const totalItemsSpan = document.getElementById('total-items');
+            
+            if (showingFrom) showingFrom.textContent = totalItems > 0 ? '1' : '0';
+            if (showingTo) showingTo.textContent = totalItems.toString();
+            if (totalItemsSpan) totalItemsSpan.textContent = totalItems.toString();
+        }
+
+        // View item detail
+        function viewItemDetail(itemId) {
+            // If loaded in iframe, communicate with parent to load detail page
+            if (window.parent && window.parent !== window) {
+                window.parent.postMessage({
+                    type: 'LOAD_DASHBOARD',
+                    url: `inventory/item-detail.html?id=${itemId}`
+                }, '*');
+            } else {
+                // Direct navigation if not in iframe
+                window.location.href = `item-detail.html?id=${itemId}`;
+            }
+        }
+
+        // Edit item
+        function editItem(itemId) {
+            // Stop event propagation to prevent row click
+            event.stopPropagation();
+            
+            // If loaded in iframe, communicate with parent to load detail page with edit mode
+            if (window.parent && window.parent !== window) {
+                window.parent.postMessage({
+                    type: 'LOAD_DASHBOARD',
+                    url: `inventory/item-detail.html?id=${itemId}&edit=true`
+                }, '*');
+            } else {
+                // Direct navigation if not in iframe
+                window.location.href = `item-detail.html?id=${itemId}&edit=true`;
+            }
+        }
+
+        // Delete item
+        async function deleteItem(itemId, event) {
+            if (event) {
+                event.preventDefault();
+                event.stopPropagation();
+            }
+            
+            const confirmed = await showConfirmDialog('Are you sure you want to delete this item?', 'Delete Item', 'danger');
+            if (!confirmed) {
+                return;
+            }
+            
+            console.log('Deleting item:', itemId);
+            const result = await deleteItemFromSupabase(itemId);
+            
+            if (result.success) {
+                showNotification('Item deleted successfully!', 'success', 3000);
+                await loadItemsTable(); // This will also call updateItemCount()
+            } else {
+                const errorMsg = result.error?.message || result.error || 'Unknown error';
+                showNotification('Error deleting item: ' + errorMsg, 'error', 5000);
+                console.error('Delete error:', result.error);
+            }
+        }
+
+        // Generate Inventory Item ID (SAK-FSID-00001 format)
+        async function generateInventoryItemID() {
+            if (!supabaseClient) {
+                console.error('❌ Supabase not available');
+                return 'SAK-FSID-00001';
+            }
+            
+            try {
+                // Get all items (including deleted) to find max ID
+                const { data, error } = await supabaseClient
+                    .from('inventory_items')
+                    .select('inventory_item_id')
+                    .not('inventory_item_id', 'is', null);
+                
+                if (error) {
+                    console.error('Error fetching items for ID generation:', error);
+                    return 'SAK-FSID-00001';
+                }
+                
+                let maxNumber = 0;
+                if (data && data.length > 0) {
+                    data.forEach(item => {
+                        if (item.inventory_item_id) {
+                            const match = item.inventory_item_id.match(/SAK-FSID-(\d+)/);
+                            if (match) {
+                                const num = parseInt(match[1]);
+                                if (num > maxNumber) {
+                                    maxNumber = num;
+                                }
+                            }
+                        }
+                    });
+                }
+                
+                const nextNumber = maxNumber + 1;
+                const nextID = `SAK-FSID-${String(nextNumber).padStart(5, '0')}`;
+                console.log('✅ Generated Inventory Item ID:', nextID);
+                return nextID;
+            } catch (error) {
+                console.error('❌ Error generating Inventory Item ID:', error);
+                return 'SAK-FSID-00001';
+            }
+        }
+
+        // Universal Excel Download Helper (works even with file:// protocol)
+        function downloadExcelFile(wb, fileName) {
+            try {
+                console.log('🔄 Starting download process for:', fileName);
+                
+                // Convert workbook to binary array
+                const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+                console.log('✅ Workbook converted to array, size:', wbout.length, 'bytes');
+                
+                // Create blob with proper MIME type
+                const blob = new Blob([wbout], { 
+                    type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
+                });
+                console.log('✅ Blob created, size:', blob.size, 'bytes');
+                
+                // Method 1: Try direct XLSX.writeFile first (if available and works)
+                try {
+                    if (typeof XLSX.writeFile === 'function') {
+                        XLSX.writeFile(wb, fileName);
+                        console.log('✅ Download via XLSX.writeFile successful');
+                        return true;
+                    }
+                } catch (writeFileError) {
+                    console.warn('⚠️ XLSX.writeFile failed, trying blob method:', writeFileError);
+                }
+                
+                // Method 2: Blob URL with anchor click (IMMEDIATE - no setTimeout)
+                const url = window.URL.createObjectURL(blob);
+                console.log('✅ Object URL created:', url);
+                
+                // Create temporary anchor element
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = fileName;
+                link.style.display = 'none';
+                link.setAttribute('download', fileName); // Ensure download attribute is set
+                
+                // Append to body IMMEDIATELY
+                document.body.appendChild(link);
+                console.log('✅ Link element appended to body');
+                
+                // Trigger click IMMEDIATELY (synchronous in user context)
+                try {
+                    // Try direct click first
+                    if (typeof link.click === 'function') {
+                        link.click();
+                        console.log('✅ Link click() method triggered');
+                    } else {
+                        // Fallback: MouseEvent
+                        const clickEvent = new MouseEvent('click', {
+                            view: window,
+                            bubbles: true,
+                            cancelable: true,
+                            buttons: 1
+                        });
+                        link.dispatchEvent(clickEvent);
+                        console.log('✅ MouseEvent click triggered');
+                    }
+                } catch (clickError) {
+                    console.error('❌ Click failed:', clickError);
+                    // Cleanup
+                    try {
+                        if (link.parentNode) {
+                            document.body.removeChild(link);
+                        }
+                        window.URL.revokeObjectURL(url);
+                    } catch (cleanupErr) {
+                        console.warn('Cleanup error:', cleanupErr);
+                    }
+                    return false;
+                }
+                
+                // Cleanup after a delay (non-blocking)
+                setTimeout(() => {
+                    try {
+                        if (link.parentNode) {
+                            document.body.removeChild(link);
+                        }
+                        window.URL.revokeObjectURL(url);
+                        console.log('✅ Cleanup completed');
+                    } catch (cleanupError) {
+                        console.warn('⚠️ Cleanup error (non-critical):', cleanupError);
+                    }
+                }, 1000);
+                
+                console.log('✅ Download process completed successfully');
+                return true;
+            } catch (error) {
+                console.error('❌ Error in downloadExcelFile:', error);
+                console.error('Error details:', error.message, error.stack);
+                return false;
+            }
+        }
+
+        // Download Excel Template (GLOBAL FUNCTION - Must be accessible)
+        window.downloadExcelTemplate = function() {
+            try {
+                console.log('📥 Downloading Excel template...');
+                
+                // Check if XLSX is loaded
+                if (typeof XLSX === 'undefined') {
+                    showNotification('Excel library not loaded. Please refresh the page and try again.', 'error', 5000);
+                    console.error('❌ XLSX library not available');
+                    return;
+                }
+                
+                // Create workbook
+                const wb = XLSX.utils.book_new();
+                
+                // Create worksheet data
+                const wsData = [
+                    // Header row
+                    [
+                        'Inventory Item ID',
+                        'Item Name',
+                        'Name Localized',
+                        'SKU',
+                        'Barcode',
+                        'Storage Unit',
+                        'Ingredient Unit',
+                        'Storage To Ingredient Conversion',
+                        'Cost',
+                        'Minimum Level',
+                        'PAR Level',
+                        'Maximum Level',
+                        'Category Reference'
+                    ],
+                    // Example row (empty)
+                    ['', '', '', '', '', '', '', '', '', '', '', '', '']
+                ];
+                
+                // Create worksheet
+                const ws = XLSX.utils.aoa_to_sheet(wsData);
+                
+                // Set column widths (14 columns now)
+                ws['!cols'] = [
+                    { wch: 25 }, // Inventory Item ID
+                    { wch: 20 }, // Item Name
+                    { wch: 20 }, // Name Localized
+                    { wch: 15 }, // SKU
+                    { wch: 15 }, // Barcode
+                    { wch: 15 }, // Storage Unit
+                    { wch: 15 }, // Ingredient Unit
+                    { wch: 30 }, // Storage To Ingredient Conversio
+                    { wch: 12 }, // Cost
+                    { wch: 15 }, // Minimum Level
+                    { wch: 15 }, // PAR Level
+                    { wch: 15 }, // Maximum Leve
+                    { wch: 20 }, // Category
+                    { wch: 20 }  // Reference
+                ];
+                
+                // Style header row (bold)
+                const headerRange = XLSX.utils.decode_range(ws['!ref']);
+                for (let C = headerRange.s.c; C <= headerRange.e.c; ++C) {
+                    const cellAddress = XLSX.utils.encode_cell({ r: 0, c: C });
+                    if (!ws[cellAddress]) continue;
+                    ws[cellAddress].s = {
+                        font: { bold: true },
+                        fill: { fgColor: { rgb: "E8E8E8" } }
+                    };
+                }
+                
+                // Add worksheet to workbook
+                XLSX.utils.book_append_sheet(wb, ws, 'Items');
+                
+                // Download file (SYNCHRONOUS in user context)
+                const fileName = 'inventory-items-template.xlsx';
+                
+                // IMPORTANT: Download must happen synchronously in user click context
+                // Convert workbook immediately
+                const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+                const blob = new Blob([wbout], { 
+                    type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
+                });
+                
+                // Check if we're in an iframe - if yes, send to parent for download
+                if (window.parent && window.parent !== window) {
+                    console.log('📤 Sending download request to parent window (iframe context)');
+                    // Send blob data to parent window for download
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        window.parent.postMessage({
+                            type: 'DOWNLOAD_FILE',
+                            fileName: fileName,
+                            fileData: e.target.result,
+                            fileType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+                        }, '*');
+                    };
+                    reader.readAsDataURL(blob);
+                    showNotification('Download initiated! Check your downloads folder.', 'success', 4000);
+                    return;
+                }
+                
+                // Direct download (not in iframe)
+                const url = window.URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = fileName;
+                link.style.display = 'none';
+                document.body.appendChild(link);
+                link.click();
+                
+                // Cleanup after download
+                setTimeout(() => {
+                    try {
+                        if (link.parentNode) document.body.removeChild(link);
+                        window.URL.revokeObjectURL(url);
+                    } catch (e) {}
+                }, 1000);
+                
+                console.log('✅ Excel template download triggered:', fileName);
+                showNotification('Excel template downloaded! Check your downloads folder.', 'success', 4000);
+            } catch (error) {
+                console.error('❌ Error downloading template:', error);
+                showNotification('Error downloading template: ' + error.message, 'error', 5000);
+            }
+        };
+
+        // Open Import Modal
+        function openImportModal() {
+            const modal = document.getElementById('import-modal');
+            if (modal) {
+                modal.classList.add('show');
+            } else {
+                showNotification('Import modal not found. Please refresh the page.', 'error', 5000);
+            }
+        }
+
+        // Close Import Modal
+        function closeImportModal() {
+            const modal = document.getElementById('import-modal');
+            if (modal) {
+                modal.classList.remove('show');
+                // Reset file input
+                const fileInput = document.getElementById('import-file-input');
+                if (fileInput) {
+                    fileInput.value = '';
+                }
+            }
+        }
+
+        // Handle File Upload for Import
+        async function handleFileImport(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            // Check file extension
+            const fileName = file.name.toLowerCase();
+            if (!fileName.endsWith('.xlsx') && !fileName.endsWith('.xls') && !fileName.endsWith('.csv')) {
+                showNotification('Please upload an Excel file (.xlsx, .xls) or CSV file.', 'warning', 4000);
+                return;
+            }
+            
+            const reader = new FileReader();
+            reader.onload = async function(e) {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    
+                    // Get first sheet
+                    const firstSheetName = workbook.SheetNames[0];
+                    const worksheet = workbook.Sheets[firstSheetName];
+                    
+                    // Convert to JSON
+                    const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+                    
+                    if (jsonData.length < 2) {
+                        showNotification('Excel file is empty or has no data rows.', 'warning', 4000);
+                        return;
+                    }
+                    
+                    // Get headers (first row)
+                    const headers = jsonData[0].map(h => String(h).trim());
+                    
+                    // Validate required columns
+                    const requiredColumns = [
+                        'Inventory Item ID',
+                        'Item Name',
+                        'SKU',
+                        'Storage Unit',
+                        'Ingredient Unit',
+                        'Storage To Ingredient Conversion',
+                        'Cost',
+                        'Minimum Level',
+                        'PAR Level',
+                        'Maximum Level'
+                    ];
+                    
+                    const missingColumns = requiredColumns.filter(col => !headers.includes(col));
+                    if (missingColumns.length > 0) {
+                        showNotification(`Missing required columns: ${missingColumns.join(', ')}. Please download the template and use it for import.`, 'error', 6000);
+                        return;
+                    }
+                    
+                    // Process data rows (skip header row)
+                    const itemsToImport = [];
+                    for (let i = 1; i < jsonData.length; i++) {
+                        const row = jsonData[i];
+                        if (!row || row.length === 0) continue;
+                        
+                        // Create item object from row
+                        const item = {};
+                        headers.forEach((header, index) => {
+                            const value = row[index];
+                            if (value !== undefined && value !== null && value !== '') {
+                                // Map Excel headers to database fields
+                                switch(header) {
+                                    case 'Inventory Item ID':
+                                        item.inventory_item_id = String(value).trim();
+                                        break;
+                                    case 'Item Name':
+                                        item.name = String(value).trim();
+                                        break;
+                                    case 'Name Localized':
+                                        item.name_localized = String(value).trim();
+                                        break;
+                                    case 'SKU':
+                                        item.sku = String(value).trim();
+                                        break;
+                                    case 'Barcode':
+                                        item.barcode = String(value).trim();
+                                        break;
+                                    case 'Storage Unit':
+                                        item.storage_unit = String(value).trim();
+                                        break;
+                                    case 'Ingredient Unit':
+                                        item.ingredient_unit = String(value).trim();
+                                        break;
+                                    case 'Storage To Ingredient Conversion':
+                                        const conversionValue = parseFloat(value);
+                                        item.storage_to_ingredient = (conversionValue && conversionValue > 0) ? conversionValue : 1;
+                                        break;
+                                    case 'Cost':
+                                        const costValue = parseFloat(value);
+                                        item.cost = (costValue && costValue >= 0) ? costValue : 0;
+                                        break;
+                                    case 'Minimum Level':
+                                        item.min_level = String(value).trim();
+                                        break;
+                                    case 'PAR Level':
+                                        item.par_level = String(value).trim();
+                                        break;
+                                    case 'Maximum Level':
+                                        item.max_level = String(value).trim();
+                                        break;
+                                    case 'Category Reference':
+                                        item.category = String(value).trim();
+                                        break;
+                                }
+                            }
+                        });
+                        
+                        // Validate required fields
+                        if (item.name && item.sku && item.storage_unit && item.ingredient_unit) {
+                            // Set defaults
+                            // Check if inventory_item_id is provided, validate format
+                            if (item.inventory_item_id && item.inventory_item_id.trim() !== '') {
+                                // Validate format (SAK-FSID-00001)
+                                const idPattern = /^SAK-FSID-\d{5}$/;
+                                if (!idPattern.test(item.inventory_item_id.trim())) {
+                                    // If format is wrong, mark for regeneration
+                                    console.warn(`Invalid Inventory Item ID format: ${item.inventory_item_id}, will generate new one`);
+                                    item.inventory_item_id = null; // Will be generated in batch
+                                } else {
+                                    item.inventory_item_id = item.inventory_item_id.trim();
+                                }
+                            } else {
+                                // Will be generated in batch before import
+                                item.inventory_item_id = null;
+                            }
+                            if (!item.name_localized) {
+                                item.name_localized = item.name;
+                            }
+                            if (!item.storage_to_ingredient || item.storage_to_ingredient <= 0) {
+                                item.storage_to_ingredient = 1;
+                            }
+                            if (item.cost === undefined || item.cost === null || item.cost < 0) {
+                                item.cost = 0;
+                            }
+                            if (!item.costing_method) {
+                                item.costing_method = 'From Transactions';
+                            }
+                            if (!item.category) {
+                                item.category = 'Uncategorized';
+                            }
+                            
+                            // Set defaults for JSONB fields
+                            item.tags = [];
+                            item.ingredients = [];
+                            item.suppliers = [];
+                            item.deleted = false;
+                            
+                            itemsToImport.push(item);
+                        }
+                    }
+                    
+                    if (itemsToImport.length === 0) {
+                        showNotification('No valid items found in the Excel file. Please check the data.', 'warning', 4000);
+                        return;
+                    }
+                    
+                    // Generate Inventory Item IDs for items that don't have one
+                    // First, get the current max ID to start from
+                    let currentMaxID = 0;
+                    if (supabaseClient) {
+                        try {
+                            const { data } = await supabaseClient
+                                .from('inventory_items')
+                                .select('inventory_item_id')
+                                .not('inventory_item_id', 'is', null);
+                            
+                            if (data && data.length > 0) {
+                                data.forEach(item => {
+                                    if (item.inventory_item_id) {
+                                        const match = item.inventory_item_id.match(/SAK-FSID-(\d+)/);
+                                        if (match) {
+                                            const num = parseInt(match[1]);
+                                            if (num > currentMaxID) {
+                                                currentMaxID = num;
+                                            }
+                                        }
+                                    }
+                                });
+                            }
+                        } catch (e) {
+                            console.warn('Error fetching max ID:', e);
+                        }
+                    }
+                    
+                    // Generate IDs sequentially for items that need them
+                    for (let i = 0; i < itemsToImport.length; i++) {
+                        if (!itemsToImport[i].inventory_item_id || itemsToImport[i].inventory_item_id.trim() === '') {
+                            currentMaxID++;
+                            itemsToImport[i].inventory_item_id = `SAK-FSID-${String(currentMaxID).padStart(5, '0')}`;
+                        }
+                    }
+                    
+                    // Show Review Data screen (Foodics style)
+                    showReviewDataScreen(itemsToImport);
+                    
+                } catch (error) {
+                    console.error('Error importing file:', error);
+                    showNotification('Error importing file: ' + error.message, 'error', 5000);
+                }
+            };
+            
+            reader.readAsArrayBuffer(file);
+        }
+
+        // Show Review Data Screen (Foodics style)
+        function showReviewDataScreen(items) {
+            // Close import modal
+            closeImportModal();
+            
+            // Validate items and find issues
+            const validatedItems = items.map((item, index) => {
+                const issues = [];
+                
+                // Check for duplicate SKUs in import batch
+                if (item.sku && item.sku.trim() !== '') {
+                    const duplicateSKU = items.filter((it, idx) => idx !== index && it.sku && it.sku.trim() === item.sku.trim());
+                    if (duplicateSKU.length > 0) {
+                        issues.push('Duplicate SKU in import file');
+                    }
+                }
+                
+                // Check for duplicate Inventory Item IDs in import batch (only if ID is provided)
+                if (item.inventory_item_id && item.inventory_item_id.trim() !== '') {
+                    const duplicateID = items.filter((it, idx) => idx !== index && it.inventory_item_id && it.inventory_item_id.trim() === item.inventory_item_id.trim());
+                    if (duplicateID.length > 0) {
+                        issues.push('Duplicate Inventory Item ID in import file');
+                    }
+                }
+                
+                // Validate required fields
+                if (!item.name || item.name.trim() === '') {
+                    issues.push('Item Name is required');
+                }
+                if (!item.sku || item.sku.trim() === '') {
+                    issues.push('SKU is required');
+                }
+                if (!item.storage_unit || item.storage_unit.trim() === '') {
+                    issues.push('Storage Unit is required');
+                }
+                if (!item.ingredient_unit || item.ingredient_unit.trim() === '') {
+                    issues.push('Ingredient Unit is required');
+                }
+                if (!item.storage_to_ingredient || item.storage_to_ingredient <= 0) {
+                    issues.push('Storage To Ingredient Conversion must be greater than 0');
+                }
+                
+                // Validate Inventory Item ID format
+                if (item.inventory_item_id && item.inventory_item_id.trim() !== '') {
+                    const idPattern = /^SAK-FSID-\d{5}$/;
+                    if (!idPattern.test(item.inventory_item_id.trim())) {
+                        issues.push('Invalid Inventory Item ID format (should be SAK-FSID-00001)');
+                    }
+                } else {
+                    // ID will be auto-generated, no issue
+                }
+                
+                return {
+                    ...item,
+                    rowNumber: index + 2, // Excel row number (header is row 1)
+                    issues: issues,
+                    hasIssues: issues.length > 0
+                };
+            });
+            
+            // Check for existing SKUs and IDs in database
+            validateAgainstDatabase(validatedItems).then(validatedWithDB => {
+                // Ensure review modal exists
+                ensureReviewDataModal();
+                
+                // Store validated items for import
+                window.itemsToImportFinal = validatedWithDB;
+                
+                // Display review data
+                displayReviewData(validatedWithDB);
+                
+                // Show modal
+                const reviewModal = document.getElementById('review-data-modal');
+                if (reviewModal) {
+                    reviewModal.classList.add('show');
+                } else {
+                    console.error('Review modal not found!');
+                    showNotification('Review modal not found. Please refresh the page.', 'error', 5000);
+                }
+            }).catch(error => {
+                console.error('Error validating against database:', error);
+                showNotification('Error validating data. Please try again.', 'error', 5000);
+            });
+        }
+
+        // Validate against database (check for duplicates)
+        async function validateAgainstDatabase(items) {
+            if (!supabaseClient) {
+                return items;
+            }
+            
+            try {
+                // Get existing SKUs and Inventory Item IDs
+                const { data: existingItems, error: fetchError } = await supabaseClient
+                    .from('inventory_items')
+                    .select('sku, inventory_item_id');
+                
+                if (fetchError) {
+                    console.error('Error fetching existing items for validation:', fetchError);
+                    return items; // Return items without DB validation if fetch fails
+                }
+                
+                const existingSKUs = new Set(existingItems?.map(item => item.sku).filter(sku => sku) || []);
+                const existingIDs = new Set(existingItems?.map(item => item.inventory_item_id).filter(id => id) || []);
+                
+                // Add database validation issues
+                return items.map(item => {
+                    const newIssues = [...(item.issues || [])];
+                    
+                    if (item.sku && item.sku.trim() !== '' && existingSKUs.has(item.sku.trim())) {
+                        newIssues.push('SKU already exists in database');
+                    }
+                    
+                    if (item.inventory_item_id && item.inventory_item_id.trim() !== '' && existingIDs.has(item.inventory_item_id.trim())) {
+                        newIssues.push('Inventory Item ID already exists in database');
+                    }
+                    
+                    return {
+                        ...item,
+                        issues: newIssues,
+                        hasIssues: newIssues.length > 0
+                    };
+                });
+            } catch (error) {
+                console.error('Error validating against database:', error);
+                return items;
+            }
+        }
+
+        // Display Review Data
+        function displayReviewData(items) {
+            const tbody = document.getElementById('review-data-table-body');
+            if (!tbody) return;
+            
+            tbody.innerHTML = '';
+            
+            const totalRows = items.length;
+            const cleanRows = items.filter(item => !item.hasIssues).length;
+            const rowsWithIssues = items.filter(item => item.hasIssues).length;
+            
+            // Update summary
+            const summaryEl = document.getElementById('review-summary');
+            if (summaryEl) {
+                summaryEl.innerHTML = `
+                    <div class="flex items-center gap-6 text-sm font-semibold">
+                        <span>All rows: <strong class="text-gray-800">${totalRows}</strong></span>
+                        <span class="text-green-600">Clean rows: <strong>${cleanRows}</strong></span>
+                        <span class="text-red-600">Rows with issues: <strong>${rowsWithIssues}</strong></span>
+                    </div>
+                    ${rowsWithIssues > 0 ? `
+                        <div class="mt-2 text-xs text-red-600">
+                            ⚠️ Items with issues will be skipped during import. Only clean items will be imported.
+                        </div>
+                    ` : ''}
+                `;
+            }
+            
+            // Display items (show first 100, with pagination)
+            const itemsToShow = items.slice(0, 100);
+            
+            itemsToShow.forEach((item, index) => {
+                const row = document.createElement('tr');
+                row.className = item.hasIssues ? 'bg-red-50' : '';
+                
+                // Issue indicator
+                const issueIcon = item.hasIssues 
+                    ? '<span class="text-red-600 font-bold text-lg">①</span>' 
+                    : '<span class="text-green-600">✓</span>';
+                
+                // Highlight row if has issues
+                if (item.hasIssues) {
+                    row.className = 'bg-red-50 border-l-4 border-red-500';
+                }
+                
+                row.innerHTML = `
+                    <td class="px-4 py-2 text-center border align-middle">${issueIcon}</td>
+                    <td class="px-4 py-2 font-mono text-sm border align-middle ${item.hasIssues ? 'text-red-600' : ''}" style="min-width: 150px;">${item.inventory_item_id || 'N/A'}</td>
+                    <td class="px-4 py-2 border align-middle" style="min-width: 200px;">${item.name || ''}</td>
+                    <td class="px-4 py-2 border align-middle" style="min-width: 200px;">${item.name_localized || item.name || ''}</td>
+                    <td class="px-4 py-2 font-mono text-sm border align-middle ${item.hasIssues ? 'text-red-600' : ''}" style="min-width: 120px;">${item.sku || ''}</td>
+                    <td class="px-4 py-2 border align-middle" style="min-width: 120px;">${item.barcode || ''}</td>
+                    <td class="px-4 py-2 border align-middle" style="min-width: 250px;">
+                        ${item.hasIssues 
+                            ? `<div class="text-xs text-red-600">${item.issues.slice(0, 3).join(', ')}${item.issues.length > 3 ? '...' : ''}</div>` 
+                            : '<span class="text-green-600 text-xs">✓ Clean</span>'}
+                    </td>
+                `;
+                
+                tbody.appendChild(row);
+            });
+            
+            // Show pagination info if more than 100 items
+            if (items.length > 100) {
+                const paginationInfo = document.getElementById('review-pagination-info');
+                if (paginationInfo) {
+                    paginationInfo.textContent = `Showing 1-100 of ${items.length} items`;
+                }
+            }
+        }
+
+        // Create Review Data Modal (if not exists)
+        function ensureReviewDataModal() {
+            let modal = document.getElementById('review-data-modal');
+            if (!modal) {
+                // Modal is already in HTML, just ensure it exists
+                console.warn('Review modal not found in HTML, creating dynamically...');
+                // This shouldn't happen as modal is now in HTML
+            }
+        }
+
+        // Close Review Data Modal
+        window.closeReviewDataModal = function() {
+            const modal = document.getElementById('review-data-modal');
+            if (modal) {
+                modal.classList.remove('show');
+            }
+            // Reopen import modal
+            openImportModal();
+        };
+
+        // Finalize Import (after review)
+        window.finalizeImport = async function() {
+            const items = window.itemsToImportFinal;
+            if (!items || items.length === 0) {
+                showNotification('No items to import.', 'warning', 3000);
+                return;
+            }
+            
+            // Filter out items with issues
+            const cleanItems = items.filter(item => !item.hasIssues);
+            const itemsWithIssues = items.filter(item => item.hasIssues);
+            
+            if (cleanItems.length === 0) {
+                showNotification('No clean items to import. Please fix the issues first.', 'warning', 4000);
+                return;
+            }
+            
+            if (itemsWithIssues.length > 0) {
+                const confirmMsg = `You have ${itemsWithIssues.length} item(s) with issues that will be skipped.\n\nOnly ${cleanItems.length} clean item(s) will be imported.\n\nDo you want to continue?`;
+                const confirmed = await showConfirmDialog(confirmMsg, 'Confirm Import', 'info');
+                if (!confirmed) {
+                    return;
+                }
+            }
+            
+            // Import clean items
+            await importItemsToSupabase(cleanItems);
+            
+            // Close review modal
+            closeReviewDataModal();
+        };
+
+        // Import items to Supabase (Final import after review)
+        async function importItemsToSupabase(items) {
+            if (!supabaseClient) {
+                showNotification('Supabase not configured. Please refresh the page.', 'error', 5000);
+                return;
+            }
+            
+            try {
+                // Import items in batches to avoid timeout
+                const batchSize = 50;
+                let successCount = 0;
+                let errorCount = 0;
+                const errors = [];
+                
+                for (let i = 0; i < items.length; i += batchSize) {
+                    const batch = items.slice(i, i + batchSize);
+                    
+                    // Remove validation metadata before inserting
+                    const batchToInsert = batch.map(item => {
+                        const { rowNumber, issues, hasIssues, ...itemData } = item;
+                        
+                        // Ensure all required fields are present and valid
+                        if (!itemData.name || itemData.name.trim() === '') {
+                            throw new Error(`Item at row ${item.rowNumber} missing name`);
+                        }
+                        if (!itemData.sku || itemData.sku.trim() === '') {
+                            throw new Error(`Item at row ${item.rowNumber} missing SKU`);
+                        }
+                        if (!itemData.storage_unit || itemData.storage_unit.trim() === '') {
+                            throw new Error(`Item at row ${item.rowNumber} missing Storage Unit`);
+                        }
+                        if (!itemData.ingredient_unit || itemData.ingredient_unit.trim() === '') {
+                            throw new Error(`Item at row ${item.rowNumber} missing Ingredient Unit`);
+                        }
+                        if (!itemData.inventory_item_id || itemData.inventory_item_id.trim() === '') {
+                            throw new Error(`Item at row ${item.rowNumber} missing Inventory Item ID`);
+                        }
+                        
+                        // Set defaults
+                        if (!itemData.name_localized) {
+                            itemData.name_localized = itemData.name;
+                        }
+                        if (!itemData.storage_to_ingredient || itemData.storage_to_ingredient <= 0) {
+                            itemData.storage_to_ingredient = 1;
+                        }
+                        if (itemData.cost === undefined || itemData.cost === null) {
+                            itemData.cost = 0;
+                        }
+                        if (!itemData.costing_method) {
+                            itemData.costing_method = 'From Transactions';
+                        }
+                        if (!itemData.category) {
+                            itemData.category = 'Uncategorized';
+                        }
+                        if (!itemData.tags) {
+                            itemData.tags = [];
+                        }
+                        if (!itemData.ingredients) {
+                            itemData.ingredients = [];
+                        }
+                        if (!itemData.suppliers) {
+                            itemData.suppliers = [];
+                        }
+                        // Set deleted to false for new imports (if column exists in schema)
+                        // If column doesn't exist, it will be ignored by Supabase
+                        itemData.deleted = false;
+                        // deleted_at will be null for new items
+                        
+                        return itemData;
+                    });
+                    
+                    const { data, error } = await supabaseClient
+                        .from('inventory_items')
+                        .insert(batchToInsert)
+                        .select();
+                    
+                    if (error) {
+                        console.error('Error importing batch:', error);
+                        console.error('Batch data:', batchToInsert);
+                        errorCount += batch.length;
+                        errors.push({
+                            batch: Math.floor(i / batchSize) + 1,
+                            error: error.message,
+                            details: error.details || '',
+                            hint: error.hint || '',
+                            items: batch.map(item => `${item.name || 'Unknown'} (${item.sku || 'No SKU'})`).join(', ')
+                        });
+                    } else {
+                        successCount += data ? data.length : 0;
+                    }
+                }
+                
+                if (successCount > 0) {
+                    let message = `✅ Successfully imported ${successCount} item(s)!`;
+                    if (errorCount > 0) {
+                        message += `\n\n⚠️ ${errorCount} item(s) failed to import.`;
+                        if (errors.length > 0) {
+                            console.error('Import errors:', errors);
+                        }
+                    }
+                    showNotification(message, 'success', 5000);
+                    closeReviewDataModal();
+                    // Reload items table
+                    await loadItemsTable();
+                } else {
+                    let errorMsg = `❌ Failed to import items. ${errorCount > 0 ? errorCount + ' item(s) failed.' : ''}`;
+                    if (errors.length > 0) {
+                        const uniqueErrors = [...new Set(errors.map(e => e.error))];
+                        errorMsg += '\n\nCommon errors:\n' + uniqueErrors.slice(0, 5).map(e => `- ${e}`).join('\n');
+                        if (errors[0].hint) {
+                            errorMsg += '\n\nHint: ' + errors[0].hint;
+                        }
+                        errorMsg += '\n\nPlease check the browser console for detailed error information.';
+                    }
+                    showNotification(errorMsg.replace(/\n\n/g, '. '), 'error', 8000);
+                    console.error('Import errors (detailed):', errors);
+                }
+                
+            } catch (error) {
+                console.error('Error importing items:', error);
+                showNotification('Error importing items: ' + error.message, 'error', 5000);
+            }
+        }
+
+        // Export Items to Excel
+        async function exportItems(event) {
+            // Prevent default and stop propagation immediately
+            if (event) {
+                event.preventDefault();
+                event.stopPropagation();
+            }
+            
+            // Show loading notification
+            showNotification('Preparing export...', 'info', 2000);
+            
+            const items = await loadItemsFromSupabase();
+            
+            if (items.length === 0) {
+                showNotification('No items to export.', 'warning', 3000);
+                return;
+            }
+            
+            // Filter out deleted items for export
+            const activeItems = items.filter(item => !item.deleted);
+            
+            // Create workbook
+            const wb = XLSX.utils.book_new();
+            
+            // Create worksheet data with exact headers matching template
+            const wsData = [
+                // Header row (exact match to template structure)
+                [
+                    'Inventory Item ID',
+                    'Item Name',
+                    'Name Localized',
+                    'SKU',
+                    'Barcode',
+                    'Storage Unit',
+                    'Ingredient Unit',
+                    'Storage To Ingredient Conversio',  // Note: truncated as in template
+                    'Cost',
+                    'Minimum Level',
+                    'PAR Level',
+                    'Maximum Leve',  // Note: truncated as in template
+                    'Category',
+                    'Reference'
+                ]
+            ];
+            
+            // Add data rows with all item details
+            activeItems.forEach(item => {
+                wsData.push([
+                    item.inventory_item_id || '',
+                    item.name || '',
+                    item.name_localized || item.name || '',
+                    item.sku || '',
+                    item.barcode || '',
+                    item.storage_unit || '',
+                    item.ingredient_unit || '',
+                    item.storage_to_ingredient || 1,
+                    item.cost || 0,
+                    item.min_level || '',
+                    item.par_level || '',
+                    item.max_level || '',
+                    item.category || 'Uncategorized',
+                    '' // Reference column (empty for now)
+                ]);
+            });
+            
+            // Create worksheet
+            const ws = XLSX.utils.aoa_to_sheet(wsData);
+            
+            // Set column widths (14 columns now)
+            ws['!cols'] = [
+                { wch: 25 }, // Inventory Item ID
+                { wch: 20 }, // Item Name
+                { wch: 20 }, // Name Localized
+                { wch: 15 }, // SKU
+                { wch: 15 }, // Barcode
+                { wch: 15 }, // Storage Unit
+                { wch: 15 }, // Ingredient Unit
+                { wch: 30 }, // Storage To Ingredient Conversio
+                { wch: 12 }, // Cost
+                { wch: 15 }, // Minimum Level
+                { wch: 15 }, // PAR Level
+                { wch: 15 }, // Maximum Leve
+                { wch: 20 }, // Category
+                { wch: 20 }  // Reference
+            ];
+            
+            // Add worksheet to workbook
+            XLSX.utils.book_append_sheet(wb, ws, 'Items');
+            
+            // Download file with proper filename (SYNCHRONOUS in user context)
+            const fileName = 'Inventory-Items-Details.xlsx';
+            
+            // IMPORTANT: Download must happen synchronously in user click context
+            // Convert workbook immediately
+            const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+            const blob = new Blob([wbout], { 
+                type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
+            });
+            
+            // Check if we're in an iframe - if yes, send to parent for download
+            if (window.parent && window.parent !== window) {
+                console.log('📤 Sending download request to parent window (iframe context)');
+                // Send blob data to parent window for download
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    window.parent.postMessage({
+                        type: 'DOWNLOAD_FILE',
+                        fileName: fileName,
+                        fileData: e.target.result,
+                        fileType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+                    }, '*');
+                };
+                reader.readAsDataURL(blob);
+                showNotification(`Exporting ${activeItems.length} item(s)! Check your downloads folder.`, 'success', 4000);
+                return;
+            }
+            
+            // Direct download (not in iframe)
+            const url = window.URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = fileName;
+            link.style.display = 'none';
+            document.body.appendChild(link);
+            link.click();
+            
+            // Cleanup after download
+            setTimeout(() => {
+                try {
+                    if (link.parentNode) document.body.removeChild(link);
+                    window.URL.revokeObjectURL(url);
+                } catch (e) {}
+            }, 1000);
+            
+            console.log('✅ Items exported to Excel:', fileName);
+            showNotification(`Successfully exported ${activeItems.length} item(s) to Excel! Check your downloads folder.`, 'success', 4000);
+        }
+
+        // Filter function
+        function openFilter() {
+            showNotification('Filter Options - To be implemented', 'info', 3000);
+            // You can open a filter modal
+        }
+
+        // Listen for language changes from parent
+        window.addEventListener('message', function(event) {
+            if (event.data.type === 'SET_LANGUAGE') {
+                // Handle language change if needed
+                console.log('Language changed to:', event.data.lang);
+            }
+        });
+
+        // Close modal on outside click (safe initialization)
+        document.addEventListener('DOMContentLoaded', function() {
+            const modal = document.getElementById('create-item-modal');
+            if (modal) {
+                modal.addEventListener('click', function(e) {
+                    if (e.target === this) {
+                        closeCreateItemModal();
+                    }
+                });
+            }
+        });
+
+        // Clear all localStorage data for items (one-time cleanup)
+        function clearLocalStorageItems() {
+            localStorage.removeItem('inventory_items');
+            console.log('✅ Cleared localStorage for inventory_items');
+        }
+
+        // Initialize Supabase Client on DOM Ready (in case SDK loads late)
+        document.addEventListener('DOMContentLoaded', function() {
+            // Re-initialize Supabase if not already done
+            if (!supabaseClient && typeof supabase !== 'undefined') {
+                try {
+                    supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+                    console.log('✅ Supabase initialized on DOM ready');
+                } catch (error) {
+                    console.error('❌ Supabase initialization failed on DOM ready:', error);
+                }
+            }
+        });
+
+        // Initialize - Load items on page load
+        document.addEventListener('DOMContentLoaded', async function() {
+            // Clear localStorage to remove old default items
+            clearLocalStorageItems();
+            initializeSampleItems();
+            await loadItemsTable();
+        });
+    </script>
+
+    <!-- Create Item Modal -->
+    <div id="create-item-modal" class="modal">
+        <div class="modal-content">
+            <div class="p-6">
+                <!-- Modal Header -->
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-2xl font-bold text-gray-800">Create item</h2>
+                    <button onclick="closeCreateItemModal()" class="text-gray-500 hover:text-gray-700 text-2xl">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+
+                <!-- Modal Body -->
+                <form id="create-item-form" onsubmit="event.preventDefault(); saveNewItem();">
+                    <div class="grid grid-cols-2 gap-4">
+                        <!-- Left Column -->
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">
+                                    Name <span class="text-red-500">*</span>
+                                </label>
+                                <input type="text" id="item-name" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500" required>
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">
+                                    SKU <span class="text-red-500">*</span>
+                                </label>
+                                <div class="flex gap-2">
+                                    <input type="text" id="item-sku" class="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500" required placeholder="sk-19588">
+                                    <button type="button" onclick="generateSKU()" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300">
+                                        Generate
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">
+                                    Storage Unit <span class="text-red-500">*</span>
+                                </label>
+                                <input type="text" id="item-storage-unit" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500" required placeholder="Pcs">
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">
+                                    Storage To Ingredient <span class="text-red-500">*</span>
+                                </label>
+                                <input type="number" id="item-storage-to-ingredient" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500" required placeholder="1" min="0" step="0.01">
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">
+                                    Barcode
+                                </label>
+                                <input type="text" id="item-barcode" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">
+                                    Minimum Level
+                                </label>
+                                <input type="number" id="item-min-level" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500" min="0">
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">
+                                    Maximum Level
+                                </label>
+                                <input type="text" id="item-max-level" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
+                            </div>
+                        </div>
+
+                        <!-- Right Column -->
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">
+                                    Name Localized
+                                </label>
+                                <input type="text" id="item-name-localized" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">
+                                    Category
+                                </label>
+                                <select id="item-category" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
+                                    <option value="">Choose...</option>
+                                    <!-- Categories will be loaded dynamically -->
+                                </select>
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">
+                                    Ingredient Unit <span class="text-red-500">*</span>
+                                </label>
+                                <input type="text" id="item-ingredient-unit" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500" required placeholder="Pcs">
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">
+                                    Costing Method <span class="text-red-500">*</span>
+                                </label>
+                                <select id="item-costing-method" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500" required>
+                                    <option value="">Choose...</option>
+                                    <option value="From Transactions" selected>From Transactions</option>
+                                    <option value="Standard Cost">Standard Cost</option>
+                                    <option value="Average Cost">Average Cost</option>
+                                    <option value="FIFO">FIFO</option>
+                                    <option value="LIFO">LIFO</option>
+                                </select>
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">
+                                    Cost
+                                </label>
+                                <input type="number" id="item-cost" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500" min="0" step="0.01" placeholder="0.00">
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">
+                                    Par Level
+                                </label>
+                                <input type="text" id="item-par-level" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Advanced Options (Hidden by default) -->
+                    <div id="advanced-options" class="advanced-options mt-4">
+                        <div class="grid grid-cols-2 gap-4 pt-4 border-t border-gray-200">
+                            <!-- Additional advanced fields can be added here -->
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">
+                                    Factor
+                                </label>
+                                <input type="text" id="item-factor" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500" placeholder="1 Pcs = 1 Pcs">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">
+                                    Production Section
+                                </label>
+                                <select id="item-production-section" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
+                                    <option value="">Choose...</option>
+                                    <option value="Section A">Section A</option>
+                                    <option value="Section B">Section B</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Advanced Options Toggle -->
+                    <div class="mt-4">
+                        <a href="#" onclick="toggleAdvancedOptions(); return false;" id="advanced-options-toggle" class="text-blue-600 hover:text-blue-800">
+                            Advanced Options
+                        </a>
+                    </div>
+
+                    <!-- Modal Footer -->
+                    <div class="flex justify-end gap-3 pt-4 border-t border-gray-200 mt-6">
+                        <button type="button" onclick="closeCreateItemModal()" class="px-6 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">
+                            Close
+                        </button>
+                        <button type="submit" class="px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700">
+                            Save
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Review Data Modal (Foodics Style) -->
+    <div id="review-data-modal" class="modal">
+        <div class="modal-content" style="max-width: 95vw; max-height: 95vh;">
+            <div class="p-6">
+                <!-- Modal Header -->
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-2xl font-bold text-gray-800">Review & Finalize</h2>
+                    <button onclick="closeReviewDataModal()" class="text-gray-500 hover:text-gray-700 text-2xl">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                
+                <!-- Summary -->
+                <div id="review-summary" class="mb-4 p-4 bg-gray-50 rounded-lg">
+                    <!-- Summary will be populated by displayReviewData -->
+                </div>
+                
+                        <!-- Table -->
+                        <div class="table-container" style="max-height: 60vh; overflow-y: auto;">
+                            <table class="w-full text-sm border-collapse">
+                                <thead class="bg-gray-100 sticky top-0 z-20">
+                                    <tr>
+                                        <th class="px-4 py-3 text-center border bg-gray-100 font-semibold text-gray-700 whitespace-nowrap" style="min-width: 80px;">Status</th>
+                                        <th class="px-4 py-3 text-left border bg-gray-100 font-semibold text-gray-700 whitespace-nowrap" style="min-width: 150px;">Inventory Item ID</th>
+                                        <th class="px-4 py-3 text-left border bg-gray-100 font-semibold text-gray-700 whitespace-nowrap" style="min-width: 200px;">Item Name</th>
+                                        <th class="px-4 py-3 text-left border bg-gray-100 font-semibold text-gray-700 whitespace-nowrap" style="min-width: 200px;">Name Localized</th>
+                                        <th class="px-4 py-3 text-left border bg-gray-100 font-semibold text-gray-700 whitespace-nowrap" style="min-width: 120px;">SKU</th>
+                                        <th class="px-4 py-3 text-left border bg-gray-100 font-semibold text-gray-700 whitespace-nowrap" style="min-width: 120px;">Barcode</th>
+                                        <th class="px-4 py-3 text-left border bg-gray-100 font-semibold text-gray-700" style="min-width: 250px;">Issues</th>
+                                    </tr>
+                                </thead>
+                        <tbody id="review-data-table-body">
+                            <!-- Data will be populated by displayReviewData -->
+                        </tbody>
+                    </table>
+                </div>
+                
+                <!-- Pagination Info -->
+                <div id="review-pagination-info" class="text-sm text-gray-600 mt-2"></div>
+                
+                <!-- Modal Footer -->
+                <div class="flex justify-between items-center pt-4 border-t border-gray-200 mt-4">
+                    <button 
+                        onclick="closeReviewDataModal()"
+                        class="px-6 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+                    >
+                        Previous
+                    </button>
+                    <button 
+                        onclick="finalizeImport()"
+                        class="px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
+                    >
+                        Import
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Import Items Modal -->
+    <div id="import-modal" class="modal">
+        <div class="modal-content" style="max-width: 700px;">
+            <div class="p-6">
+                <!-- Modal Header -->
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-2xl font-bold text-gray-800">Upload a File</h2>
+                    <button onclick="closeImportModal()" class="text-gray-500 hover:text-gray-700 text-2xl">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+
+                <!-- Modal Body -->
+                <div class="mb-6">
+                    <div class="bg-purple-50 border-l-4 border-purple-500 p-4 mb-4">
+                        <p class="text-sm text-purple-800 font-semibold">
+                            Make sure your file includes the following required columns:
+                        </p>
+                    </div>
+
+                    <!-- Required Columns List -->
+                    <div class="mb-6">
+                        <h3 class="text-sm font-semibold text-gray-700 mb-3">REQUIRED COLUMNS</h3>
+                        <div class="grid grid-cols-2 gap-2 text-sm text-gray-600">
+                            <div class="flex items-center gap-2">
+                                <i class="fas fa-info-circle text-purple-500"></i>
+                                <span>Inventory Item ID</span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <i class="fas fa-info-circle text-purple-500"></i>
+                                <span>Item Name</span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <i class="fas fa-info-circle text-purple-500"></i>
+                                <span>SKU</span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <i class="fas fa-info-circle text-purple-500"></i>
+                                <span>Storage Unit</span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <i class="fas fa-info-circle text-purple-500"></i>
+                                <span>Ingredient Unit</span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <i class="fas fa-info-circle text-purple-500"></i>
+                                <span>Storage To Ingredient Conversion</span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <i class="fas fa-info-circle text-purple-500"></i>
+                                <span>Cost</span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <i class="fas fa-info-circle text-purple-500"></i>
+                                <span>Minimum Level</span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <i class="fas fa-info-circle text-purple-500"></i>
+                                <span>PAR Level</span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <i class="fas fa-info-circle text-purple-500"></i>
+                                <span>Maximum Level</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- File Upload Area -->
+                    <div class="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center mb-4" style="background: #f9fafb;">
+                        <div class="mb-4">
+                            <i class="fas fa-file-csv text-4xl text-gray-400 mb-2"></i>
+                            <i class="fas fa-file-excel text-4xl text-gray-400"></i>
+                        </div>
+                        <p class="text-gray-600 mb-4">
+                            What data do you want to upload?<br>
+                            Upload a CSV or Excel file to begin the import process.
+                        </p>
+                        <input 
+                            type="file" 
+                            id="import-file-input" 
+                            accept=".xlsx,.xls,.csv"
+                            onchange="handleFileImport(event)"
+                            class="hidden"
+                        >
+                        <button 
+                            type="button"
+                            onclick="document.getElementById('import-file-input').click()"
+                            class="px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-semibold"
+                        >
+                            Choose File
+                        </button>
+                    </div>
+
+                    <!-- Optional Columns -->
+                    <div class="mb-4">
+                        <h3 class="text-sm font-semibold text-gray-700 mb-2">OPTIONAL COLUMNS</h3>
+                        <div class="text-sm text-gray-600">
+                            <div class="flex items-center gap-2">
+                                <i class="fas fa-info-circle text-gray-400"></i>
+                                <span>Name Localized, Barcode, Category Reference</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Modal Footer -->
+                <div class="flex justify-between items-center pt-4 border-t border-gray-200">
+                    <button 
+                        onclick="window.downloadExcelTemplate(); return false;"
+                        class="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 flex items-center gap-2"
+                    >
+                        <i class="fas fa-file-excel"></i>
+                        Download Excel template
+                    </button>
+                    <button 
+                        onclick="closeImportModal()"
+                        class="px-6 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+                    >
+                        Close
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bulk Add Tags Modal -->
+    <div id="bulk-add-tags-modal" class="modal">
+        <div class="modal-content" style="max-width: 500px;">
+            <div class="p-6">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-2xl font-bold text-gray-800">Add Tags</h2>
+                    <button onclick="closeBulkAddTagsModal()" class="text-gray-500 hover:text-gray-700 text-2xl">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        Enter tags (comma-separated):
+                    </label>
+                    <input 
+                        type="text" 
+                        id="bulk-tags-input" 
+                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                        placeholder="e.g., Weekly Stocktaking, Vegetables, etc."
+                    >
+                    <p class="text-xs text-gray-500 mt-2">Separate multiple tags with commas</p>
+                </div>
+                <div class="flex justify-end gap-3">
+                    <button onclick="closeBulkAddTagsModal()" class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">
+                        Cancel
+                    </button>
+                    <button onclick="confirmBulkAddTags()" class="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700">
+                        Add Tags
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bulk Remove Tags Modal -->
+    <div id="bulk-remove-tags-modal" class="modal">
+        <div class="modal-content" style="max-width: 500px;">
+            <div class="p-6">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-2xl font-bold text-gray-800">Remove Tags</h2>
+                    <button onclick="closeBulkRemoveTagsModal()" class="text-gray-500 hover:text-gray-700 text-2xl">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        Enter tags to remove (comma-separated):
+                    </label>
+                    <input 
+                        type="text" 
+                        id="bulk-remove-tags-input" 
+                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                        placeholder="e.g., Weekly Stocktaking, Vegetables"
+                    >
+                    <p class="text-xs text-gray-500 mt-2">Separate multiple tags with commas</p>
+                </div>
+                <div class="flex justify-end gap-3">
+                    <button onclick="closeBulkRemoveTagsModal()" class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">
+                        Cancel
+                    </button>
+                    <button onclick="confirmBulkRemoveTags()" class="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700">
+                        Remove Tags
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bulk Add Tags Modal -->
+    <div id="bulk-add-tags-modal" class="modal">
+        <div class="modal-content" style="max-width: 500px;">
+            <div class="p-6">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-2xl font-bold text-gray-800">Add Tags</h2>
+                    <button onclick="closeBulkAddTagsModal()" class="text-gray-500 hover:text-gray-700 text-2xl">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        Enter tags (comma-separated):
+                    </label>
+                    <input 
+                        type="text" 
+                        id="bulk-tags-input" 
+                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                        placeholder="e.g., Weekly Stocktaking, Vegetables, etc."
+                    >
+                    <p class="text-xs text-gray-500 mt-2">Separate multiple tags with commas</p>
+                </div>
+                <div class="flex justify-end gap-3">
+                    <button onclick="closeBulkAddTagsModal()" class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">
+                        Cancel
+                    </button>
+                    <button onclick="confirmBulkAddTags()" class="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700">
+                        Add Tags
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bulk Remove Tags Modal -->
+    <div id="bulk-remove-tags-modal" class="modal">
+        <div class="modal-content" style="max-width: 500px;">
+            <div class="p-6">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-2xl font-bold text-gray-800">Remove Tags</h2>
+                    <button onclick="closeBulkRemoveTagsModal()" class="text-gray-500 hover:text-gray-700 text-2xl">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        Enter tags to remove (comma-separated):
+                    </label>
+                    <input 
+                        type="text" 
+                        id="bulk-remove-tags-input" 
+                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                        placeholder="e.g., Weekly Stocktaking, Vegetables"
+                    >
+                    <p class="text-xs text-gray-500 mt-2">Separate multiple tags with commas</p>
+                </div>
+                <div class="flex justify-end gap-3">
+                    <button onclick="closeBulkRemoveTagsModal()" class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">
+                        Cancel
+                    </button>
+                    <button onclick="confirmBulkRemoveTags()" class="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700">
+                        Remove Tags
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Sakura Integrated Management Portal</title>
+    
+    <!-- PWA Meta Tags -->
+    <meta name="application-name" content="Sakura Portal">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="Sakura Portal">
+    <meta name="description" content="Complete ERP Management System for Sakura Cafe">
+    <meta name="format-detection" content="telephone=no">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="msapplication-TileColor" content="#284b44">
+    <meta name="msapplication-tap-highlight" content="no">
+    <meta name="theme-color" content="#284b44">
+    
+    <!-- Apple Touch Icons -->
+    <link rel="apple-touch-icon" href="assets/icons/icon-192x192.png">
+    <link rel="apple-touch-icon" sizes="152x152" href="assets/icons/icon-152x152.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="assets/icons/icon-180x180.png">
+    <link rel="apple-touch-icon" sizes="167x167" href="assets/icons/icon-167x167.png">
+    
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="manifest.json">
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" sizes="32x32" href="assets/icons/icon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="assets/icons/icon-16x16.png">
+    <link rel="shortcut icon" href="assets/icons/icon-192x192.png">
+
+    <!-- External Libraries -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    
+    <!-- Capacitor -->
+    <script type="module" src="https://unpkg.com/@capacitor/core@latest/dist/capacitor.js"></script>
+    
+    <!-- Performance Configuration -->
+    <script type="module" src="performance-config.js"></script>
+    
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+    <!-- Professional Animated Splash Screen -->
+    <div id="splash-screen" class="splash-screen">
+        <div class="splash-background">
+            <div class="splash-particles"></div>
+        </div>
+        <div class="splash-content">
+            <!-- Sakura Logo with Animation -->
+            <div class="sakura-logo-container">
+                <div class="sakura-logo">
+                    <div class="logo-circle">
+                        <div class="logo-inner">
+                            <div class="sakura-petal petal-1"></div>
+                            <div class="sakura-petal petal-2"></div>
+                            <div class="sakura-petal petal-3"></div>
+                            <div class="sakura-petal petal-4"></div>
+                            <div class="sakura-petal petal-5"></div>
+                            <div class="sakura-center"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="logo-text-container">
+                    <h1 class="splash-title">
+                        <span class="title-word">Sakura</span>
+                        <span class="title-word">Portal</span>
+                    </h1>
+                    <p class="splash-subtitle">
+                        <span class="subtitle-text">Enterprise Resource Planning</span>
+                    </p>
+                </div>
+            </div>
+            
+            <!-- Professional Loading Animation -->
+            <div class="professional-loader">
+                <div class="loader-dots">
+                    <div class="dot"></div>
+                    <div class="dot"></div>
+                    <div class="dot"></div>
+                </div>
+                <div class="loading-text">Initializing System...</div>
+                <div class="progress-bar">
+                    <div class="progress-fill"></div>
+                </div>
+            </div>
+            
+            <!-- Version and Copyright -->
+            <div class="splash-footer">
+                <div class="version-info">v1.0.0</div>
+                <div class="copyright">© 2025 Sakura Technologies</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main App Container -->
+    <div id="app" class="app-container" style="display: none;">
+        <!-- Header -->
+        <header class="app-header">
+            <div class="header-content">
+                <div class="header-left">
+                    <button id="menu-toggle" class="menu-toggle">
+                        <i class="fas fa-bars"></i>
+                    </button>
+                    <div class="header-logo">
+                        <i class="fas fa-leaf"></i>
+                        <span>Sakura Portal</span>
+                    </div>
+                </div>
+                <div class="header-right">
+                    <button id="refresh-btn" class="header-btn">
+                        <i class="fas fa-sync-alt"></i>
+                    </button>
+                    <button id="settings-btn" class="header-btn">
+                        <i class="fas fa-cog"></i>
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Sidebar -->
+        <aside id="sidebar" class="sidebar">
+            <nav class="sidebar-nav">
+                <a href="#dashboard" class="nav-item active" data-page="dashboard">
+                    <i class="fas fa-tachometer-alt"></i>
+                    <span>Dashboard</span>
+                </a>
+                <a href="#payable" class="nav-item" data-page="payable">
+                    <i class="fas fa-file-invoice-dollar"></i>
+                    <span>Accounts Payable</span>
+                </a>
+                <a href="#forecasting" class="nav-item" data-page="forecasting">
+                    <i class="fas fa-chart-line"></i>
+                    <span>Forecasting</span>
+                </a>
+                <a href="#warehouse" class="nav-item" data-page="warehouse">
+                    <i class="fas fa-warehouse"></i>
+                    <span>Warehouse</span>
+                </a>
+                <div class="nav-divider"></div>
+                <a href="#settings" class="nav-item" data-page="settings">
+                    <i class="fas fa-cog"></i>
+                    <span>Settings</span>
+                </a>
+                <a href="#about" class="nav-item" data-page="about">
+                    <i class="fas fa-info-circle"></i>
+                    <span>About</span>
+                </a>
+            </nav>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Dashboard Page -->
+            <div id="dashboard-page" class="page active">
+                <div class="page-header">
+                    <h1>Dashboard Overview</h1>
+                    <p>Welcome to Sakura Cafe Management Portal</p>
+                </div>
+
+                <div class="kpi-grid">
+                    <div class="kpi-card">
+                        <div class="kpi-icon">
+                            <i class="fas fa-file-invoice-dollar"></i>
+                        </div>
+                        <div class="kpi-content">
+                            <h3>Total Dues</h3>
+                            <div class="kpi-value" id="total-dues">Loading...</div>
+                            <p class="kpi-subtitle">Outstanding Payments</p>
+                        </div>
+                    </div>
+
+                    <div class="kpi-card">
+                        <div class="kpi-icon">
+                            <i class="fas fa-users"></i>
+                        </div>
+                        <div class="kpi-content">
+                            <h3>Total Suppliers</h3>
+                            <div class="kpi-value" id="total-suppliers">Loading...</div>
+                            <p class="kpi-subtitle">Active Vendors</p>
+                        </div>
+                    </div>
+
+                    <div class="kpi-card">
+                        <div class="kpi-icon">
+                            <i class="fas fa-exclamation-triangle"></i>
+                        </div>
+                        <div class="kpi-content">
+                            <h3>Overdues</h3>
+                            <div class="kpi-value" id="overdues">Loading...</div>
+                            <p class="kpi-subtitle">Pending Payments</p>
+                        </div>
+                    </div>
+
+                    <div class="kpi-card">
+                        <div class="kpi-icon">
+                            <i class="fas fa-receipt"></i>
+                        </div>
+                        <div class="kpi-content">
+                            <h3>Transactions</h3>
+                            <div class="kpi-value" id="total-transactions">Loading...</div>
+                            <p class="kpi-subtitle">Total Records</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="quick-actions">
+                    <h2>Quick Actions</h2>
+                    <div class="actions-grid">
+                        <button class="action-btn" data-page="payable">
+                            <i class="fas fa-file-invoice-dollar"></i>
+                            <span>View Payables</span>
+                        </button>
+                        <button class="action-btn" data-page="forecasting">
+                            <i class="fas fa-chart-line"></i>
+                            <span>Forecasting</span>
+                        </button>
+                        <button class="action-btn" data-page="warehouse">
+                            <i class="fas fa-warehouse"></i>
+                            <span>Warehouse</span>
+                        </button>
+                        <button class="action-btn" id="export-data">
+                            <i class="fas fa-download"></i>
+                            <span>Export Data</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="last-updated">
+                    <p><i class="fas fa-clock"></i> Last updated: <span id="last-updated">Never</span></p>
+                </div>
+            </div>
+
+            <!-- Payable Page -->
+            <div id="payable-page" class="page">
+                <div class="page-header">
+                    <h1>Accounts Payable</h1>
+                    <p>Manage supplier payments and outstanding dues</p>
+                </div>
+                <div id="payable-content">
+                    <!-- Content will be loaded dynamically -->
+                </div>
+            </div>
+
+            <!-- Forecasting Page -->
+            <div id="forecasting-page" class="page">
+                <div class="page-header">
+                    <h1>Forecasting & Budgeting</h1>
+                    <p>Raw materials forecasting and budget analysis</p>
+                </div>
+                <div id="forecasting-content">
+                    <!-- Content will be loaded dynamically -->
+                </div>
+            </div>
+
+            <!-- Warehouse Page -->
+            <div id="warehouse-page" class="page">
+                <div class="page-header">
+                    <h1>Warehouse Management</h1>
+                    <p>Inventory and warehouse operations</p>
+                </div>
+                <div id="warehouse-content">
+                    <!-- Content will be loaded dynamically -->
+                </div>
+            </div>
+
+            <!-- Settings Page -->
+            <div id="settings-page" class="page">
+                <div class="page-header">
+                    <h1>Settings</h1>
+                    <p>Configure your application preferences</p>
+                </div>
+                <div class="settings-content">
+                    <div class="settings-section">
+                        <h3>Data Management</h3>
+                        <div class="setting-item">
+                            <label>Auto-refresh interval</label>
+                            <select id="refresh-interval">
+                                <option value="30000">30 seconds</option>
+                                <option value="60000" selected>1 minute</option>
+                                <option value="300000">5 minutes</option>
+                                <option value="600000">10 minutes</option>
+                            </select>
+                        </div>
+                        <div class="setting-item">
+                            <label>Data source</label>
+                            <input type="url" id="data-source" placeholder="Enter data source URL">
+                        </div>
+                    </div>
+                    <div class="settings-section">
+                        <h3>Notifications</h3>
+                        <div class="setting-item">
+                            <label>
+                                <input type="checkbox" id="notifications-enabled" checked>
+                                Enable notifications
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- About Page -->
+            <div id="about-page" class="page">
+                <div class="page-header">
+                    <h1>About Sakura Portal</h1>
+                    <p>ERP Management System for Sakura Cafe</p>
+                </div>
+                <div class="about-content">
+                    <div class="about-logo">
+                        <i class="fas fa-leaf text-6xl text-brand-primary"></i>
+                    </div>
+                    <h2>Sakura Portal v1.0.0</h2>
+                    <p>A comprehensive ERP management system designed specifically for Sakura Cafe operations.</p>
+                    <div class="features">
+                        <h3>Features</h3>
+                        <ul>
+                            <li>Accounts Payable Management</li>
+                            <li>Raw Materials Forecasting</li>
+                            <li>Warehouse Management</li>
+                            <li>Real-time Data Synchronization</li>
+                            <li>Mobile-First Design</li>
+                        </ul>
+                    </div>
+                    <div class="contact-info">
+                        <h3>Contact</h3>
+                        <p>For support and inquiries, please contact the development team.</p>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div id="loading-overlay" class="loading-overlay">
+        <div class="loading-spinner">
+            <div class="spinner"></div>
+            <p>Loading...</p>
+        </div>
+    </div>
+
+    <!-- Toast Notifications -->
+    <div id="toast-container" class="toast-container"></div>
+
+    <script type="module" src="app.js"></script>
+</body>
+</html>

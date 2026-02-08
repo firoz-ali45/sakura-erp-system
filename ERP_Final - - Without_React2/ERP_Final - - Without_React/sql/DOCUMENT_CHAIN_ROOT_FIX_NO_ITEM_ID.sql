@@ -1,0 +1,8 @@
+-- ============================================================
+-- DOCUMENT CHAIN ROOT FIX — NO item_id JOINS
+-- PROBLEM 1: PR/PO/GRN/PUR show "Not Created" incorrectly
+-- PROBLEM 2: PO/GRN/PUR item flow shows wrong PR (PR-2026-000004 instead of correct PR)
+-- ROOT CAUSE: v_item_flow_by_po and v_item_flow_by_grn used item_id fallback
+-- FIX: Use source_pr_id, pr_item_id, po_item_id ONLY. Remove ALL item_id fallbacks.
+-- Applied via Supabase MCP: document_chain_root_fix_no_item_id
+-- ============================================================

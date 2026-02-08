@@ -1,0 +1,293 @@
+/**
+ * Central Sidebar Configuration
+ * Single source of truth for all sidebar navigation items
+ * Zero hardcoded routes or labels in components
+ */
+
+export const sidebarConfig = [
+  {
+    id: 'home-portal',
+    route: '/homeportal/dashboard',
+    icon: 'fas fa-tachometer-alt',
+    i18nKey: 'homePortal.title',
+    exact: true
+  },
+  {
+    id: 'inventory',
+    label: 'inventory',
+    icon: 'fas fa-shopping-bag',
+    i18nKey: 'homePortal.inventory',
+    children: [
+      {
+        id: 'items',
+        route: '/homeportal/items',
+        icon: 'fas fa-box',
+        i18nKey: 'homePortal.inventoryItems'
+      },
+      {
+        id: 'suppliers',
+        route: '/homeportal/suppliers',
+        icon: 'fas fa-truck',
+        i18nKey: 'homePortal.inventorySuppliers'
+      },
+      {
+        id: 'purchase-requests',
+        route: '/homeportal/pr',
+        icon: 'fas fa-file-alt',
+        i18nKey: 'homePortal.purchaseRequests',
+        label: 'Purchase Requests'
+      },
+      {
+        id: 'purchase-orders',
+        route: '/homeportal/purchase-orders',
+        icon: 'fas fa-file-invoice',
+        i18nKey: 'homePortal.inventoryPurchaseOrders'
+      },
+      {
+        id: 'transfer-orders',
+        route: '/homeportal/transfer-orders',
+        icon: 'fas fa-exchange-alt',
+        i18nKey: 'homePortal.inventoryTransferOrders'
+      },
+      {
+        id: 'grns',
+        route: '/homeportal/grns',
+        icon: 'fas fa-clipboard-list',
+        i18nKey: 'inventory.grn.title'
+      },
+      {
+        id: 'stock-overview',
+        route: '/homeportal/stock-overview',
+        icon: 'fas fa-boxes',
+        i18nKey: 'inventory.stockOverview.title'
+      },
+      {
+        id: 'inventory-levels',
+        route: '/homeportal/reports/inventory-levels',
+        icon: 'fas fa-layer-group',
+        i18nKey: 'inventory.reports.inventoryLevels'
+      },
+      {
+        id: 'inventory-count',
+        action: 'loadDashboard',
+        actionParam: 'inventory/inventory-count.html',
+        icon: 'fas fa-clipboard-check',
+        i18nKey: 'homePortal.inventoryCount'
+      },
+      {
+        id: 'transfers',
+        action: 'loadDashboard',
+        actionParam: 'inventory/transfers.html',
+        icon: 'fas fa-arrows-alt',
+        i18nKey: 'homePortal.inventoryTransfers'
+      },
+      {
+        id: 'production',
+        action: 'loadDashboard',
+        actionParam: 'inventory/production.html',
+        icon: 'fas fa-industry',
+        i18nKey: 'homePortal.inventoryProduction'
+      },
+      {
+        id: 'more',
+        route: '/homeportal/more',
+        icon: 'fas fa-ellipsis-h',
+        i18nKey: 'homePortal.inventoryMore'
+      }
+    ]
+  },
+  {
+    id: 'finance',
+    label: 'finance',
+    icon: 'fas fa-university',
+    i18nKey: 'homePortal.finance',
+    children: [
+      {
+        id: 'finance-purchasing',
+        route: '/homeportal/purchasing',
+        icon: 'fas fa-file-invoice-dollar',
+        i18nKey: 'homePortal.financePurchasing'
+      },
+      {
+        id: 'payments',
+        route: '/homeportal/payments',
+        icon: 'fas fa-money-check-alt',
+        i18nKey: 'homePortal.payments'
+      },
+      {
+        id: 'accounts-payable',
+        route: '/homeportal/accounts-payable',
+        icon: 'fas fa-hand-holding-usd',
+        i18nKey: 'homePortal.accountsPayable'
+      },
+      {
+        id: 'finance-more',
+        route: '/homeportal/finance-more',
+        icon: 'fas fa-ellipsis-h',
+        i18nKey: 'homePortal.financeMore'
+      },
+      {
+        id: 'finance-reports',
+        route: '/homeportal/finance-reports',
+        icon: 'fas fa-chart-pie',
+        i18nKey: 'homePortal.financeReports'
+      }
+    ]
+  },
+  {
+    id: 'reports',
+    label: 'reports',
+    icon: 'fas fa-chart-bar',
+    i18nKey: 'homePortal.reports',
+    children: [
+      {
+        id: 'reports-accounts-payable',
+        route: '/homeportal/reports-accounts-payable',
+        icon: 'fas fa-file-invoice-dollar',
+        i18nKey: 'homePortal.reportsAccountsPayable'
+      },
+      {
+        id: 'rm-forecasting',
+        route: '/homeportal/rm-forecasting',
+        icon: 'fas fa-chart-line',
+        i18nKey: 'homePortal.rmForecasting'
+      },
+      {
+        id: 'warehouse-dashboard',
+        route: '/homeportal/warehouse-dashboard',
+        icon: 'fas fa-warehouse',
+        i18nKey: 'homePortal.warehouseDashboard'
+      },
+      {
+        id: 'food-quality-traceability',
+        route: '/homeportal/food-quality-traceability',
+        icon: 'fas fa-shield-alt',
+        i18nKey: 'homePortal.foodQualityTraceability'
+      }
+    ]
+  },
+  {
+    id: 'manage',
+    label: 'manage',
+    icon: 'fas fa-cog',
+    i18nKey: 'homePortal.manage',
+    children: [
+      {
+        id: 'user-management',
+        route: '/homeportal/user-management',
+        icon: 'fas fa-users-cog',
+        i18nKey: 'homePortal.userManagement',
+        badge: 'pendingUsersCount'
+      },
+      {
+        id: 'tags',
+        route: '/homeportal/tags',
+        icon: 'fas fa-tags',
+        i18nKey: 'homePortal.manageMore'
+      },
+      {
+        id: 'settings-inventory-locations',
+        route: '/homeportal/settings/inventory-locations',
+        icon: 'fas fa-map-marker-alt',
+        i18nKey: 'inventory.locations.title'
+      }
+    ]
+  },
+  {
+    id: 'settings',
+    action: 'openSettings',
+    icon: 'fas fa-cog',
+    i18nKey: 'homePortal.settings',
+    footer: true // Render in footer section
+  }
+];
+
+/**
+ * Get sidebar item by ID
+ */
+export function getSidebarItem(id) {
+  const findInTree = (items, targetId) => {
+    for (const item of items) {
+      if (item.id === targetId) return item;
+      if (item.children) {
+        const found = findInTree(item.children, targetId);
+        if (found) return found;
+      }
+    }
+    return null;
+  };
+  
+  return findInTree(sidebarConfig, id);
+}
+
+/**
+ * Get all routes from sidebar config
+ */
+export function getAllRoutes() {
+  const routes = [];
+  
+  const extractRoutes = (items) => {
+    items.forEach(item => {
+      if (item.route) {
+        routes.push(item.route);
+      }
+      if (item.children) {
+        extractRoutes(item.children);
+      }
+    });
+  };
+  
+  extractRoutes(sidebarConfig);
+  return routes;
+}
+
+/**
+ * Check if a route exists in sidebar config
+ */
+export function routeExists(route) {
+  return getAllRoutes().includes(route);
+}
+
+/**
+ * Get active item based on current route
+ */
+export function getActiveItem(currentRoute) {
+  const findActive = (items, route) => {
+    for (const item of items) {
+      // Check if current route matches this item
+      if (item.route && (
+        item.route === route || 
+        (item.exact !== true && route.startsWith(item.route))
+      )) {
+        return item;
+      }
+      
+      // Check children
+      if (item.children) {
+        const found = findActive(item.children, route);
+        if (found) return found;
+      }
+    }
+    return null;
+  };
+  
+  return findActive(sidebarConfig, currentRoute);
+}
+
+/**
+ * Get parent item for a given item ID
+ */
+export function getParentItem(childId) {
+  const findParent = (items, targetId, parent = null) => {
+    for (const item of items) {
+      if (item.id === targetId) return parent;
+      if (item.children) {
+        const found = findParent(item.children, targetId, item);
+        if (found !== null) return found;
+      }
+    }
+    return null;
+  };
+  
+  return findParent(sidebarConfig, childId);
+}

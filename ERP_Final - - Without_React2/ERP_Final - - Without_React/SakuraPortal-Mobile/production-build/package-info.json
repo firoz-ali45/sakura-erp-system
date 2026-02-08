@@ -1,0 +1,24 @@
+{
+  "name": "SakuraPortal",
+  "version": "1.0.0",
+  "description": "Complete ERP Management System with Creative Animations",
+  "features": [
+    "Creative Sakura Logo Animation",
+    "Password Protection (Sakura123@@)",
+    "Accounts Payable Management",
+    "Forecasting & Budgeting",
+    "Warehouse Management",
+    "Real-time Data Sync",
+    "Offline Support",
+    "Mobile-First Design"
+  ],
+  "deployment": {
+    "buildDate": "2025-10-13T15:58:01.227Z",
+    "password": "Sakura123@@",
+    "requirements": [
+      "Web server with HTTPS",
+      "Google Apps Script integration",
+      "Modern browser support"
+    ]
+  }
+}

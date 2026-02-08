@@ -1,0 +1,15 @@
+{
+    "sqltools.connections": [
+        {
+            "ssh": "Disabled",
+            "previewLimit": 50,
+            "server": "db.kexwnurwavszvmlpifsf.supabase.co",
+            "port": 5432,
+            "driver": "PostgreSQL",
+            "name": "Supabase ERP",
+            "database": "postgres",
+            "username": "postgres",
+            "password": "Firoz112233@@4"
+        }
+    ]
+}

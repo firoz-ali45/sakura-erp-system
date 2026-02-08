@@ -1,0 +1,76 @@
+{
+  "name": "Sakura Management Portal",
+  "short_name": "Sakura Portal",
+  "description": "Complete ERP Management System for Sakura Cafe - Accounts Payable, Forecasting, Warehouse Management",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#284b44",
+  "theme_color": "#284b44",
+  "orientation": "portrait-primary",
+  "scope": "/",
+  "lang": "en",
+  "categories": ["business", "productivity", "finance"],
+  "icons": [
+    {
+      "src": "https://images.deliveryhero.io/image/hungerstation/restaurant/logo/8556a1377e5154c66adf844d9c5ecb9f.jpg",
+      "sizes": "192x192",
+      "type": "image/jpeg",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "https://images.deliveryhero.io/image/hungerstation/restaurant/logo/8556a1377e5154c66adf844d9c5ecb9f.jpg",
+      "sizes": "512x512",
+      "type": "image/jpeg",
+      "purpose": "any maskable"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "https://images.deliveryhero.io/image/hungerstation/restaurant/logo/8556a1377e5154c66adf844d9c5ecb9f.jpg",
+      "sizes": "1280x720",
+      "type": "image/jpeg",
+      "form_factor": "wide"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Accounts Payable",
+      "short_name": "Payable",
+      "description": "View accounts payable dashboard",
+      "url": "/payable.html",
+      "icons": [
+        {
+          "src": "https://images.deliveryhero.io/image/hungerstation/restaurant/logo/8556a1377e5154c66adf844d9c5ecb9f.jpg",
+          "sizes": "96x96"
+        }
+      ]
+    },
+    {
+      "name": "Forecasting",
+      "short_name": "Forecast",
+      "description": "View forecasting dashboard",
+      "url": "/forecasting.html",
+      "icons": [
+        {
+          "src": "https://images.deliveryhero.io/image/hungerstation/restaurant/logo/8556a1377e5154c66adf844d9c5ecb9f.jpg",
+          "sizes": "96x96"
+        }
+      ]
+    },
+    {
+      "name": "Warehouse",
+      "short_name": "Warehouse",
+      "description": "View warehouse dashboard",
+      "url": "/Warehouse.html",
+      "icons": [
+        {
+          "src": "https://images.deliveryhero.io/image/hungerstation/restaurant/logo/8556a1377e5154c66adf844d9c5ecb9f.jpg",
+          "sizes": "96x96"
+        }
+      ]
+    }
+  ],
+  "related_applications": [],
+  "prefer_related_applications": false
+}
+

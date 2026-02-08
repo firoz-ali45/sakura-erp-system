@@ -1,0 +1,16 @@
+
+/* RM Forecasting Custom Styles */
+:root {
+    --site-primary: #7c3aed;
+    --site-secondary: #8b5cf6;
+    --site-accent: #c4b5fd;
+}
+
+.site-branding::before {
+    content: "📊 ";
+}
+
+.page-header h1::before {
+    content: "RM Forecasting ";
+    color: var(--site-primary);
+}
