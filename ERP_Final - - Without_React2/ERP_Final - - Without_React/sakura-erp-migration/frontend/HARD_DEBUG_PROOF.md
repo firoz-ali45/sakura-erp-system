@@ -128,6 +128,20 @@ Message: `FINAL HARD SYNC: frontend now 100% DB-driven`
 
 ---
 
-## STEP 9 — FILES CHANGED LIST
+## STEP 9 — FILES CHANGED LIST (after commit 52b9f1c)
 
-(To be filled after commit: exact list of changed files.)
+| Status | File |
+|--------|------|
+| A | ERP_Final - - Without_React2/ERP_Final - - Without_React/sakura-erp-migration/frontend/HARD_DEBUG_PROOF.md |
+| M | ERP_Final - - Without_React2/ERP_Final - - Without_React/sakura-erp-migration/frontend/src/services/erpViews.js |
+| M | ERP_Final - - Without_React2/ERP_Final - - Without_React/sakura-erp-migration/frontend/src/views/inventory/GRNDetail.vue |
+| M | ERP_Final - - Without_React2/ERP_Final - - Without_React/sakura-erp-migration/frontend/src/views/inventory/GRNs.vue |
+| M | ERP_Final - - Without_React2/ERP_Final - - Without_React/sakura-erp-migration/frontend/src/views/inventory/PurchaseOrderDetail.vue |
+| M | ERP_Final - - Without_React2/ERP_Final - - Without_React/sakura-erp-migration/frontend/src/views/inventory/PurchaseOrders.vue |
+| M | ERP_Final - - Without_React2/ERP_Final - - Without_React/sakura-erp-migration/frontend/src/views/inventory/PurchasingDetail.vue |
+| M | ERP_Final - - Without_React2/ERP_Final - - Without_React/sakura-erp-migration/frontend/src/views/inventory/StockOverview.vue |
+| M | ERP_Final - - Without_React2/ERP_Final - - Without_React/sakura-erp-migration/frontend/src/views/purchase-requests/PRConvertToPO.vue |
+| M | ERP_Final - - Without_React2/ERP_Final - - Without_React/sakura-erp-migration/frontend/src/views/purchase-requests/PRCreate.vue |
+| M | ERP_Final - - Without_React2/ERP_Final - - Without_React/sakura-erp-migration/frontend/src/views/purchase-requests/PRDetail.vue |
+
+11 files changed, 171 insertions(+), 19 deletions(-).

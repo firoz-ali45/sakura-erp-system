@@ -127,6 +127,42 @@ const routes = [
     meta: { requiresAuth: true }
   },
   {
+        path: 'reports/inventory-control',
+    name: 'InventoryControl',
+        component: () => import('../views/inventory/reports/InventoryControl.vue'),
+    meta: { requiresAuth: true }
+  },
+  {
+        path: 'reports/inventory-history',
+    name: 'InventoryHistory',
+        component: () => import('../views/inventory/reports/InventoryHistory.vue'),
+    meta: { requiresAuth: true }
+  },
+  {
+        path: 'reports/purchasing',
+    name: 'ReportPurchasing',
+        component: () => import('../views/inventory/reports/PurchasingReport.vue'),
+    meta: { requiresAuth: true }
+  },
+  {
+        path: 'reports/transfer-orders',
+    name: 'ReportTransferOrders',
+        component: () => import('../views/inventory/reports/TransferOrdersReport.vue'),
+    meta: { requiresAuth: true }
+  },
+  {
+        path: 'reports/transfers',
+    name: 'ReportTransfers',
+        component: () => import('../views/inventory/reports/TransfersReport.vue'),
+    meta: { requiresAuth: true }
+  },
+  {
+        path: 'reports/cost-adjustment-history',
+    name: 'CostAdjustmentHistory',
+        component: () => import('../views/inventory/reports/CostAdjustmentReport.vue'),
+    meta: { requiresAuth: true }
+  },
+  {
         path: 'settings/inventory-locations',
     name: 'InventoryLocations',
         component: () => import('../views/settings/InventoryLocations.vue'),

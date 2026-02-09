@@ -75,8 +75,21 @@
   "inventory": {
     "title": "Inventory",
     "reports": {
+      "title": "Inventory Reports",
       "inventoryLevels": "Inventory Levels",
-      "levelsDesc": "Real-time stock by item, location and batch (v_inventory_balance). Read-only."
+      "levelsDesc": "Real-time stock by item, location and batch (v_inventory_balance). Read-only.",
+      "inventoryControl": "Inventory Control",
+      "inventoryHistory": "Inventory History",
+      "purchasing": "Purchasing",
+      "transferOrders": "Transfer Orders",
+      "transfers": "Transfers",
+      "costAdjustmentHistory": "Cost Adjustment History",
+      "costAdjustment": "Cost Adjustment History",
+      "control": "Inventory Control",
+      "history": "Inventory History",
+      "fromDate": "From Date",
+      "toDate": "To Date",
+      "transferOrdersPlaceholder": "Transfer orders from v_transfer_orders_report (ledger/locations)."
     },
     "items": {
       "title": "Inventory Items",

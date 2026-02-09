@@ -68,6 +68,42 @@ export const sidebarConfig = [
         i18nKey: 'inventory.reports.inventoryLevels'
       },
       {
+        id: 'inventory-control',
+        route: '/homeportal/reports/inventory-control',
+        icon: 'fas fa-tasks',
+        i18nKey: 'inventory.reports.inventoryControl'
+      },
+      {
+        id: 'inventory-history',
+        route: '/homeportal/reports/inventory-history',
+        icon: 'fas fa-history',
+        i18nKey: 'inventory.reports.inventoryHistory'
+      },
+      {
+        id: 'report-purchasing',
+        route: '/homeportal/reports/purchasing',
+        icon: 'fas fa-file-invoice-dollar',
+        i18nKey: 'inventory.reports.purchasing'
+      },
+      {
+        id: 'report-transfer-orders',
+        route: '/homeportal/reports/transfer-orders',
+        icon: 'fas fa-exchange-alt',
+        i18nKey: 'inventory.reports.transferOrders'
+      },
+      {
+        id: 'report-transfers',
+        route: '/homeportal/reports/transfers',
+        icon: 'fas fa-arrows-alt',
+        i18nKey: 'inventory.reports.transfers'
+      },
+      {
+        id: 'cost-adjustment-history',
+        route: '/homeportal/reports/cost-adjustment-history',
+        icon: 'fas fa-adjust',
+        i18nKey: 'inventory.reports.costAdjustmentHistory'
+      },
+      {
         id: 'inventory-count',
         action: 'loadDashboard',
         actionParam: 'inventory/inventory-count.html',

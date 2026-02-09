@@ -3,30 +3,19 @@ import { ref } from 'vue';
 const locationsCache = ref([]);
 
 /**
- * Load all active inventory_locations (for GRN dropdown: allow_grn = true).
- * Returns list of display strings: "Location Name (location_code)" for storage in receiving_location.
- * Fallback: if allow_grn query errors, loads all active locations so dropdown is never empty.
+ * Load GRN/PO destinations from inventory_locations ONLY.
+ * WHERE is_active = true AND allow_grn = true. No hardcoded list, no fallback to all locations (no ghost locations).
  */
 export async function loadLocationsForGRN() {
   try {
     const { ensureSupabaseReady, supabaseClient } = await import('@/services/supabase.js');
     const ready = await ensureSupabaseReady();
     if (!ready || !supabaseClient) return [];
-    const { data: dataGrn, error: errGrn } = await supabaseClient
-      .from('inventory_locations')
-      .select('id, location_code, location_name, location_type')
-      .eq('is_active', true)
-      .eq('allow_grn', true)
-      .order('location_name');
-    if (!errGrn && dataGrn && dataGrn.length > 0) {
-      locationsCache.value = dataGrn;
-      return dataGrn.map(loc => `${loc.location_name} (${loc.location_code})`);
-    }
-    if (errGrn) console.warn('loadLocationsForGRN (allow_grn):', errGrn.message);
     const { data, error } = await supabaseClient
       .from('inventory_locations')
       .select('id, location_code, location_name, location_type')
       .eq('is_active', true)
+      .eq('allow_grn', true)
       .order('location_name');
     if (error) {
       console.warn('loadLocationsForGRN:', error);
