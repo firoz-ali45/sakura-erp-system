@@ -109,16 +109,16 @@
             <span>{{ $t('common.print') }}</span>
           </button>
         </template>
-        <!-- Create GRN Button - ALWAYS VISIBLE -->
+        <!-- Create GRN Button - DB-driven: shown only when fn_can_create_next_document('PO', id) is true -->
           <button 
-          v-if="order && !loading"
-          :disabled="!canCreateGRN || saving"
+          v-if="order && !loading && canCreateGRN"
+          :disabled="saving"
           @click.stop.prevent="onCreateGRN"
           @mousedown="console.log('🔥 BUTTON MOUSEDOWN', { canCreateGRN, saving })"
           @mouseup="console.log('🔥 BUTTON MOUSEUP')"
             type="button"
           class="px-6 py-2 text-white rounded-lg flex items-center gap-2 font-semibold sakura-primary-btn hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
-          :class="{ 'opacity-50 cursor-not-allowed': !canCreateGRN || saving }"
+          :class="{ 'opacity-50 cursor-not-allowed': saving }"
           style="pointer-events: auto !important; z-index: 9999; position: relative; cursor: pointer !important;"
           id="create-grn-button"
           >
@@ -1037,20 +1037,8 @@ const getPODisplayNumber = computed(() => {
   return `(${poNumber})`;
 });
 
-const canCreateGRN = computed(() => {
-  const status = poStatus.value || order.value?.status || '';
-  const normalizedStatus = String(status).toLowerCase();
-  const result = normalizedStatus === 'approved' || normalizedStatus === 'partially_received';
-  
-  console.log('[canCreateGRN CHECK]', {
-    poStatus: poStatus.value,
-    orderStatus: order.value?.status,
-    normalizedStatus,
-    result
-  });
-  
-  return result;
-});
+// DB-driven: fn_can_create_next_document('PO', po_id) — no local status logic
+const canCreateGRN = ref(false);
 
 const availableItems = computed(() => {
   const selectedItemIds = (order.value?.items || []).map(item => item.itemId || item.item_id);
@@ -1092,7 +1080,10 @@ const loadOrder = async () => {
       
       const rawStatus = order.value?.status || order.value?.approval_state || 'draft';
       poStatus.value = String(rawStatus).toLowerCase();
-      
+
+      const { canCreateNextDocument } = await import('@/services/erpViews.js');
+      canCreateGRN.value = await canCreateNextDocument('PO', order.value.id);
+
       console.log('[PO STATUS UPDATE]', {
         rawStatus,
         poStatus: poStatus.value,

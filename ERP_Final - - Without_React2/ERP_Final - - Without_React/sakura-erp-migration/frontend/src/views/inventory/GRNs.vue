@@ -118,6 +118,7 @@
               <th :class="['px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider', textAlign]">{{ $t('inventory.grn.purchaseOrderHeader') }}</th>
               <th :class="['px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider', textAlign]">{{ $t('inventory.grn.supplierHeader') }}</th>
               <th :class="['px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider', textAlign]">{{ $t('inventory.grn.receivingLocationHeader') }}</th>
+              <th :class="['px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider', textAlign]">{{ $t('inventory.stockOverview.batch') || 'Batch' }}</th>
               <th :class="['px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider', textAlign]">{{ $t('inventory.grn.statusHeader') }}</th>
               <th :class="['px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider', textAlign]">{{ $t('inventory.grn.receivedByHeader') }}</th>
               <th :class="['px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider', textAlign]">{{ $t('inventory.grn.actionsHeader') }}</th>
@@ -126,6 +127,9 @@
           <tbody class="bg-white divide-y divide-gray-200">
             <!-- Loading Skeleton -->
             <tr v-if="loading" v-for="n in 5" :key="'skeleton-' + n" class="animate-pulse">
+              <td class="px-6 py-4">
+                <div class="h-4 bg-gray-200 rounded sakura-skeleton"></div>
+              </td>
               <td class="px-6 py-4">
                 <div class="h-4 bg-gray-200 rounded sakura-skeleton"></div>
               </td>
@@ -153,7 +157,7 @@
             </tr>
             <!-- Empty State -->
             <tr v-else-if="!loading && paginatedGRNs.length === 0" class="hover:bg-gray-50">
-              <td colspan="8" class="px-6 py-8 text-center text-gray-500">
+              <td colspan="9" class="px-6 py-8 text-center text-gray-500">
                 No GRNs found
               </td>
             </tr>
@@ -173,6 +177,7 @@
               <td :class="['px-6 py-4 text-sm text-gray-700', textAlign]">{{ formatPurchaseOrderReference(grn) }}</td>
               <td :class="['px-6 py-4 text-sm text-gray-700', textAlign]">{{ formatSupplierDisplay(grn.supplier) }}</td>
               <td :class="['px-6 py-4 text-sm text-gray-700', textAlign]">{{ grn.receivingLocation || grn.receiving_location || 'N/A' }}</td>
+              <td :class="['px-6 py-4 text-sm text-gray-700', textAlign]">{{ grnBatchDisplay(grn) }}</td>
               <td :class="['px-6 py-4 text-sm', textAlign]">
                 <span 
                   :class="[
@@ -903,6 +908,7 @@ import {
 } from '@/services/supabase';
 import { loadPurchaseOrdersFromSupabase, loadSuppliersFromSupabase } from '@/services/supabase';
 import { loadItemsFromSupabase } from '@/services/supabase';
+import { fetchGrnBatchSummary } from '@/services/erpViews.js';
 import { useInventoryLocations } from '@/composables/useInventoryLocations';
 import { showNotification } from '@/utils/notifications';
 import * as XLSX from 'xlsx';
@@ -927,6 +933,8 @@ const currentPage = ref(1);
 const limit = ref(50);
 const purchaseOrders = ref([]);
 const inventoryItems = ref([]);
+/** GRN grid batch column: from v_grn_batch_summary (display_batch) */
+const grnBatchSummaryMap = ref({});
 
 // Filter criteria
 const filterCriteria = ref({
@@ -1156,8 +1164,12 @@ const grnsForReview = computed(() => {
 const loadGRNs = async () => {
   loading.value = true;
   try {
-    const data = await loadGRNsFromSupabase();
+    const [data, batchSummary] = await Promise.all([
+      loadGRNsFromSupabase(),
+      fetchGrnBatchSummary()
+    ]);
     grns.value = data || [];
+    grnBatchSummaryMap.value = Object.fromEntries((batchSummary || []).map(s => [s.grn_id, s.display_batch ?? '—']));
     console.log('✔ GRNs loaded:', grns.value.length);
     
     // CRITICAL: Log GRN data to verify supplier_name and purchase_order_number are present
@@ -1187,6 +1199,11 @@ const loadGRNs = async () => {
     loading.value = false;
   }
 };
+
+/** Batch column: from v_grn_batch_summary.display_batch (single batch_no or "N batches" or "—") */
+function grnBatchDisplay(grn) {
+  return grnBatchSummaryMap.value[grn.id] ?? '—';
+}
 
 const loadPurchaseOrders = async () => {
   try {

@@ -446,8 +446,8 @@
             </table>
           </div>
           
-          <!-- Add Payment Form -->
-          <div v-if="invoice.payment_status !== 'paid' && invoice.status !== 'draft'" class="border-t pt-6">
+          <!-- Add Payment Form - DB-driven: show only when fn_can_create_next_document('PURCHASE', id) is true -->
+          <div v-if="canCreatePayment" class="border-t pt-6">
             <h3 class="text-lg font-semibold text-gray-800 mb-4">Record New Payment</h3>
             <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
               <div>
@@ -644,6 +644,9 @@ const atms = ref([]);
 // Original data for change detection
 const originalData = ref({});
 
+// DB-driven: show "Record Payment" only when fn_can_create_next_document('PURCHASE', id) is true
+const canCreatePayment = ref(false);
+
 // New Payment Form
 const newPayment = ref({
   payment_date: new Date().toISOString().split('T')[0],
@@ -785,6 +788,9 @@ const loadInvoice = async () => {
     }
     
     invoice.value = invoiceData;
+
+    const { canCreateNextDocument } = await import('@/services/erpViews.js');
+    canCreatePayment.value = await canCreateNextDocument('PURCHASE', invoiceData.id);
     
     // Initialize form data
     formData.value = {
@@ -960,7 +966,8 @@ const recordPayment = async () => {
     
     showNotification('Payment recorded successfully.', 'success');
     await loadInvoice();
-    
+    const { forceRefreshAfterAction } = await import('@/services/erpViews.js');
+    await forceRefreshAfterAction();
   } catch (error) {
     console.error('Error recording payment:', error);
     showNotification('Error recording payment: ' + error.message, 'error');

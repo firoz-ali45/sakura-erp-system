@@ -144,9 +144,9 @@
             <i class="fas fa-print"></i>
             <span>{{ t('inventory.grn.print') }}</span>
           </button>
-          <!-- ERP Document Closure: Hide Create Purchasing if PUR already exists for this GRN -->
+          <!-- DB-driven: show only when fn_can_create_next_document('GRN', grn_id) is true -->
           <button 
-            v-if="!hasExistingPurchasing"
+            v-if="canCreatePurchase"
             @click="createPurchasing" 
             :class="[
               'px-6 py-2 text-white rounded-lg flex items-center gap-2 font-semibold transition-all duration-300 relative overflow-hidden shadow-lg hover:shadow-xl transform hover:scale-105'
@@ -1108,8 +1108,7 @@ import {
   updateBatchInSupabase,
   generateGRNNumber,
   loadBatchesForGRN,
-  loadGRNsFromSupabase,
-  hasPurchasingForGRN
+  loadGRNsFromSupabase
 } from '@/services/supabase';
 import DocumentFlow from '@/components/common/DocumentFlow.vue';
 import ItemFlow from '@/components/common/ItemFlow.vue';
@@ -1142,7 +1141,7 @@ const showEditModal = ref(false);
 const saving = ref(false);
 const editingItems = ref({}); // Track which item is being edited
 const itemEditForm = ref({}); // Store edited item values
-const hasExistingPurchasing = ref(false); // ERP: Hide Create Purchasing if PUR exists for this GRN
+const canCreatePurchase = ref(false); // DB-driven: fn_can_create_next_document('GRN', grn_id)
 
 // Edit form
 const editForm = ref({
@@ -1516,7 +1515,8 @@ const loadGRN = async () => {
           grn.value.batches = [];
         }
         // ERP Document Closure: Check if Purchasing exists for this GRN (hide Create Purchasing if yes)
-        hasExistingPurchasing.value = await hasPurchasingForGRN(grnId);
+        const { canCreateNextDocument } = await import('@/services/erpViews.js');
+        canCreatePurchase.value = await canCreateNextDocument('GRN', grnId);
 
         // Initialize QC data for batches
         grn.value.batches.forEach(batch => {
@@ -2794,6 +2794,8 @@ const approveGRN = async () => {
       
       // CRITICAL: Reload GRN to get latest status from database
       await loadGRN();
+      const { forceRefreshAfterAction } = await import('@/services/erpViews.js');
+      await forceRefreshAfterAction();
       
       // Wait for Vue to update the DOM
       await nextTick();
@@ -3264,8 +3266,9 @@ const createPurchasing = async () => {
     }
     
     showNotification('Purchasing Invoice created successfully! Redirecting...', 'success');
-    hasExistingPurchasing.value = true; // ERP: Hide Create Purchasing (child document now exists)
-    
+    canCreatePurchase.value = false; // DB: next doc created; fn_can_create_next_document will be false on refresh
+    const { forceRefreshAfterAction } = await import('@/services/erpViews.js');
+    await forceRefreshAfterAction();
     // Navigate to purchasing detail page
     setTimeout(() => {
       router.push(`/homeportal/purchasing-detail/${newInvoice.id}`);

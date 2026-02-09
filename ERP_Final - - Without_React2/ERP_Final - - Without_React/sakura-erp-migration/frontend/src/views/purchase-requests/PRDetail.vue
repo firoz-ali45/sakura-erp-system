@@ -531,21 +531,8 @@ const isOverdue = computed(() => {
 const canApprove = computed(() => ['submitted', 'under_review'].includes(pr.value?.status));
 const canReject = computed(() => ['submitted', 'under_review'].includes(pr.value?.status));
 
-// Can convert to PO if:
-// 1. Status is approved or partially_ordered
-// 2. AND there are items with remaining quantity > 0
-// 3. ERP Document Closure: NO linked PO exists yet (if PO exists → hide Convert to PO)
-const canConvertToPO = computed(() => {
-  if (!pr.value) return false;
-  // ERP: If child document (PO) exists, hide Convert to PO
-  if (linkedPOs.value && linkedPOs.value.length > 0) return false;
-  // Status 'approved' or 'partially_ordered'
-  if (!['approved', 'partially_ordered'].includes(pr.value.status)) return false;
-  
-  // Check if any item has quantity_remaining > 0 (Calculated by DB)
-  const items = pr.value.items || [];
-  return items.some(item => parseFloat(item.quantity_remaining) > 0);
-});
+// DB-driven: fn_can_create_next_document('PR', pr_id) — no local logic
+const canConvertToPO = ref(false);
 
 // Calculate total remaining quantity for display
 const totalRemainingQty = computed(() => {
@@ -585,6 +572,8 @@ const loadData = async () => {
     pr.value = prData;
     linkedPOs.value = pos || [];
     documentFlow.value = flow || [];
+    const { canCreateNextDocument } = await import('@/services/erpViews.js');
+    canConvertToPO.value = await canCreateNextDocument('PR', prId);
     
     // Trace PO/GRN for ItemFlow — DOCUMENT CHAIN ONLY (pr_po_linkage). NO item_id fallback.
     try {

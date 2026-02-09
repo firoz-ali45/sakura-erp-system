@@ -536,7 +536,8 @@ const createPO = async () => {
     console.log('PO Number:', createdPONumber);
     
     showNotification(`Purchase Order ${createdPONumber} created successfully!`, 'success');
-    
+    const { forceRefreshAfterAction } = await import('@/services/erpViews.js');
+    await forceRefreshAfterAction();
     // Redirect to PO list (use list because detail page might not exist)
     setTimeout(() => {
       router.push('/homeportal/purchase-orders');

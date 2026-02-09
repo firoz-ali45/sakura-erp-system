@@ -426,6 +426,8 @@ const rejectReason = ref('');
 
 // Departments from DB (single source of truth) - loaded on mount
 const departments = ref([]);
+// Button visibility from DB: fn_can_create_next_document('PR', id)
+const canCreatePOMap = ref({});
 
 // Tabs configuration
 const tabs = computed(() => [
@@ -531,7 +533,16 @@ const loadData = async () => {
     purchaseRequests.value = prs || [];
     dashboardStats.value = stats || {};
     departments.value = (deptList || []).map(d => (typeof d === 'object' ? (d.name || d.code || '') : String(d))).filter(Boolean);
-    
+
+    // DB-driven: can Create PO per PR (fn_can_create_next_document)
+    const list = purchaseRequests.value;
+    const map = {};
+    await Promise.all((list || []).map(async (pr) => {
+      const { canCreateNextDocument } = await import('@/services/erpViews.js');
+      map[pr.id] = await canCreateNextDocument('PR', pr.id);
+    }));
+    canCreatePOMap.value = map;
+
     console.log('PR List updated. Count:', purchaseRequests.value.length);
     console.log('============ PRList loadData END ============');
   } catch (error) {
@@ -721,7 +732,7 @@ const bulkDelete = async () => {
 // Permission checks
 const canApprove = (pr) => ['submitted', 'under_review'].includes(pr.status);
 const canReject = (pr) => ['submitted', 'under_review'].includes(pr.status);
-const canConvertToPO = (pr) => ['approved', 'partially_ordered'].includes(pr.status);
+const canConvertToPO = (pr) => canCreatePOMap.value[pr.id] === true;
 
 // Filter methods
 const openFilter = () => showFilterModal.value = true;
