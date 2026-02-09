@@ -629,29 +629,63 @@ const updateSummariesFromData = (data) => {
 };
 
 const loadDashboardData = async () => {
+  // PART 6: Load dashboard from v_transaction_status + v_item_stock_full (DB single source of truth)
+  let erpTransactionStatus = [];
+  let erpItemStock = [];
+  try {
+    const { fetchTransactionStatus, fetchItemStockFull } = await import('@/services/erpViews.js');
+    [erpTransactionStatus, erpItemStock] = await Promise.all([
+      fetchTransactionStatus(),
+      fetchItemStockFull()
+    ]);
+  } catch (e) {
+    console.warn('Dashboard ERP views load:', e);
+  }
+
   // Fast initial load: get cached data immediately (non-blocking)
   const { getSummaryData } = await import('@/services/homeSummaryService');
   const { immediate, refresh } = getSummaryData();
-  
+
+  const applyErpToData = (data) => {
+    if (!data) return data;
+    const out = { ...data };
+    if (erpTransactionStatus.length >= 0) {
+      out.erpTransactionStatus = erpTransactionStatus;
+      if (!out.accountsPayable) out.accountsPayable = {};
+      out.accountsPayable = { ...out.accountsPayable, totalTransactions: erpTransactionStatus.length };
+    }
+    if (erpItemStock.length >= 0) {
+      out.erpItemStock = erpItemStock;
+      const outOfStock = (erpItemStock || []).filter(r => Number(r.total_stock) === 0).length;
+      const wh = summaryStore.warehouseSummary || {};
+      summaryStore.updateWarehouseSummary({
+        totalInventoryValue: Number(wh.totalInventoryValue) || 0,
+        outOfStockCount: outOfStock,
+        lowStockCount: Number(wh.lowStockCount) || 0,
+        transferValue: Number(wh.transferValue) || 0,
+        purchaseValue: Number(wh.purchaseValue) || 0
+      });
+    }
+    return out;
+  };
+
   // Render cached data immediately if available (non-blocking)
   if (immediate) {
-    updateSummariesFromData(immediate);
+    updateSummariesFromData(applyErpToData(immediate));
     loading.value = false; // UI is ready immediately
   } else {
-    // If no cache, show skeleton for < 1 second, then render empty state
     setTimeout(() => {
       loading.value = false;
     }, 800);
   }
-  
+
   // Background refresh: update when fresh data arrives (non-blocking)
   refresh.then(freshData => {
     if (freshData) {
-      updateSummariesFromData(freshData);
+      updateSummariesFromData(applyErpToData(freshData));
     }
   }).catch(error => {
     console.error('Error refreshing dashboard data:', error);
-    // Keep cached data visible, don't show errors
   });
 };
 

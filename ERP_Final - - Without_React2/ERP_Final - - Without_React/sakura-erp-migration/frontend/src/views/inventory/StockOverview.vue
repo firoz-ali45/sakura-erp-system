@@ -49,11 +49,16 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { fetchItemStockFull } from '@/services/erpViews.js';
 
 const { t } = useI18n();
+
+/** Listen for global refresh after any PR/PO/GRN/Purchase/Payment action — no cached state */
+function onRefreshStock() {
+  load();
+}
 const loading = ref(false);
 const rows = ref([]);
 const filters = ref({
@@ -99,5 +104,11 @@ async function load() {
   }
 }
 
-onMounted(() => load());
+onMounted(() => {
+  load();
+  window.addEventListener('erp:refresh-stock', onRefreshStock);
+});
+onUnmounted(() => {
+  window.removeEventListener('erp:refresh-stock', onRefreshStock);
+});
 </script>

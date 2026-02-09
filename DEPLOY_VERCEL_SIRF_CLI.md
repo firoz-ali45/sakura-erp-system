@@ -60,3 +60,13 @@ CLI **local frontend folder** ka code upload karega aur **sakura-erp-system-miuq
 | Hook / push se deployment nahi dikh rahi | Ab deploy **sirf CLI** se karo: pehli baar `vercel login` + `vercel link`, phir har baar `.\deploy-vercel-cli.ps1` |
 
 Hook ko ab ignore karo — ye tareeka zyada reliable hai.
+
+---
+
+## Agar error aaye: "The provided path ... does not exist"
+
+1. **Vercel Dashboard** → **sakura-erp-system-miuq** → **Settings** → **General**.
+2. **Root Directory** — agar koi path set hai (jaise `ERP_Final - - Without_React2/.../frontend`) to use **clear** kar do (khali chhod do), **Save** karo.
+3. Phir dubara chalao: `.\deploy-vercel-cli.ps1`
+
+CLI se deploy karte waqt tum **frontend folder** se upload karte ho, isliye project ka Root Directory **khali** hona chahiye (CLI apna root bhejta hai).

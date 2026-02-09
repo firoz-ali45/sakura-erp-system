@@ -96,13 +96,18 @@ export async function fetchItemBatchesFull() {
 
 /**
  * Force refresh after PR create, PO create, GRN approve, Purchase create, Payment post.
- * Returns { itemStock, transactionStatus, documentFlow } — no cache.
+ * Returns { itemStock, transactionStatus, documentFlow, itemBatches } — no cache.
+ * Dispatches 'erp:refresh-stock' so Stock Overview can auto-refresh.
  */
 export async function forceRefreshAfterAction() {
-  const [itemStock, transactionStatus, documentFlow] = await Promise.all([
+  const [itemStock, transactionStatus, documentFlow, itemBatches] = await Promise.all([
     fetchItemStockFull(),
     fetchTransactionStatus(),
-    fetchDocumentFlowFull()
+    fetchDocumentFlowFull(),
+    fetchItemBatchesFull()
   ]);
-  return { itemStock, transactionStatus, documentFlow };
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('erp:refresh-stock'));
+  }
+  return { itemStock, transactionStatus, documentFlow, itemBatches };
 }

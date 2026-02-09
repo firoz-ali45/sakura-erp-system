@@ -6,8 +6,10 @@ All stock, batch, document flow, and button visibility come from Supabase. No lo
 
 | Page / Feature | View / RPC | Notes |
 |----------------|------------|--------|
-| Stock Overview | `v_item_stock_full` | item_id, item_name, total_stock, batch_count, latest_batch, batch_numbers. Batch column: 1 batch → batch number; >1 → "N batches" |
+| Stock Overview | `v_item_stock_full` | item_id, item_name, total_stock, batch_count, latest_batch, batch_numbers. Batch column: 1 batch → batch number; >1 → "N batches". Auto-refreshes on `erp:refresh-stock`. |
+| Inventory Levels report | `v_item_stock_full` | Same source; batch display rule as above. |
 | GRN grid batch column | `v_grn_batch_summary` | Join by grn_id; display `display_batch` ("3 batches" / batch_no / "-") |
+| Dashboard (Home) | `v_transaction_status`, `v_item_stock_full` | Loads both views; totalTransactions from status count; warehouse outOfStockCount from item stock. |
 | Button visibility | `fn_can_create_next_document(doc_type, doc_id)` | PR→Create PO; PO→Create GRN; GRN→Create Purchase; PURCHASE→Create Payment |
 
 ## Button visibility (RPC only)
@@ -21,15 +23,15 @@ Buttons are hidden when the RPC returns false (no manual status checks).
 
 ## Force refresh after actions
 
-After each of these, the frontend calls `forceRefreshAfterAction()` (which refetches `v_transaction_status`, `v_document_flow_full`, `v_item_stock_full`):
+After each of these, the frontend calls `forceRefreshAfterAction()` (which refetches `v_transaction_status`, `v_document_flow_full`, `v_item_stock_full`, `v_item_batches_full` and dispatches `erp:refresh-stock`):
 
 - PR create (save or create + submit)
-- PO create (Convert to PO)
+- PO create (new PO from list modal; Convert to PO from PR)
 - GRN approve
 - Purchase (invoice) create from GRN
 - Payment post (Record Payment)
 
-No cached state for these; list/detail pages refetch as needed.
+No cached state for these; list/detail pages refetch as needed. Stock Overview listens for `erp:refresh-stock` and reloads when any action triggers a refresh.
 
 ## Test scenario (end-to-end)
 
