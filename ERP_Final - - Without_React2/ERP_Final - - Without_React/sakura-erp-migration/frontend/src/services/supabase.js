@@ -4143,54 +4143,44 @@ export async function generateBatchId(grnId, itemId, expiryDate) {
 
 /**
  * Load batches for a specific GRN
- * Single source: v_grn_all_batches (UNION grn_batches + inventory_batches orphans)
- * Fallback: v_grn_batches_with_batch_number, then grn_batches
+ * Tries grn_batches table FIRST (works on Vercel + local; views may not exist in all projects).
+ * Then v_grn_all_batches / v_grn_batches_with_batch_number. Fallback: localStorage.
  */
 export async function loadBatchesForGRN(grnId) {
   if (USE_SUPABASE && supabaseClient) {
     try {
+      // 1) Try base table first — always exists, so Vercel and local both get same data
       let { data, error } = await supabaseClient
+        .from('grn_batches')
+        .select('*')
+        .eq('grn_id', grnId)
+        .order('created_at', { ascending: false });
+      if (!error && data && data.length > 0) return data;
+
+      // 2) Optional: views (if they exist in this project)
+      const viewResult = await supabaseClient
         .from('v_grn_all_batches')
         .select('*')
         .eq('grn_id', grnId)
         .order('created_at', { ascending: false });
+      if (!viewResult.error && viewResult.data?.length) return viewResult.data;
+      const view2 = await supabaseClient
+        .from('v_grn_batches_with_batch_number')
+        .select('*')
+        .eq('grn_id', grnId)
+        .order('created_at', { ascending: false });
+      if (!view2.error && view2.data?.length) return view2.data;
 
-      if (error && (error.code === 'PGRST205' || error.message?.includes('not found') || error.message?.includes('view') || error.message?.includes('relation'))) {
-        const fallback = await supabaseClient
-          .from('v_grn_batches_with_batch_number')
-          .select('*')
-          .eq('grn_id', grnId)
-          .order('created_at', { ascending: false });
-        if (!fallback.error && fallback.data?.length) return fallback.data || [];
-        const gb = await supabaseClient
-          .from('grn_batches')
-          .select('*, item:inventory_items(*)')
-          .eq('grn_id', grnId)
-          .order('created_at', { ascending: false });
-        if (!gb.error) return gb.data || [];
-      }
-      if (error) {
-        if (error.code === 'PGRST205' || error.message?.includes('not found') || error.message?.includes('Could not find the table')) {
-          return loadBatchesForGRNFromLocalStorage(grnId);
-        }
-        console.error('❌ Error loading batches from Supabase:', error);
-        return loadBatchesForGRNFromLocalStorage(grnId);
-      }
-
-      // CRITICAL: If Supabase returns empty, fallback to localStorage (batch may have been saved there if DB insert failed)
-      const result = data || [];
-      if (result.length === 0) {
-        const localBatches = loadBatchesForGRNFromLocalStorage(grnId);
-        if (localBatches.length > 0) return localBatches;
-      }
-      return result;
-    } catch (error) {
-      console.error('❌ Exception loading batches from Supabase:', error);
+      // 3) If Supabase returned empty, try localStorage (e.g. local dev had batches saved there)
+      const localBatches = loadBatchesForGRNFromLocalStorage(grnId);
+      if (localBatches.length > 0) return localBatches;
+      return data || [];
+    } catch (err) {
+      console.warn('loadBatchesForGRN:', err);
       return loadBatchesForGRNFromLocalStorage(grnId);
     }
-  } else {
-    return loadBatchesForGRNFromLocalStorage(grnId);
   }
+  return loadBatchesForGRNFromLocalStorage(grnId);
 }
 
 function loadBatchesForGRNFromLocalStorage(grnId) {
