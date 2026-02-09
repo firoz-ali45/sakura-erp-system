@@ -1,0 +1,28 @@
+# Dependencies & build
+node_modules/
+**/node_modules/
+.vite/
+**/.vite/
+dist/
+**/dist/
+*.local
+
+# Env & secrets
+.env
+.env.*
+!.env.example
+
+# Logs & cache
+*.log
+.cache/
+.npm
+.eslintcache
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+*.swp
+*.swo
