@@ -95,7 +95,9 @@ function formatQty(n) {
 async function load() {
   loading.value = true;
   try {
-    rows.value = await fetchItemStockFull();
+    const data = await fetchItemStockFull();
+    console.log('USING VIEW v_item_stock_full', data);
+    rows.value = data;
   } catch (e) {
     console.warn('StockOverview load:', e);
     rows.value = [];

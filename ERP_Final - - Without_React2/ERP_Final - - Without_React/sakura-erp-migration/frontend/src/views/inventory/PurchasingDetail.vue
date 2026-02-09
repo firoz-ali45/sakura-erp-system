@@ -790,7 +790,9 @@ const loadInvoice = async () => {
     invoice.value = invoiceData;
 
     const { canCreateNextDocument } = await import('@/services/erpViews.js');
-    canCreatePayment.value = await canCreateNextDocument('PURCHASE', invoiceData.id);
+    const rpcResult = await canCreateNextDocument('PURCHASE', invoiceData.id);
+    canCreatePayment.value = rpcResult;
+    console.log('RPC fn_can_create_next_document', { docType: 'PURCHASE', purchaseId: invoiceData.id, result: rpcResult });
     
     // Initialize form data
     formData.value = {
@@ -966,8 +968,8 @@ const recordPayment = async () => {
     
     showNotification('Payment recorded successfully.', 'success');
     await loadInvoice();
-    const { forceRefreshAfterAction } = await import('@/services/erpViews.js');
-    await forceRefreshAfterAction();
+    const { forceSystemSync } = await import('@/services/erpViews.js');
+    await forceSystemSync();
   } catch (error) {
     console.error('Error recording payment:', error);
     showNotification('Error recording payment: ' + error.message, 'error');

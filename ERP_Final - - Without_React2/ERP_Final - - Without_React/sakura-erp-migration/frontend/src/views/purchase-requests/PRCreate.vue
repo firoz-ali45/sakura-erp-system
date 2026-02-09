@@ -594,8 +594,8 @@ const savePR = async () => {
     console.log('📦 Save PR Result:', result);
     
     if (result && result.success) {
-      const { forceRefreshAfterAction } = await import('@/services/erpViews.js');
-      await forceRefreshAfterAction();
+      const { forceSystemSync } = await import('@/services/erpViews.js');
+      await forceSystemSync();
       showNotification(
         isEditMode.value ? 'Purchase request updated' : `Purchase request ${result.data?.pr_number || ''} created as draft`,
         'success'
@@ -691,8 +691,8 @@ const saveAndSubmit = async () => {
         console.warn('Submit RPC failed (PR still created):', submitError);
         showNotification(`PR ${createResult.data.pr_number} created successfully`, 'success');
       }
-      const { forceRefreshAfterAction } = await import('@/services/erpViews.js');
-      await forceRefreshAfterAction();
+      const { forceSystemSync } = await import('@/services/erpViews.js');
+      await forceSystemSync();
       router.push('/homeportal/pr');
     } else {
       const errorMsg = createResult?.error || 'Failed to create purchase request';

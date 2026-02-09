@@ -1170,6 +1170,7 @@ const loadGRNs = async () => {
     ]);
     grns.value = data || [];
     grnBatchSummaryMap.value = Object.fromEntries((batchSummary || []).map(s => [s.grn_id, s.display_batch ?? '—']));
+    console.log('USING VIEW v_grn_batch_summary', batchSummary || []);
     console.log('✔ GRNs loaded:', grns.value.length);
     
     // CRITICAL: Log GRN data to verify supplier_name and purchase_order_number are present

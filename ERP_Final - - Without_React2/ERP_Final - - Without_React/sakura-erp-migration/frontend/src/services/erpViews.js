@@ -100,6 +100,14 @@ export async function fetchItemBatchesFull() {
  * Dispatches 'erp:refresh-stock' so Stock Overview can auto-refresh.
  */
 export async function forceRefreshAfterAction() {
+  return forceSystemSync();
+}
+
+/**
+ * Force live refresh: reloads v_item_stock_full, v_document_flow_full, v_transaction_status.
+ * Call after: GRN approve, PO create, Purchase create, Payment post.
+ */
+export async function forceSystemSync() {
   const [itemStock, transactionStatus, documentFlow, itemBatches] = await Promise.all([
     fetchItemStockFull(),
     fetchTransactionStatus(),

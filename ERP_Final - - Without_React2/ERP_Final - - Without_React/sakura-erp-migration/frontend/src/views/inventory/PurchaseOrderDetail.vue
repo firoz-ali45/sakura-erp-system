@@ -1082,7 +1082,9 @@ const loadOrder = async () => {
       poStatus.value = String(rawStatus).toLowerCase();
 
       const { canCreateNextDocument } = await import('@/services/erpViews.js');
-      canCreateGRN.value = await canCreateNextDocument('PO', order.value.id);
+      const rpcResult = await canCreateNextDocument('PO', order.value.id);
+      canCreateGRN.value = rpcResult;
+      console.log('RPC fn_can_create_next_document', { docType: 'PO', orderId: order.value.id, result: rpcResult });
 
       console.log('[PO STATUS UPDATE]', {
         rawStatus,

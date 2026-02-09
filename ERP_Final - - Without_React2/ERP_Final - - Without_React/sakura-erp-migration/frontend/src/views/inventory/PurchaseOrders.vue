@@ -1721,8 +1721,8 @@ const savePurchaseOrder = async () => {
       // Reload purchase orders to show the new draft
       await loadPurchaseOrders();
       // Force refresh status/stock/flow (no cached state)
-      const { forceRefreshAfterAction } = await import('@/services/erpViews.js');
-      await forceRefreshAfterAction();
+      const { forceSystemSync } = await import('@/services/erpViews.js');
+      await forceSystemSync();
     } else {
       // Show detailed error message
       const errorMsg = result.error || 'Failed to save purchase order';

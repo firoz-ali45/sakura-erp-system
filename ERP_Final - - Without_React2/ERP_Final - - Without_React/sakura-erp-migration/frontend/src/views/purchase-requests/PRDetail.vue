@@ -573,7 +573,9 @@ const loadData = async () => {
     linkedPOs.value = pos || [];
     documentFlow.value = flow || [];
     const { canCreateNextDocument } = await import('@/services/erpViews.js');
-    canConvertToPO.value = await canCreateNextDocument('PR', prId);
+    const result = await canCreateNextDocument('PR', prId);
+    canConvertToPO.value = result;
+    console.log('RPC fn_can_create_next_document', { docType: 'PR', prId, result });
     
     // Trace PO/GRN for ItemFlow — DOCUMENT CHAIN ONLY (pr_po_linkage). NO item_id fallback.
     try {

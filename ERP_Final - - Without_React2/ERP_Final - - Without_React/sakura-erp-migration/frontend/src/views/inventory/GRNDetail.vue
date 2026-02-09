@@ -1516,7 +1516,9 @@ const loadGRN = async () => {
         }
         // ERP Document Closure: Check if Purchasing exists for this GRN (hide Create Purchasing if yes)
         const { canCreateNextDocument } = await import('@/services/erpViews.js');
-        canCreatePurchase.value = await canCreateNextDocument('GRN', grnId);
+        const result = await canCreateNextDocument('GRN', grnId);
+        canCreatePurchase.value = result;
+        console.log('RPC fn_can_create_next_document', { docType: 'GRN', grnId, result });
 
         // Initialize QC data for batches
         grn.value.batches.forEach(batch => {
@@ -2794,8 +2796,8 @@ const approveGRN = async () => {
       
       // CRITICAL: Reload GRN to get latest status from database
       await loadGRN();
-      const { forceRefreshAfterAction } = await import('@/services/erpViews.js');
-      await forceRefreshAfterAction();
+      const { forceSystemSync } = await import('@/services/erpViews.js');
+      await forceSystemSync();
       
       // Wait for Vue to update the DOM
       await nextTick();
@@ -3267,8 +3269,8 @@ const createPurchasing = async () => {
     
     showNotification('Purchasing Invoice created successfully! Redirecting...', 'success');
     canCreatePurchase.value = false; // DB: next doc created; fn_can_create_next_document will be false on refresh
-    const { forceRefreshAfterAction } = await import('@/services/erpViews.js');
-    await forceRefreshAfterAction();
+    const { forceSystemSync } = await import('@/services/erpViews.js');
+    await forceSystemSync();
     // Navigate to purchasing detail page
     setTimeout(() => {
       router.push(`/homeportal/purchasing-detail/${newInvoice.id}`);
