@@ -3798,20 +3798,10 @@ function getGRNByIdFromLocalStorage(grnId) {
   try {
     const grns = JSON.parse(localStorage.getItem('sakura_grns') || '[]');
     const grn = grns.find(g => g.id === grnId);
-    
     if (grn) {
-      // Load batches for this GRN
-      const batches = JSON.parse(localStorage.getItem('sakura_grn_batches') || '[]');
-      const grnBatches = batches.filter(b => 
-        (b.grnId || b.grn_id) === grnId
-      );
-      
-      // Attach batches to GRN
-      grn.batches = grnBatches;
-      
+      grn.batches = []; // Batches only from Supabase, never localStorage
       return { success: true, data: grn };
     }
-    
     return { success: false, data: null };
   } catch (error) {
     console.error('Error loading GRN from localStorage:', error);
@@ -4142,53 +4132,37 @@ export async function generateBatchId(grnId, itemId, expiryDate) {
 }
 
 /**
- * Load batches for a specific GRN
- * Tries grn_batches table FIRST (works on Vercel + local; views may not exist in all projects).
- * Then v_grn_all_batches / v_grn_batches_with_batch_number. Fallback: localStorage.
+ * Load batches for a specific GRN — SUPABASE ONLY (no localStorage).
+ * Tries grn_batches table first, then optional views. Returns [] if none.
  */
 export async function loadBatchesForGRN(grnId) {
-  if (USE_SUPABASE && supabaseClient) {
-    try {
-      // 1) Try base table first — always exists, so Vercel and local both get same data
-      let { data, error } = await supabaseClient
-        .from('grn_batches')
-        .select('*')
-        .eq('grn_id', grnId)
-        .order('created_at', { ascending: false });
-      if (!error && data && data.length > 0) return data;
-
-      // 2) Optional: views (if they exist in this project)
-      const viewResult = await supabaseClient
-        .from('v_grn_all_batches')
-        .select('*')
-        .eq('grn_id', grnId)
-        .order('created_at', { ascending: false });
-      if (!viewResult.error && viewResult.data?.length) return viewResult.data;
-      const view2 = await supabaseClient
-        .from('v_grn_batches_with_batch_number')
-        .select('*')
-        .eq('grn_id', grnId)
-        .order('created_at', { ascending: false });
-      if (!view2.error && view2.data?.length) return view2.data;
-
-      // 3) If Supabase returned empty, try localStorage (e.g. local dev had batches saved there)
-      const localBatches = loadBatchesForGRNFromLocalStorage(grnId);
-      if (localBatches.length > 0) return localBatches;
-      return data || [];
-    } catch (err) {
-      console.warn('loadBatchesForGRN:', err);
-      return loadBatchesForGRNFromLocalStorage(grnId);
-    }
-  }
-  return loadBatchesForGRNFromLocalStorage(grnId);
-}
-
-function loadBatchesForGRNFromLocalStorage(grnId) {
+  if (!USE_SUPABASE || !supabaseClient) return [];
   try {
-    const batches = JSON.parse(localStorage.getItem('sakura_grn_batches') || '[]');
-    return batches.filter(b => (b.grnId || b.grn_id) === grnId);
-  } catch (error) {
-    console.error('Error loading batches from localStorage:', error);
+    // 1) Base table — Vercel + local same data
+    let { data, error } = await supabaseClient
+      .from('grn_batches')
+      .select('*')
+      .eq('grn_id', grnId)
+      .order('created_at', { ascending: false });
+    if (!error && data && data.length > 0) return data;
+
+    // 2) Optional views
+    const viewResult = await supabaseClient
+      .from('v_grn_all_batches')
+      .select('*')
+      .eq('grn_id', grnId)
+      .order('created_at', { ascending: false });
+    if (!viewResult.error && viewResult.data?.length) return viewResult.data;
+    const view2 = await supabaseClient
+      .from('v_grn_batches_with_batch_number')
+      .select('*')
+      .eq('grn_id', grnId)
+      .order('created_at', { ascending: false });
+    if (!view2.error && view2.data?.length) return view2.data;
+
+    return data || [];
+  } catch (err) {
+    console.warn('loadBatchesForGRN:', err);
     return [];
   }
 }

@@ -4,12 +4,12 @@
 Localhost par GRN detail me batches dikh rahe the, Vercel par same GRN me "No batches created yet".
 
 ## Cause
-- Pehle code pehle `v_grn_all_batches` view se load karta tha. Agar ye view Supabase project me nahi bana tha to error aata aur fallback **localStorage** pe chala jata tha.
-- Localhost par tumne batches create kiye the to woh isi browser ke localStorage me save ho gaye — isliye local par dikhe.
-- Vercel par naya session → localStorage empty → batches empty dikhe.
+- Pehle code pehle `v_grn_all_batches` view se load karta tha. Agar ye view nahi bana tha to fallback **localStorage** pe chala jata tha.
+- Localhost par batches browser ke localStorage me the → dikhe. Vercel par localStorage empty → batches empty.
 
 ## Code change (ho chuka)
-`loadBatchesForGRN` ab pehle **`grn_batches`** table se load karta hai (jo hamesha exist karti hai), phir optional views. Isse local + Vercel dono same Supabase se batches laenge.
+- **Batches ab sirf Supabase se** — localStorage fallback hata diya. `loadBatchesForGRN` pehle **`grn_batches`** table se load karta hai, phir optional views. Return empty agar kuch na mile.
+- **localStorage batches kabhi use nahi** — na load, na getGRNByIdFromLocalStorage me. Yaad rakho: localStorage pe batches nahi rakhne.
 
 ## Ab tum kya karo
 
