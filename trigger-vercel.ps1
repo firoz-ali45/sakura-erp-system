@@ -1,16 +1,16 @@
-# Trigger Vercel deploy (latest commit) — use when push se auto-deploy nahi ho raha
-# Pehle Vercel me Deploy Hook banao, URL yahan paste karo (see VERCELL_DEPLOY_HOOK_SETUP.md)
+# Trigger Vercel deploy (latest commit) - push ke baad chalayo
+# Deploy Hook URL: Vercel Dashboard -> Settings -> Git -> Deploy Hooks
 
 $hookUrl = $env:VERCEL_DEPLOY_HOOK_URL
 if (-not $hookUrl) {
-  # Yahan apna Deploy Hook URL paste karo (Vercel Dashboard se copy karke)
   $hookUrl = "https://api.vercel.com/v1/integrations/deploy/prj_VsTQWkUyDQqIogM3cqKUK8nrmuzc/aR90lrhDsN"
 }
-if ($hookUrl -eq "PASTE_YOUR_VERCEL_DEPLOY_HOOK_URL_HERE") {
-  Write-Host "Vercel Deploy Hook URL set nahi hai." -ForegroundColor Yellow
-  Write-Host "VERCELL_DEPLOY_HOOK_SETUP.md dekho — Vercel me Hook banao, URL yahan ya env me set karo." -ForegroundColor Cyan
+
+if ($hookUrl -match "PASTE_YOUR|REPLACE") {
+  Write-Host "Pehle trigger-vercel.ps1 me apna Deploy Hook URL paste karo." -ForegroundColor Yellow
   exit 1
 }
+
 Write-Host "Triggering Vercel deploy (latest commit)..." -ForegroundColor Cyan
 try {
   $r = Invoke-WebRequest -Uri $hookUrl -Method POST -UseBasicParsing
