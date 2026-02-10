@@ -206,17 +206,17 @@ BEGIN
     GROUP BY isl.item_id, isl.location_id
   ),
   keys AS (
-    SELECT DISTINCT k.item_id, k.location_id
+    SELECT DISTINCT k.ciid, k.clid
     FROM (
-      SELECT item_id, location_id FROM opening
-      UNION SELECT item_id, location_id FROM period_in
-      UNION SELECT item_id, location_id FROM period_out
-      UNION SELECT item_id, location_id FROM closing
+      SELECT o.item_id AS ciid, o.location_id AS clid FROM opening o
+      UNION SELECT pin.item_id, pin.location_id FROM period_in pin
+      UNION SELECT pout.item_id, pout.location_id FROM period_out pout
+      UNION SELECT c.item_id, c.location_id FROM closing c
     ) k
   )
   SELECT
-    k.item_id,
-    k.location_id,
+    k.ciid,
+    k.clid,
     ii.name,
     ii.sku,
     il.location_name,
@@ -235,12 +235,12 @@ BEGIN
     COALESCE(c.qty, 0),
     COALESCE(c.cost, 0)
   FROM keys k
-  LEFT JOIN opening o ON o.item_id = k.item_id AND o.location_id = k.location_id
-  LEFT JOIN period_in pi ON pi.item_id = k.item_id AND pi.location_id = k.location_id
-  LEFT JOIN period_out po ON po.item_id = k.item_id AND po.location_id = k.location_id
-  LEFT JOIN closing c ON c.item_id = k.item_id AND c.location_id = k.location_id
-  LEFT JOIN inventory_items ii ON ii.id = k.item_id AND (ii.deleted IS NOT TRUE)
-  LEFT JOIN inventory_locations il ON il.id = k.location_id;
+  LEFT JOIN opening o ON o.item_id = k.ciid AND o.location_id = k.clid
+  LEFT JOIN period_in pi ON pi.item_id = k.ciid AND pi.location_id = k.clid
+  LEFT JOIN period_out po ON po.item_id = k.ciid AND po.location_id = k.clid
+  LEFT JOIN closing c ON c.item_id = k.ciid AND c.location_id = k.clid
+  LEFT JOIN inventory_items ii ON ii.id = k.ciid AND (ii.deleted IS NOT TRUE)
+  LEFT JOIN inventory_locations il ON il.id = k.clid;
 END;
 $$;
 
@@ -279,16 +279,39 @@ WHERE COALESCE(po.deleted, false) = false;
 DROP VIEW IF EXISTS v_transfer_orders_report CASCADE;
 DO $$
 BEGIN
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'transfer_orders') THEN
+  IF NOT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'transfer_orders') THEN
     CREATE VIEW v_transfer_orders_report AS
-    SELECT t.id, t.transfer_number, t.source_location_id, t.dest_location_id, t.status, t.transfer_date,
+    SELECT NULL::uuid AS id, NULL::text AS transfer_number, NULL::uuid AS source_location_id, NULL::uuid AS dest_location_id,
+      NULL::text AS status, NULL::date AS transfer_date,
+      NULL::text AS source_code, NULL::text AS source_name, NULL::text AS dest_code, NULL::text AS dest_name
+    WHERE false;
+  ELSIF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'transfer_orders' AND column_name = 'source_location_id')
+   AND EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'transfer_orders' AND column_name = 'dest_location_id') THEN
+    CREATE VIEW v_transfer_orders_report AS
+    SELECT t.id, t.transfer_number, t.source_location_id, t.dest_location_id, t.status, t.transfer_date::date AS transfer_date,
       sl.location_code AS source_code, sl.location_name AS source_name,
       dl.location_code AS dest_code, dl.location_name AS dest_name
     FROM transfer_orders t
     LEFT JOIN inventory_locations sl ON sl.id = t.source_location_id
     LEFT JOIN inventory_locations dl ON dl.id = t.dest_location_id
     WHERE COALESCE(t.deleted, false) = false;
+  ELSIF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'transfer_orders' AND column_name = 'from_location')
+   AND EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'transfer_orders' AND column_name = 'to_location') THEN
+    -- transfer_orders with from_location / to_location (TEXT): match locations by name or "name (code)"
+    CREATE VIEW v_transfer_orders_report AS
+    SELECT t.id, t.transfer_number,
+      sl.id AS source_location_id, dl.id AS dest_location_id,
+      t.status, (t.transfer_date::timestamptz)::date AS transfer_date,
+      sl.location_code AS source_code, sl.location_name AS source_name,
+      dl.location_code AS dest_code, dl.location_name AS dest_name
+    FROM transfer_orders t
+    LEFT JOIN inventory_locations sl ON sl.is_active = true
+      AND (sl.location_name = t.from_location OR (sl.location_name || ' (' || sl.location_code || ')') = t.from_location)
+    LEFT JOIN inventory_locations dl ON dl.is_active = true
+      AND (dl.location_name = t.to_location OR (dl.location_name || ' (' || dl.location_code || ')') = t.to_location)
+    WHERE COALESCE(t.deleted, false) = false;
   ELSE
+    -- transfer_orders exists but lacks location columns (e.g. only id, created_at): empty view
     CREATE VIEW v_transfer_orders_report AS
     SELECT NULL::uuid AS id, NULL::text AS transfer_number, NULL::uuid AS source_location_id, NULL::uuid AS dest_location_id,
       NULL::text AS status, NULL::date AS transfer_date,

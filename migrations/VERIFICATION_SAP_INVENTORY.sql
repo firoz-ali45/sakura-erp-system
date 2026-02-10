@@ -19,6 +19,8 @@ SELECT 'v_inventory_balance' AS view_name, COUNT(*)::text AS row_count FROM v_in
 SELECT 'v_inventory_history' AS view_name, COUNT(*)::text AS row_count FROM v_inventory_history;
 
 -- 4) Control report function (date range)
+-- If this fails with "function fn_inventory_control_report(date, date) does not exist",
+-- run migrations/CREATE_fn_inventory_control_report.sql first, then re-run this verification.
 SELECT * FROM fn_inventory_control_report(
   (current_date - interval '30 days')::date,
   current_date
