@@ -231,6 +231,62 @@
               <i class="fas fa-boxes w-5 text-center"></i>
               <span>{{ $t('inventory.stockOverview.title') }}</span>
             </router-link>
+            <router-link 
+              to="/homeportal/reports/inventory-levels" 
+              class="nav-link nav-sub-item flex items-center p-3 my-1 rounded-lg"
+              active-class="active"
+            >
+              <i class="fas fa-layer-group w-5 text-center"></i>
+              <span>{{ $t('inventory.reports.inventoryLevels') }}</span>
+            </router-link>
+            <router-link 
+              to="/homeportal/reports/inventory-control" 
+              class="nav-link nav-sub-item flex items-center p-3 my-1 rounded-lg"
+              active-class="active"
+            >
+              <i class="fas fa-tasks w-5 text-center"></i>
+              <span>{{ $t('inventory.reports.inventoryControl') }}</span>
+            </router-link>
+            <router-link 
+              to="/homeportal/reports/inventory-history" 
+              class="nav-link nav-sub-item flex items-center p-3 my-1 rounded-lg"
+              active-class="active"
+            >
+              <i class="fas fa-history w-5 text-center"></i>
+              <span>{{ $t('inventory.reports.inventoryHistory') }}</span>
+            </router-link>
+            <router-link 
+              to="/homeportal/reports/purchasing" 
+              class="nav-link nav-sub-item flex items-center p-3 my-1 rounded-lg"
+              active-class="active"
+            >
+              <i class="fas fa-file-invoice-dollar w-5 text-center"></i>
+              <span>{{ $t('inventory.reports.purchasing') }}</span>
+            </router-link>
+            <router-link 
+              to="/homeportal/reports/transfer-orders" 
+              class="nav-link nav-sub-item flex items-center p-3 my-1 rounded-lg"
+              active-class="active"
+            >
+              <i class="fas fa-exchange-alt w-5 text-center"></i>
+              <span>{{ $t('inventory.reports.transferOrders') }}</span>
+            </router-link>
+            <router-link 
+              to="/homeportal/reports/transfers" 
+              class="nav-link nav-sub-item flex items-center p-3 my-1 rounded-lg"
+              active-class="active"
+            >
+              <i class="fas fa-arrows-alt w-5 text-center"></i>
+              <span>{{ $t('inventory.reports.transfers') }}</span>
+            </router-link>
+            <router-link 
+              to="/homeportal/reports/cost-adjustment-history" 
+              class="nav-link nav-sub-item flex items-center p-3 my-1 rounded-lg"
+              active-class="active"
+            >
+              <i class="fas fa-adjust w-5 text-center"></i>
+              <span>{{ $t('inventory.reports.costAdjustmentHistory') }}</span>
+            </router-link>
             <a href="#" @click.prevent="loadDashboard('inventory/inventory-count.html')" class="nav-link nav-sub-item flex items-center p-3 my-1 rounded-lg">
               <i class="fas fa-clipboard-check w-5 text-center"></i>
               <span>{{ $t('homePortal.inventoryCount') }}</span>
