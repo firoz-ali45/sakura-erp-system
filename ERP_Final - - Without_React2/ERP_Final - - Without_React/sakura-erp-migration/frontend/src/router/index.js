@@ -239,6 +239,18 @@ const routes = [
         meta: { requiresAuth: true }
       },
       {
+        path: 'reports/inventory-reports',
+        name: 'InventoryReportsPage',
+        component: () => import('../views/reports/InventoryReportsPage.vue'),
+        meta: { requiresAuth: true }
+      },
+      {
+        path: 'reports/business-reports',
+        name: 'BusinessReportsPage',
+        component: () => import('../views/reports/BusinessReportsPage.vue'),
+        meta: { requiresAuth: true }
+      },
+      {
         path: 'reports-accounts-payable',
         name: 'ReportsAccountsPayable',
         component: () => import('../views/reports/AccountsPayable.vue'),

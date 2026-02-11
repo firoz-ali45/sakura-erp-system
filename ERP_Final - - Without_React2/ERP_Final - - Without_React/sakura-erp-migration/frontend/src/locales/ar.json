@@ -548,6 +548,8 @@
     "financePurchasing": "المشتريات (الفواتير)",
     "payments": "المدفوعات",
     "reports": "التقارير",
+    "inventoryReports": "تقارير المخزون",
+    "businessReports": "تقارير الأعمال",
     "accountsPayable": "الحسابات الدائنة",
     "paymentConfiguration": "إعدادات الدفع",
     "financeMore": "المزيد",
