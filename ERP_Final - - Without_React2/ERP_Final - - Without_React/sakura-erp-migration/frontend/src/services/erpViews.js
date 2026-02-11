@@ -114,7 +114,7 @@ export async function fetchInventoryBalance() {
 export async function fetchInventoryHistory() {
   const ready = await ensureSupabaseReady();
   if (!ready) return [];
-  const { data, error } = await supabaseClient.from('v_inventory_history').select('*').order('created_at', { ascending: false }).limit(1000);
+  const { data, error } = await supabaseClient.from('v_inventory_history').select('*').order('created_at', { ascending: false }).limit(10000);
   if (error) {
     console.warn('fetchInventoryHistory:', error);
     return [];

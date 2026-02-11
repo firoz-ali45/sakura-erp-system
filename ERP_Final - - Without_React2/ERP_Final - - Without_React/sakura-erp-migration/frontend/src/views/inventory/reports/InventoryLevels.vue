@@ -4,103 +4,97 @@
       <h1 class="text-2xl font-bold text-gray-800 mb-1">{{ $t('inventory.reports.inventoryLevels') }}</h1>
       <p class="text-sm text-gray-600 mb-4">{{ $t('inventory.reports.levelsDesc') }}</p>
       <div class="flex flex-wrap gap-4 items-center">
-        <input
-          v-model="searchText"
-          type="text"
-          :placeholder="$t('inventory.stockOverview.filterItem')"
-          class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#284b44] w-64"
-        />
-        <button
-          type="button"
-          @click="load"
-          class="px-4 py-2 rounded-lg text-white flex items-center gap-2"
-          style="background-color: #284b44;"
-        >
-          <i class="fas fa-sync-alt"></i>
-          {{ $t('common.search') }}
+        <input v-model="searchText" type="text" :placeholder="$t('inventory.stockOverview.filterItem')" class="px-4 py-2 border rounded-lg w-64" />
+        <button type="button" @click="load" class="px-4 py-2 rounded-lg text-white" style="background-color: #284b44;">
+          <i class="fas fa-sync-alt mr-1"></i> {{ $t('common.search') }}
         </button>
       </div>
     </div>
 
-    <div class="bg-white rounded-xl shadow-md overflow-hidden">
-      <table class="w-full">
-        <thead class="bg-gray-50">
-          <tr>
-            <th class="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase">{{ $t('inventory.stockOverview.itemName') }}</th>
-            <th class="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase">SKU</th>
-            <th class="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase">{{ $t('inventory.stockOverview.batch') }}</th>
-            <th class="px-6 py-3 text-right text-xs font-semibold text-gray-700 uppercase">{{ $t('inventory.stockOverview.currentQty') }}</th>
-          </tr>
-        </thead>
-        <tbody class="divide-y divide-gray-200">
-          <tr v-if="loading" class="text-center">
-            <td colspan="4" class="px-6 py-12"><i class="fas fa-spinner fa-spin text-2xl text-[#284b44]"></i></td>
-          </tr>
-          <tr v-else-if="!filteredRows.length" class="text-center">
-            <td colspan="4" class="px-6 py-12 text-gray-500">{{ $t('inventory.stockOverview.noData') }}</td>
-          </tr>
-          <tr v-else v-for="row in filteredRows" :key="row.item_id" class="hover:bg-gray-50">
-            <td class="px-6 py-4 text-sm font-medium text-gray-900">{{ row.item_name || '—' }}</td>
-            <td class="px-6 py-4 text-sm text-gray-700">{{ row.sku || row.item_code || '—' }}</td>
-            <td class="px-6 py-4 text-sm text-gray-700">{{ batchDisplay(row) }}</td>
-            <td class="px-6 py-4 text-sm text-right font-medium">{{ formatQty(row.total_stock) }}</td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
+    <ReportTable
+      :columns="matrixColumns"
+      :data="matrixRows"
+      :loading="loading"
+      row-key="item_id"
+      :searchable="true"
+      :exportable="true"
+      @export-excel="doExportExcel"
+      @export-pdf="doExportPDF"
+      @refresh="load"
+    />
   </div>
 </template>
 
 <script setup>
 import { ref, computed, onMounted } from 'vue';
 import { useI18n } from 'vue-i18n';
+import { fetchInventoryBalance } from '@/services/erpViews.js';
+import { useReportExport } from '@/composables/useReportExport.js';
+import ReportTable from '@/components/reports/ReportTable.vue';
 
 const { t } = useI18n();
+const { exportExcel } = useReportExport();
 const loading = ref(false);
 const rows = ref([]);
 const searchText = ref('');
 
-const filteredRows = computed(() => {
-  let list = rows.value;
+// Pivot: item -> { item_name, sku, [loc_name]: qty, total }
+const matrixRows = computed(() => {
+  const list = rows.value;
   const q = (searchText.value || '').trim().toLowerCase();
-  if (!q) return list;
-  return list.filter(r =>
-    (r.item_name || '').toLowerCase().includes(q) ||
-    (r.sku || r.item_code || '').toLowerCase().includes(q) ||
-    (rowBatchText(r).toLowerCase().includes(q))
-  );
+  const filtered = q ? list.filter(r => (r.item_name || '').toLowerCase().includes(q) || (r.sku || '').toLowerCase().includes(q)) : list;
+  const byItem = {};
+  for (const r of filtered) {
+    const key = r.item_id || '';
+    if (!byItem[key]) {
+      byItem[key] = { item_id: key, item_name: r.item_name, sku: r.sku, _locs: {} };
+    }
+    const loc = r.location_name || 'Other';
+    byItem[key]._locs[loc] = (byItem[key]._locs[loc] || 0) + Number(r.current_qty || 0);
+  }
+  const locs = [...new Set(filtered.map(r => r.location_name || 'Other'))].sort();
+  return Object.values(byItem).map(row => {
+    const r = { item_id: row.item_id, item_name: row.item_name, sku: row.sku };
+    let total = 0;
+    for (const loc of locs) {
+      const qty = row._locs[loc] || 0;
+      r[loc] = qty;
+      total += qty;
+    }
+    r.total = total;
+    return r;
+  });
 });
 
-function rowBatchText(row) {
-  const n = Number(row.batch_count);
-  if (n === 1) return row.latest_batch || (Array.isArray(row.batch_numbers) && row.batch_numbers[0]) || '';
-  return n > 1 ? `${n} batches` : '';
-}
+const matrixColumns = computed(() => {
+  const locs = [...new Set(rows.value.map(r => r.location_name || 'Other'))].sort();
+  const cols = [
+    { key: 'item_name', label: t('inventory.stockOverview.itemName'), sortable: true },
+    { key: 'sku', label: 'SKU', sortable: true }
+  ];
+  for (const loc of locs) cols.push({ key: loc, label: loc, align: 'right', sortable: true, format: formatNum });
+  cols.push({ key: 'total', label: 'Total', align: 'right', sortable: true, format: formatNum });
+  return cols;
+});
 
-function formatQty(n) {
+function formatNum(n) {
   const v = Number(n);
   return isNaN(v) ? '0' : v.toLocaleString('en', { minimumFractionDigits: 0, maximumFractionDigits: 4 });
 }
 
-function formatCost(n) {
-  const v = Number(n);
-  return isNaN(v) ? '0.00' : v.toLocaleString('en', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' SAR';
+function doExportExcel() {
+  exportExcel(matrixRows.value, matrixColumns.value, 'inventory_levels');
 }
 
-/** Batch display: 1 batch → batch number; >1 → "N batches"; 0 → "—" (DB-driven, no local calc) */
-function batchDisplay(row) {
-  const n = Number(row.batch_count);
-  if (n === 0) return '—';
-  if (n === 1) return row.latest_batch || (Array.isArray(row.batch_numbers) && row.batch_numbers[0]) || '—';
-  return `${n} batches`;
+function doExportPDF() {
+  window.print();
 }
 
 async function load() {
   loading.value = true;
   try {
-    const { fetchItemStockFull } = await import('@/services/erpViews.js');
-    const data = await fetchItemStockFull();
-    rows.value = (data || []).map(r => ({ ...r, sku: r.item_code }));
+    const data = await fetchInventoryBalance();
+    rows.value = data || [];
   } catch (e) {
     console.warn('Inventory Levels load:', e);
     rows.value = [];
@@ -109,7 +103,5 @@ async function load() {
   }
 }
 
-onMounted(() => {
-  load();
-});
+onMounted(() => load());
 </script>
