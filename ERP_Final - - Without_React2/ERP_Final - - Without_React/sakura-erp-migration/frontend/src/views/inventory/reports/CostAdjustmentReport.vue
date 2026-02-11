@@ -12,7 +12,7 @@
       :data="rows"
       :loading="loading"
       row-key="id"
-      :search-keys="['item_name','sku','location_name','movement_type','reason','created_by']"
+      :search-keys="['item_name','sku','barcode','branch','reference','created_by','submitted_by']"
       @export-excel="doExportExcel"
       @export-pdf="doExportPDF"
       @refresh="load"
@@ -32,22 +32,23 @@ const { exportExcel } = useReportExport();
 const loading = ref(false);
 const rows = ref([]);
 
-function formatNum(n) {
-  const v = Number(n);
-  return isNaN(v) ? '—' : v.toLocaleString('en', { minimumFractionDigits: 0, maximumFractionDigits: 4 });
+function formatCost(v) {
+  const n = Number(v);
+  return isNaN(n) ? '—' : '₹ ' + n.toLocaleString('en', { minimumFractionDigits: 2, maximumFractionDigits: 4 });
 }
 
 const columns = computed(() => [
-  { key: 'item_name', label: 'Item', sortable: true },
+  { key: 'item_name', label: 'Name', sortable: true },
   { key: 'sku', label: 'SKU', sortable: true },
-  { key: 'location_name', label: 'Location', sortable: true },
-  { key: 'movement_type', label: 'Type', sortable: true },
-  { key: 'qty_in', label: 'Qty In', align: 'right', sortable: true, format: formatNum },
-  { key: 'qty_out', label: 'Qty Out', align: 'right', sortable: true, format: formatNum },
-  { key: 'total_cost', label: 'Cost', align: 'right', sortable: true, format: v => formatNum(v) + ' SAR' },
-  { key: 'reason', label: 'Reason', sortable: true },
-  { key: 'created_by', label: 'User', sortable: true },
-  { key: 'created_at', label: 'Date', sortable: true, format: d => d ? new Date(d).toLocaleString() : '—' }
+  { key: 'barcode', label: 'Barcode', sortable: true, format: v => v || '—' },
+  { key: 'storage_unit', label: 'Storage Unit', sortable: true, format: v => v || '—' },
+  { key: 'branch', label: 'Branch', sortable: true },
+  { key: 'reference', label: 'Reference', sortable: true, format: v => (v && String(v).trim()) || '—' },
+  { key: 'original_cost_per_unit', label: 'Original Cost per Unit', align: 'right', sortable: true, format: formatCost },
+  { key: 'new_cost_per_unit', label: 'New Cost per Unit', align: 'right', sortable: true, format: formatCost },
+  { key: 'created_by', label: 'Created By', sortable: true, format: v => v || '—' },
+  { key: 'submitted_by', label: 'Submitted By', sortable: true, format: v => v || '—' },
+  { key: 'submitted_at', label: 'Submitted At', sortable: true, format: d => d ? new Date(d).toLocaleString() : '—' }
 ]);
 
 function doExportExcel() { exportExcel(rows.value, columns.value, 'cost_adjustment_history'); }
