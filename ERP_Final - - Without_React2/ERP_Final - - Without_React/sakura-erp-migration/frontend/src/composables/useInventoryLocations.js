@@ -99,6 +99,47 @@ export async function loadLocationsForTransferDestination() {
   }
 }
 
+/**
+ * Transfer source: full objects { id, location_code, location_name } for SAP transfer engine.
+ */
+export async function loadTransferSourceLocations() {
+  try {
+    const { ensureSupabaseReady, supabaseClient } = await import('@/services/supabase.js');
+    const ready = await ensureSupabaseReady();
+    if (!ready || !supabaseClient) return [];
+    const { data, error } = await supabaseClient
+      .from('inventory_locations')
+      .select('id, location_code, location_name')
+      .eq('is_active', true)
+      .eq('allow_transfer_out', true)
+      .order('location_name');
+    if (error) return [];
+    return data || [];
+  } catch (e) {
+    return [];
+  }
+}
+
+/**
+ * Transfer destination: full objects { id, location_code, location_name } for SAP transfer engine.
+ */
+export async function loadTransferDestLocations() {
+  try {
+    const { ensureSupabaseReady, supabaseClient } = await import('@/services/supabase.js');
+    const ready = await ensureSupabaseReady();
+    if (!ready || !supabaseClient) return [];
+    const { data, error } = await supabaseClient
+      .from('inventory_locations')
+      .select('id, location_code, location_name')
+      .eq('is_active', true)
+      .order('location_name');
+    if (error) return [];
+    return data || [];
+  } catch (e) {
+    return [];
+  }
+}
+
 /** @deprecated Use loadLocationsForTransferSource for display strings. */
 export async function loadLocationsForTransferOut() {
   return loadLocationsForTransferSource();
@@ -160,6 +201,8 @@ export function useInventoryLocations() {
     loadLocationsForPO,
     loadLocationsForTransferSource,
     loadLocationsForTransferDestination,
+    loadTransferSourceLocations,
+    loadTransferDestLocations,
     loadLocationsForTransferOut,
     loadLocationsForProduction,
     loadLocationsForPOS,
