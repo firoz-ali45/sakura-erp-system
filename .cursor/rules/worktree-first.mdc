@@ -1,20 +1,20 @@
 ---
-description: Sakura ERP — Primary workspace path
+description: Sakura ERP — Worktree-first workflow
 globs: 
 alwaysApply: true
 ---
 
-# Sakura ERP — Workspace
+# Worktree-First Workflow (Sakura ERP)
 
 ## CRITICAL: Workspace Location
-- **Primary path**: `C:\Users\shahf\Downloads\ERP_CLOUD\sakura-erp-system`
-- **Ab se sab coding YAHI folder me hogi.**
+- **Primary path**: `C:\Users\shahf\.cursor\worktrees\sakura-erp-system\nva`
+- **Ab se sab coding YAHI worktree me hogi.**
 
 ## Workflow Rules
-1. **Coding**: Sab edits isi folder me karo — `ERP_Final - - Without_React2\...\frontend\`, `migrations\`, `services\`, etc.
+1. **Coding**: Sab edits isi worktree folder me karo — `ERP_Final - - Without_React2\...\frontend\`, `migrations\`, `services\`, etc.
 2. **Commit & Push**: `.\sync-to-git.ps1` chalao
 3. **Vercel**: Push ke baad `.\trigger-vercel.ps1` ya `.\commit-and-deploy.ps1`
-4. **Apply Worktree**: "Apply worktree to current branch" use mat karo — EPERM error aata hai.
+4. **Apply Button**: Composer ka "Apply" use mat karo — EPERM error. Direct prompt se edits karo.
 
 ## File Paths
 - Frontend: `ERP_Final - - Without_React2\ERP_Final - - Without_React\sakura-erp-migration\frontend\`

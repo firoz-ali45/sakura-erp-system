@@ -1,12 +1,18 @@
-# Sakura ERP — Workflow
+# Sakura ERP — Worktree Workflow
 
-## Primary Path (Tumhara Laptop)
+## Primary Path (Ab Se Yahi Use Karo)
 
 ```
-C:\Users\shahf\Downloads\ERP_CLOUD\sakura-erp-system
+C:\Users\shahf\.cursor\worktrees\sakura-erp-system\nva
 ```
 
-**Sab coding YAHI folder me.** Nva worktree path use mat karo — tumhare laptop pe wo folder nahi hai.
+**Sab coding YAHI worktree me.** Direct prompt ke through coding — Apply button use mat karo.
+
+---
+
+## Sync Complete ✅
+
+Downloads (localhost) se saari files worktree me copy ho chuki hai.
 
 ---
 
@@ -28,7 +34,7 @@ C:\Users\shahf\Downloads\ERP_CLOUD\sakura-erp-system
 ## Cursor Me Kaise Open Karein
 
 1. **File → Open Folder**
-2. Select: `C:\Users\shahf\Downloads\ERP_CLOUD\sakura-erp-system`
+2. Select: `C:\Users\shahf\.cursor\worktrees\sakura-erp-system\nva`
 3. Isi folder ko workspace banao
 
 ---

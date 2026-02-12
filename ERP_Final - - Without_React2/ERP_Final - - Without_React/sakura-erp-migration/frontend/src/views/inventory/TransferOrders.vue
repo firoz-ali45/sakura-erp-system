@@ -2,14 +2,14 @@
   <div class="p-6 bg-[#f0e1cd] min-h-screen">
     <div class="bg-white rounded-xl shadow-md p-6 mb-6 sticky top-0 z-10">
       <div class="flex justify-between items-center">
-        <h1 class="text-2xl font-bold text-gray-800">Transfer Orders</h1>
+        <h1 class="text-2xl font-bold text-gray-800">{{ $t('inventory.transferOrders.title') }}</h1>
         <div class="flex gap-3">
           <button
             @click="exportExcel"
             class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center gap-2"
           >
             <i class="fas fa-file-excel"></i>
-            Export
+            Export Excel
           </button>
           <button
             @click="openCreate"
@@ -17,7 +17,7 @@
             style="background-color: #284b44;"
           >
             <i class="fas fa-plus"></i>
-            New Transfer Order
+            Create Transfer Order
           </button>
         </div>
       </div>
@@ -150,7 +150,7 @@
     <!-- STEP 1: Minimal Create Popup — Source, Destination only -->
     <div v-if="showCreateModal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50" @click.self="closeCreate">
       <div class="bg-white rounded-xl shadow-xl w-full max-w-md p-6">
-        <h2 class="text-xl font-bold mb-4">New Transfer Order</h2>
+        <h2 class="text-xl font-bold mb-4">Create Transfer Order</h2>
         <div class="space-y-4">
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1">Source Location <span class="text-red-500">*</span></label>

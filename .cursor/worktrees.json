@@ -1,7 +1,7 @@
 {
-  "primary-path": "C:\\Users\\shahf\\Downloads\\ERP_CLOUD\\sakura-erp-system",
+  "primary-path": "C:\\Users\\shahf\\.cursor\\worktrees\\sakura-erp-system\\nva",
   "primary-workspace": true,
   "setup-worktree": ["npm install"],
-  "workflow": "direct",
-  "note": "Sab coding YAHI folder me. Commit & push: sync-to-git.ps1 / commit-and-deploy.ps1"
+  "workflow": "worktree-direct",
+  "note": "Ab se sab coding YAHI worktree me. Commit & push: sync-to-git.ps1 / commit-and-deploy.ps1"
 }
