@@ -103,6 +103,12 @@ const routes = [
     meta: { requiresAuth: true }
   },
   {
+        path: 'transfer-sending/:id',
+    name: 'TransferSending',
+        component: () => import('../views/inventory/TransferSending.vue'),
+    meta: { requiresAuth: true }
+  },
+  {
         path: 'grns',
     name: 'InventoryGRNs',
         component: () => import('../views/inventory/GRNs.vue'),

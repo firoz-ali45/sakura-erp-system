@@ -137,23 +137,23 @@ export async function receiveTransferItem(transferId, itemId, qty, userId) {
 
 // --- CRUD (transfer_orders + transfer_order_items) ---
 
+/** Create minimal draft — source + destination only. Items added on detail page. */
 export async function createTransferDraft(payload) {
   const ready = await ensureSupabaseReady();
   if (!ready) return { success: false, error: 'Supabase not ready' };
-  const { from_location_id, to_location_id, requested_by, remarks, business_date, items } = payload;
+  const { from_location_id, to_location_id, requested_by } = payload;
   if (!from_location_id || !to_location_id) return { success: false, error: 'From and To location required' };
   if (from_location_id === to_location_id) return { success: false, error: 'Source and destination must be different' };
-  if (!items || items.length === 0) return { success: false, error: 'At least one item required' };
 
   try {
     const insertPayload = {
       from_location_id,
       to_location_id,
       status: 'draft',
-      requested_by: requested_by || null
+      requested_by: requested_by || null,
+      transfer_number: null, // TO number generated ONLY on submit
+      business_date: new Date().toISOString().slice(0, 10) // auto today
     };
-    if (remarks && String(remarks).trim()) insertPayload.remarks = String(remarks).trim();
-    if (business_date) insertPayload.business_date = String(business_date).slice(0, 10);
 
     const { data: header, error: headerError } = await supabaseClient
       .from('transfer_orders')
@@ -164,18 +164,19 @@ export async function createTransferDraft(payload) {
     if (headerError) return { success: false, error: headerError.message };
     if (!header) return { success: false, error: 'Insert failed' };
 
+    const items = payload.items || [];
     const rows = items.map((it) => ({
       transfer_id: header.id,
       item_id: it.item_id,
       requested_qty: Number(it.requested_qty) || 0
     })).filter((r) => r.requested_qty > 0);
 
-    if (rows.length === 0) return { success: false, error: 'No valid items' };
-
-    const { error: itemsError } = await supabaseClient.from('transfer_order_items').insert(rows);
-    if (itemsError) {
-      await supabaseClient.from('transfer_orders').delete().eq('id', header.id);
-      return { success: false, error: itemsError.message };
+    if (rows.length > 0) {
+      const { error: itemsError } = await supabaseClient.from('transfer_order_items').insert(rows);
+      if (itemsError) {
+        await supabaseClient.from('transfer_orders').delete().eq('id', header.id);
+        return { success: false, error: itemsError.message };
+      }
     }
 
     return { success: true, data: header };
