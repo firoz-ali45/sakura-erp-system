@@ -1,0 +1,22 @@
+---
+description: Sakura ERP — Primary workspace path
+globs: 
+alwaysApply: true
+---
+
+# Sakura ERP — Workspace
+
+## CRITICAL: Workspace Location
+- **Primary path**: `C:\Users\shahf\Downloads\ERP_CLOUD\sakura-erp-system`
+- **Ab se sab coding YAHI folder me hogi.**
+
+## Workflow Rules
+1. **Coding**: Sab edits isi folder me karo — `ERP_Final - - Without_React2\...\frontend\`, `migrations\`, `services\`, etc.
+2. **Commit & Push**: `.\sync-to-git.ps1` chalao
+3. **Vercel**: Push ke baad `.\trigger-vercel.ps1` ya `.\commit-and-deploy.ps1`
+4. **Apply Worktree**: "Apply worktree to current branch" use mat karo — EPERM error aata hai.
+
+## File Paths
+- Frontend: `ERP_Final - - Without_React2\ERP_Final - - Without_React\sakura-erp-migration\frontend\`
+- Migrations: `migrations\`
+- Services: `services\`

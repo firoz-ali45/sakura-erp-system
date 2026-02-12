@@ -100,7 +100,7 @@ export async function loadLocationsForTransferDestination() {
 }
 
 /**
- * Transfer source: full objects { id, location_code, location_name } for SAP transfer engine.
+ * Transfer source: warehouse OR branch, is_active = true.
  */
 export async function loadTransferSourceLocations() {
   try {
@@ -111,7 +111,7 @@ export async function loadTransferSourceLocations() {
       .from('inventory_locations')
       .select('id, location_code, location_name')
       .eq('is_active', true)
-      .eq('allow_transfer_out', true)
+      .in('location_type', ['WAREHOUSE', 'BRANCH'])
       .order('location_name');
     if (error) return [];
     return data || [];
