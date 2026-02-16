@@ -163,9 +163,10 @@
         <div class="flex justify-between items-center mb-4">
           <h2 class="text-lg font-bold text-gray-800">Items</h2>
           <div v-if="order.status === 'draft'" class="flex gap-2 flex-wrap">
-            <select class="px-3 py-2 border rounded-lg text-sm">
-              <option>Storage Unit</option>
-            </select>
+            <label class="flex items-center gap-2 px-3 py-2 border rounded-lg text-sm cursor-pointer hover:bg-gray-50">
+              <input v-model="storageUnitToggle" type="checkbox" class="rounded" />
+              <span>Storage Unit</span>
+            </label>
             <button
               @click="showEditQuantities = !showEditQuantities"
               class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
@@ -306,11 +307,7 @@ import {
 import { showNotification } from '@/utils/notifications';
 import { forceInventoryViewsRefresh } from '@/services/erpViews.js';
 import { loadTransferSourceLocations, loadTransferDestLocations } from '@/composables/useInventoryLocations.js';
-import {
-  createPrintFrame,
-  buildTransferOrderPrintHtml,
-  printDocument
-} from '@/services/pdfPrintService.js';
+import { printTransferOrder } from '@/services/pdfPrintService.js';
 import AddItemModal from '@/components/transfer/AddItemModal.vue';
 import EditItemModal from '@/components/transfer/EditItemModal.vue';
 import ImportItemsModal from '@/components/transfer/ImportItemsModal.vue';
@@ -332,6 +329,7 @@ const showAddModal = ref(false);
 const showEditItemModal = ref(false);
 const showImportModal = ref(false);
 const showEditQuantities = ref(false);
+const storageUnitToggle = ref(false);
 const editForm = ref({ from_location_id: '', to_location_id: '', remarks: '' });
 const sourceLocations = ref([]);
 const destLocations = ref([]);
@@ -458,7 +456,7 @@ async function saveEdit() {
 
 async function submitForReview() {
   const { showConfirmDialog } = await import('@/utils/confirmDialog.js');
-  const ok = await showConfirmDialog({ title: 'Submit for Review', message: 'Are you sure you want to submit this?', type: 'info' });
+  const ok = await showConfirmDialog({ title: 'Submit for Review', message: 'Are you sure you want to submit this?', confirmText: 'Confirm', cancelText: 'Cancel', type: 'info' });
   if (!ok) return;
   submitting.value = true;
   try {
@@ -539,7 +537,7 @@ async function sendItems() {
 
 async function deletePermanently() {
   const { showConfirmDialog } = await import('@/utils/confirmDialog.js');
-  const ok = await showConfirmDialog({ title: 'Delete Permanently', message: 'Delete transfer order permanently?', type: 'danger' });
+  const ok = await showConfirmDialog({ title: 'Delete Permanently', message: 'Delete transfer order permanently?', confirmText: 'Yes', type: 'danger' });
   if (!ok) return;
   try {
     const result = await deleteTransferDraft(order.value.id);
@@ -559,14 +557,7 @@ function printOrder() {
     showNotification('Print available after TO number is generated', 'warning');
     return;
   }
-  const frame = createPrintFrame('sakura-print-frame-to');
-  const printDoc = frame.contentWindow.document;
-  const html = buildTransferOrderPrintHtml(order.value, enrichedItems.value, { lang: 'en' });
-  const baseStyle = '@page { size: A4; margin: 20mm 15mm; } @media print { * { -webkit-print-color-adjust: exact; print-color-adjust: exact; } body { margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; font-size: 12px; line-height: 1.5; color: #111827; background: white; } }';
-  printDoc.open();
-  printDoc.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><style>' + baseStyle + '</style></head><body><div class="print-container">' + html + '</div></body></html>');
-  printDoc.close();
-  printDocument(frame);
+  printTransferOrder(order.value, enrichedItems.value);
 }
 
 function openEditItem(it) {

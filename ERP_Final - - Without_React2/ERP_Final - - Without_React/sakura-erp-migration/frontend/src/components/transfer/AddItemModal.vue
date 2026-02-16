@@ -54,15 +54,15 @@
 </template>
 
 <script setup>
-import { ref, watch } from 'vue';
+import { ref, onMounted } from 'vue';
 import { searchInventoryItems } from '@/services/transferEngine.js';
 import { fetchItemStockAtLocation } from '@/services/transferEngine.js';
 
 const props = defineProps({
-  modelValue: { type: Boolean, default: false },
-  sourceLocationId: { type: String, default: '' }
+  sourceLocationId: { type: String, default: '' },
+  fromLocationId: { type: String, default: '' }
 });
-const emit = defineEmits(['close', 'saved']);
+const emit = defineEmits(['close', 'save']);
 
 const searchQuery = ref('');
 const searchResults = ref([]);
@@ -91,8 +91,9 @@ function debouncedSearch() {
 
 async function selectItem(it) {
   selectedItem.value = it;
-  if (props.sourceLocationId) {
-    const list = await fetchItemStockAtLocation(props.sourceLocationId);
+  const locId = props.fromLocationId || props.sourceLocationId;
+  if (locId) {
+    const list = await fetchItemStockAtLocation(locId);
     stock.value = list.find((s) => s.item_id === it.id) || { available_qty: 0, avg_cost: 0, batches: [] };
   } else {
     stock.value = { available_qty: 0, avg_cost: 0, batches: [] };
@@ -104,21 +105,19 @@ async function save() {
   if (!selectedItem.value || !qty.value || qty.value <= 0) return;
   saving.value = true;
   try {
-    emit('saved', { item_id: selectedItem.value.id, requested_qty: qty.value });
+    emit('save', { item_id: selectedItem.value.id, requested_qty: qty.value });
     emit('close');
   } finally {
     saving.value = false;
   }
 }
 
-watch(() => props.modelValue, (v) => {
-  if (v) {
-    searchQuery.value = '';
-    searchResults.value = [];
-    selectedItem.value = null;
-    stock.value = null;
-    qty.value = 1;
-    searchInventoryItems('', 50).then((r) => { searchResults.value = r; });
-  }
+onMounted(() => {
+  searchQuery.value = '';
+  searchResults.value = [];
+  selectedItem.value = null;
+  stock.value = null;
+  qty.value = 1;
+  searchInventoryItems('', 50).then((r) => { searchResults.value = r; });
 });
 </script>

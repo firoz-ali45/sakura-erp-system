@@ -55,7 +55,7 @@
           class="px-6 py-2 rounded-lg text-white disabled:opacity-50"
           style="background-color: #284b44;"
         >
-          Save
+          Confirm
         </button>
       </div>
     </div>
