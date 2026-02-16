@@ -2,7 +2,7 @@
   <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50" @click.self="$emit('close')">
     <div class="bg-white rounded-xl shadow-xl w-full max-w-lg m-4">
       <div class="sticky top-0 bg-white border-b p-6 flex justify-between items-center z-10">
-        <h2 class="text-xl font-bold">Update Items Quantities</h2>
+        <h2 class="text-xl font-bold">Edit Item</h2>
         <button @click="$emit('close')" class="text-gray-500 hover:text-gray-700"><i class="fas fa-times"></i></button>
       </div>
       <div class="p-6 space-y-4">

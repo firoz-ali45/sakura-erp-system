@@ -55,7 +55,7 @@
           class="px-6 py-2 rounded-lg text-white disabled:opacity-50"
           style="background-color: #284b44;"
         >
-          Save
+          Confirm
         </button>
       </div>
     </div>
@@ -95,7 +95,9 @@ async function onFile(ev) {
     const skuCol = headers.findIndex((h) => h === 'sku');
     const qtyCol = headers.findIndex((h) => ['quantity', 'qty', 'qty.'].includes(h));
     if (skuCol < 0 || qtyCol < 0) {
-      emit('close');
+      errors.value = ['Invalid template. Required columns: SKU, Quantity'];
+      preview.value = [];
+      pendingRows.value = [];
       return;
     }
     const parsed = rows

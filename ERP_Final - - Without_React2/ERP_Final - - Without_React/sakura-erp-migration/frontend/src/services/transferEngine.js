@@ -7,6 +7,19 @@ import { ensureSupabaseReady, supabaseClient } from '@/services/supabase.js';
 
 // --- Views ---
 
+
+export function normalizeTransferStatus(status) {
+  const s = String(status || '').toLowerCase();
+  if (['draft'].includes(s)) return 'draft';
+  if (['pending', 'submitted'].includes(s)) return 'pending';
+  if (['approved', 'level1_approved', 'level2_approved'].includes(s)) return 'approved';
+  if (['declined', 'rejected'].includes(s)) return 'declined';
+  if (['sent', 'dispatched', 'partially_dispatched'].includes(s)) return 'sent';
+  if (['closed'].includes(s)) return 'closed';
+  return s || 'draft';
+}
+
+
 export async function fetchTransferOrdersFull() {
   const ready = await ensureSupabaseReady();
   if (!ready) return [];
@@ -70,11 +83,17 @@ export async function getNextTransferApprovalStep(transferId) {
 }
 
 export async function submitTransfer(transferId) {
+  return submitTransferOrder(transferId);
+}
+
+export async function submitTransferOrder(transferId) {
   const ready = await ensureSupabaseReady();
   if (!ready || !transferId) return { ok: false, error: 'Not ready' };
-  const { data, error } = await supabaseClient.rpc('fn_submit_transfer', { p_transfer_id: transferId });
-  if (error) return { ok: false, error: error.message };
-  return data || { ok: false };
+  const primary = await supabaseClient.rpc('fn_submit_transfer_order', { p_transfer_id: transferId });
+  if (!primary.error) return primary.data || { ok: false };
+  const fallback = await supabaseClient.rpc('fn_submit_transfer', { p_transfer_id: transferId });
+  if (fallback.error) return { ok: false, error: fallback.error.message };
+  return fallback.data || { ok: false };
 }
 
 export async function approveTransferLevel(transferId, level, approvedBy) {
@@ -89,26 +108,42 @@ export async function approveTransferLevel(transferId, level, approvedBy) {
   return data || { ok: false };
 }
 
-export async function rejectTransfer(transferId, rejectedBy) {
+export async function approveTransferOrder(transferId, approvedBy) {
   const ready = await ensureSupabaseReady();
   if (!ready || !transferId) return { ok: false, error: 'Not ready' };
-  const { data, error } = await supabaseClient.rpc('fn_reject_transfer', {
-    p_transfer_id: transferId,
-    p_rejected_by: rejectedBy
-  });
-  if (error) return { ok: false, error: error.message };
-  return data || { ok: false };
+  const primary = await supabaseClient.rpc('fn_approve_transfer_order', { p_transfer_id: transferId, p_approved_by: approvedBy || 'user' });
+  if (!primary.error) return primary.data || { ok: false };
+  const stepData = await getNextTransferApprovalStep(transferId);
+  const level = stepData?.next_level ?? 1;
+  return approveTransferLevel(transferId, level, approvedBy || 'user');
+}
+
+export async function rejectTransfer(transferId, rejectedBy) {
+  return declineTransferOrder(transferId, rejectedBy);
+}
+
+export async function declineTransferOrder(transferId, rejectedBy) {
+  const ready = await ensureSupabaseReady();
+  if (!ready || !transferId) return { ok: false, error: 'Not ready' };
+  const primary = await supabaseClient.rpc('fn_decline_transfer_order', { p_transfer_id: transferId, p_rejected_by: rejectedBy || 'user' });
+  if (!primary.error) return primary.data || { ok: false };
+  const fallback = await supabaseClient.rpc('fn_reject_transfer', { p_transfer_id: transferId, p_rejected_by: rejectedBy || 'user' });
+  if (fallback.error) return { ok: false, error: fallback.error.message };
+  return fallback.data || { ok: false };
 }
 
 export async function dispatchTransfer(transferId, userId) {
+  return sendTransferOrder(transferId, userId);
+}
+
+export async function sendTransferOrder(transferId, userId) {
   const ready = await ensureSupabaseReady();
   if (!ready || !transferId) return { ok: false, error: 'Not ready' };
-  const { data, error } = await supabaseClient.rpc('fn_dispatch_transfer', {
-    p_transfer_id: transferId,
-    p_user_id: userId || 'user'
-  });
-  if (error) return { ok: false, error: error.message };
-  return data || { ok: false };
+  const primary = await supabaseClient.rpc('fn_send_transfer_order', { p_transfer_id: transferId, p_user_id: userId || 'user' });
+  if (!primary.error) return primary.data || { ok: false };
+  const fallback = await supabaseClient.rpc('fn_dispatch_transfer', { p_transfer_id: transferId, p_user_id: userId || 'user' });
+  if (fallback.error) return { ok: false, error: fallback.error.message };
+  return fallback.data || { ok: false };
 }
 
 export async function receiveTransfer(transferId, userId) {

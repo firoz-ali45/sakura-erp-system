@@ -190,7 +190,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
-import { fetchTransferOrdersFull, createTransferDraft } from '@/services/transferEngine.js';
+import { fetchTransferOrdersFull, createTransferDraft, normalizeTransferStatus } from '@/services/transferEngine.js';
 import { loadTransferSourceLocations, loadTransferDestLocations, loadInventoryLocations } from '@/composables/useInventoryLocations.js';
 import { showNotification } from '@/utils/notifications';
 import { useReportExport } from '@/composables/useReportExport.js';
@@ -236,18 +236,7 @@ const filteredRows = computed(() => {
   let list = rows.value;
 
   if (activeTab.value !== 'all') {
-    const s = activeTab.value;
-    if (s === 'approved') {
-      list = list.filter((r) => ['level1_approved', 'level2_approved'].includes((r.status || '').toLowerCase()));
-    } else if (s === 'pending') {
-      list = list.filter((r) => (r.status || '').toLowerCase() === 'submitted');
-    } else if (s === 'declined') {
-      list = list.filter((r) => (r.status || '').toLowerCase() === 'rejected');
-    } else if (s === 'sent') {
-      list = list.filter((r) => ['dispatched', 'partially_dispatched'].includes((r.status || '').toLowerCase()));
-    } else {
-      list = list.filter((r) => (r.status || '').toLowerCase() === s);
-    }
+    list = list.filter((r) => normalizeTransferStatus(r.status) === activeTab.value);
   }
 
   if (filterDateFrom.value) {
@@ -293,31 +282,13 @@ function formatDateTime(d) {
 }
 
 function formatStatus(s) {
-  const m = {
-    draft: 'Draft',
-    submitted: 'Pending',
-    level1_approved: 'Approved',
-    level2_approved: 'Approved',
-    dispatched: 'Sent',
-    partially_dispatched: 'Sent',
-    rejected: 'Declined',
-    closed: 'Closed'
-  };
-  return m[(s || '').toLowerCase()] || s;
+  const m = { draft: 'Draft', pending: 'Pending', approved: 'Approved', declined: 'Declined', sent: 'Sent', closed: 'Closed' };
+  return m[normalizeTransferStatus(s)] || s;
 }
 
 function statusClass(s) {
-  const m = {
-    draft: 'bg-gray-100 text-gray-800',
-    submitted: 'bg-amber-100 text-amber-800',
-    level1_approved: 'bg-blue-100 text-blue-800',
-    level2_approved: 'bg-blue-100 text-blue-800',
-    dispatched: 'bg-green-100 text-green-800',
-    partially_dispatched: 'bg-green-100 text-green-800',
-    rejected: 'bg-red-100 text-red-800',
-    closed: 'bg-gray-100 text-gray-800'
-  };
-  return m[(s || '').toLowerCase()] || 'bg-gray-100 text-gray-800';
+  const m = { draft: 'bg-gray-100 text-gray-800', pending: 'bg-amber-100 text-amber-800', approved: 'bg-blue-100 text-blue-800', declined: 'bg-red-100 text-red-800', sent: 'bg-green-100 text-green-800', closed: 'bg-gray-100 text-gray-800' };
+  return m[normalizeTransferStatus(s)] || 'bg-gray-100 text-gray-800';
 }
 
 function lastAction(row) {
