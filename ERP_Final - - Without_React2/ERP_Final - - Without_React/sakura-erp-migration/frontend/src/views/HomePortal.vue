@@ -211,10 +211,14 @@
               <i class="fas fa-clipboard-check w-5 text-center"></i>
               <span>{{ $t('homePortal.inventoryCount') }}</span>
             </a>
-            <a href="#" @click.prevent="loadDashboard('inventory/transfers.html')" class="nav-link nav-sub-item flex items-center p-3 my-1 rounded-lg">
+            <router-link 
+              to="/homeportal/transfers" 
+              class="nav-link nav-sub-item flex items-center p-3 my-1 rounded-lg"
+              active-class="active"
+            >
               <i class="fas fa-arrows-alt w-5 text-center"></i>
               <span>{{ $t('homePortal.inventoryTransfers') }}</span>
-            </a>
+            </router-link>
             <a href="#" @click.prevent="loadDashboard('inventory/production.html')" class="nav-link nav-sub-item flex items-center p-3 my-1 rounded-lg">
               <i class="fas fa-industry w-5 text-center"></i>
               <span>{{ $t('homePortal.inventoryProduction') }}</span>

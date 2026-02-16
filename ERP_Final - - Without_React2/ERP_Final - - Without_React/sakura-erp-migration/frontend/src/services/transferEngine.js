@@ -5,6 +5,101 @@
 
 import { ensureSupabaseReady, supabaseClient } from '@/services/supabase.js';
 
+// --- Stock Transfers (TRS-000001, separate from TO) ---
+
+export async function createTransferFromTo(toId) {
+  const ready = await ensureSupabaseReady();
+  if (!ready || !toId) return { ok: false, error: 'Not ready' };
+  const { data, error } = await supabaseClient.rpc('fn_create_transfer_from_to', { p_to_id: toId });
+  if (error) return { ok: false, error: error.message };
+  return data || { ok: false };
+}
+
+export async function getStockTransferById(transferId) {
+  const ready = await ensureSupabaseReady();
+  if (!ready || !transferId) return null;
+  const { data, error } = await supabaseClient
+    .from('v_stock_transfers_full')
+    .select('*')
+    .eq('id', transferId)
+    .single();
+  if (error) return null;
+  return data;
+}
+
+export async function fetchStockTransferItems(transferId) {
+  const ready = await ensureSupabaseReady();
+  if (!ready || !transferId) return [];
+  const { data, error } = await supabaseClient
+    .from('v_stock_transfer_items_full')
+    .select('*')
+    .eq('transfer_id', transferId)
+    .order('item_id');
+  if (error) return [];
+  return data || [];
+}
+
+export async function fetchStockTransfersList() {
+  const ready = await ensureSupabaseReady();
+  if (!ready) return [];
+  const { data, error } = await supabaseClient
+    .from('v_stock_transfers_full')
+    .select('*')
+    .order('created_at', { ascending: false });
+  if (error) return [];
+  return data || [];
+}
+
+export async function confirmPickingStockTransfer(transferId, userId) {
+  const ready = await ensureSupabaseReady();
+  if (!ready || !transferId) return { ok: false, error: 'Not ready' };
+  const { data, error } = await supabaseClient.rpc('fn_confirm_picking_stock_transfer', {
+    p_transfer_id: transferId,
+    p_user_id: userId || 'user'
+  });
+  if (error) return { ok: false, error: error.message };
+  return data || { ok: false };
+}
+
+export async function dispatchStockTransfer(transferId, userId) {
+  const ready = await ensureSupabaseReady();
+  if (!ready || !transferId) return { ok: false, error: 'Not ready' };
+  const { data, error } = await supabaseClient.rpc('fn_dispatch_stock_transfer', {
+    p_transfer_id: transferId,
+    p_user_id: userId || 'user'
+  });
+  if (error) return { ok: false, error: error.message };
+  return data || { ok: false };
+}
+
+export async function receiveStockTransferItem(transferId, itemId, batchId, receivedQty, damagedQty, rejectedQty, userId) {
+  const ready = await ensureSupabaseReady();
+  if (!ready || !transferId) return { ok: false, error: 'Not ready' };
+  const { data, error } = await supabaseClient.rpc('fn_receive_stock_transfer_item', {
+    p_transfer_id: transferId,
+    p_item_id: itemId,
+    p_batch_id: batchId || null,
+    p_received_qty: Number(receivedQty) || 0,
+    p_damaged_qty: Number(damagedQty) || 0,
+    p_rejected_qty: Number(rejectedQty) || 0,
+    p_user_id: userId || 'user'
+  });
+  if (error) return { ok: false, error: error.message };
+  return data || { ok: false };
+}
+
+export async function fetchStockTransferAudit(transferId) {
+  const ready = await ensureSupabaseReady();
+  if (!ready || !transferId) return [];
+  const { data, error } = await supabaseClient
+    .from('stock_transfer_audit')
+    .select('*')
+    .eq('transfer_id', transferId)
+    .order('performed_at', { ascending: true });
+  if (error) return [];
+  return data || [];
+}
+
 // --- Views ---
 
 export async function fetchTransferOrdersFull() {

@@ -12,10 +12,11 @@ export class AuditLogger {
 
     try {
       const currentUser = JSON.parse(localStorage.getItem('sakura_current_user') || '{}');
+      const userId = currentUser.id ?? currentUser.email ?? currentUser.name ?? null;
       const { data, error } = await this.supabase
         .from('audit_logs')
         .insert([{
-          user_id: currentUser.id || null,
+          user_id: userId ? String(userId) : null,
           action: action,
           entity_type: entityType,
           entity_id: entityId,

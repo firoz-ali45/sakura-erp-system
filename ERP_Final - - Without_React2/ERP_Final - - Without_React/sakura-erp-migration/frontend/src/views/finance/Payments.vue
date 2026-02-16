@@ -166,16 +166,19 @@
 import { ref, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
+import { useSubmitGuard } from '@/composables/useSubmitGuard';
+import { useAuditLog } from '@/composables/useAuditLog';
 
 const { t } = useI18n();
 const router = useRouter();
+const { submitting, guard } = useSubmitGuard();
+const { logAction } = useAuditLog();
 const payments = ref([]);
 const suppliers = ref([]);
 const openInvoices = ref([]);
 const banks = ref([]);
 const loading = ref(true);
 const showCreateModal = ref(false);
-const submitting = ref(false);
 
 const newPayment = ref({
   supplier_id: '',
@@ -298,36 +301,37 @@ const loadOpenInvoices = async () => {
 };
 
 const submitPayment = async () => {
-  if (!canSubmit.value || submitting.value) return;
-  submitting.value = true;
-  try {
-    const { supabaseClient } = await import('@/services/supabase.js');
-    const authStore = (await import('@/stores/auth')).useAuthStore();
-    
-    const inv = openInvoices.value.find(i => i.id === newPayment.value.invoice_id);
-    await supabaseClient.from('finance_payments').insert({
-      payment_type: 'MANUAL',
-      payment_method: 'BANK_TRANSFER',
-      purchasing_invoice_id: newPayment.value.invoice_id,
-      vendor_id: inv?.supplier_id ?? newPayment.value.supplier_id ?? null,
-      bank_id: newPayment.value.bank_id || null,
-      amount: newPayment.value.amount,
-      currency: 'SAR',
-      reference: newPayment.value.reference_number || null,
-      payment_date: newPayment.value.payment_date,
-      status: 'completed',
-      created_by: authStore.user?.name || 'System'
-    });
-    
-    showCreateModal.value = false;
-    newPayment.value = { supplier_id: '', invoice_id: null, amount: 0, payment_date: new Date().toISOString().slice(0, 10), reference_number: '', bank_id: '' };
-    await loadPayments();
-  } catch (e) {
-    console.error('Submit payment:', e);
-    alert('Failed to submit payment: ' + (e.message || 'Unknown error'));
-  } finally {
-    submitting.value = false;
-  }
+  if (!canSubmit.value) return;
+  await guard(async () => {
+    try {
+      const { supabaseClient } = await import('@/services/supabase.js');
+      const authStore = (await import('@/stores/auth')).useAuthStore();
+      
+      const inv = openInvoices.value.find(i => i.id === newPayment.value.invoice_id);
+      const payload = {
+        payment_type: 'MANUAL',
+        payment_method: 'BANK_TRANSFER',
+        purchasing_invoice_id: newPayment.value.invoice_id,
+        vendor_id: inv?.supplier_id ?? newPayment.value.supplier_id ?? null,
+        bank_id: newPayment.value.bank_id || null,
+        amount: newPayment.value.amount,
+        currency: 'SAR',
+        reference: newPayment.value.reference_number || null,
+        payment_date: newPayment.value.payment_date,
+        status: 'completed',
+        created_by: authStore.user?.name || 'System'
+      };
+      const { data } = await supabaseClient.from('finance_payments').insert(payload).select('id, payment_number').single();
+      await logAction('INSERT', 'finance_payments', data?.id, null, payload);
+      
+      showCreateModal.value = false;
+      newPayment.value = { supplier_id: '', invoice_id: null, amount: 0, payment_date: new Date().toISOString().slice(0, 10), reference_number: '', bank_id: '' };
+      await loadPayments();
+    } catch (e) {
+      console.error('Submit payment:', e);
+      alert('Failed to submit payment: ' + (e.message || 'Unknown error'));
+    }
+  });
 };
 
 const viewPayment = (id) => router.push(`/homeportal/payment-detail/${id}`);

@@ -296,7 +296,7 @@ import {
   submitTransfer,
   approveTransferLevel,
   rejectTransfer,
-  dispatchTransfer,
+  createTransferFromTo,
   deleteTransferDraft,
   updateTransferDraft,
   addItemsToTransferOrder,
@@ -545,14 +545,13 @@ async function doDecline() {
 async function sendItems() {
   sending.value = true;
   try {
-    const result = await dispatchTransfer(order.value.id, getCurrentUserName());
-    if (result.ok) {
-      showNotification('Transfer dispatched', 'success');
-      await load();
+    const result = await createTransferFromTo(order.value.id);
+    if (result.ok && result.transfer_id) {
+      showNotification('Transfer created: ' + (result.transfer_number || ''), 'success');
       await forceInventoryViewsRefresh();
-      router.push(`/homeportal/transfer-sending/${order.value.id}`);
+      router.push(`/homeportal/transfer-sending/${result.transfer_id}`);
     } else {
-      showNotification(result.error || 'Send failed', 'error');
+      showNotification(result.error || 'Create transfer failed', 'error');
     }
   } catch (e) {
     showNotification(e?.message || 'Error', 'error');

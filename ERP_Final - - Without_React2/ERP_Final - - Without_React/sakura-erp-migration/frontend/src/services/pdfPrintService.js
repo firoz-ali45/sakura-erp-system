@@ -148,6 +148,60 @@ export function printTransferOrder(order, items) {
 }
 
 /**
+ * Build Stock Transfer Document print HTML (TRS-000001, Linked TO: TO-000010).
+ */
+export function buildStockTransferPrintHtml(transfer, items) {
+  const now = new Date();
+  const printDate = now.toLocaleDateString('en-US');
+  const printTime = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+  const statusMap = { draft: 'Draft', picked: 'Picked', in_transit: 'In Transit', partially_received: 'Partially Received', completed: 'Completed', cancelled: 'Cancelled' };
+  const statusText = statusMap[(transfer?.status || '').toLowerCase()] || transfer?.status || '';
+
+  const parts = [];
+  parts.push(buildHeaderBlock({
+    printDate,
+    printTime,
+    systemName: 'Sakura Management Hub',
+    title: 'Stock Transfer Document',
+    docNumber: transfer?.transfer_number || 'Draft',
+    statusText
+  }));
+
+  parts.push('<div style="margin-bottom: 24px;">');
+  parts.push(buildFieldRow('Transfer No', transfer?.transfer_number || '—'));
+  parts.push(buildFieldRow('Linked TO', transfer?.to_number || '—'));
+  parts.push(buildFieldRow('Source', transfer?.from_name || transfer?.from_code || '—'));
+  parts.push(buildFieldRow('Destination', transfer?.to_name || transfer?.to_code || '—'));
+  parts.push(buildFieldRow('Date', transfer?.business_date ? formatDate(transfer.business_date) : '—'));
+  parts.push(buildFieldRow('Creator', transfer?.created_by || '—'));
+  parts.push(buildFieldRow('Items', (items || []).length));
+  parts.push(buildFieldRow('Total Qty', (items || []).reduce((s, it) => s + (Number(it.requested_qty ?? it.quantity ?? it.qty) || 0), 0)));
+  parts.push('</div>');
+
+  parts.push(buildItemsTable(items));
+
+  parts.push('<div style="margin-top: 32px; padding-top: 16px; border-top: 1px solid #d1d5db; display: grid; grid-template-columns: 1fr 1fr; gap: 24px; font-size: 11px;">');
+  parts.push('<div><strong>Dispatch signature:</strong> _________________</div>');
+  parts.push('<div><strong>Receive signature:</strong> _________________</div>');
+  parts.push('</div>');
+
+  parts.push('<div style="margin-top: 32px; padding-top: 16px; border-top: 1px solid #d1d5db; display: flex; justify-content: space-between; align-items: center; font-size: 11px; color: #6b7280;">');
+  parts.push('<div>Sakura Management Hub</div>');
+  parts.push('<div>Page 1 / 1</div>');
+  parts.push('</div>');
+
+  return parts.join('');
+}
+
+/**
+ * Open print dialog for Stock Transfer Document.
+ */
+export function printStockTransfer(transfer, items) {
+  const html = buildStockTransferPrintHtml(transfer, items);
+  return printDocument(html, 'Stock Transfer - ' + (transfer?.transfer_number || 'Draft'));
+}
+
+/**
  * Generic print document. Opens hidden iframe, writes HTML, triggers print.
  */
 export function printDocument(htmlContent, title = 'Document') {

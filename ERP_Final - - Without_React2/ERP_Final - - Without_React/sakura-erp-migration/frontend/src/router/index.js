@@ -109,6 +109,12 @@ const routes = [
     meta: { requiresAuth: true }
   },
   {
+        path: 'transfers',
+    name: 'InventoryTransfers',
+        component: () => import('../views/inventory/Transfers.vue'),
+    meta: { requiresAuth: true }
+  },
+  {
         path: 'grns',
     name: 'InventoryGRNs',
         component: () => import('../views/inventory/GRNs.vue'),

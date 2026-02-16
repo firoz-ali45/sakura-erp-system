@@ -112,8 +112,7 @@ export const sidebarConfig = [
       },
       {
         id: 'transfers',
-        action: 'loadDashboard',
-        actionParam: 'inventory/transfers.html',
+        route: '/homeportal/transfers',
         icon: 'fas fa-arrows-alt',
         i18nKey: 'homePortal.inventoryTransfers'
       },
