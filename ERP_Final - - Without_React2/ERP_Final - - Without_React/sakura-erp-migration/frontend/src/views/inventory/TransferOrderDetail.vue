@@ -74,8 +74,8 @@
             Send Items
           </button>
         </template>
-        <!-- Approved but not yet fully (e.g. L1 only) — show Accept for L2 -->
-        <template v-else-if="['level1_approved', 'level2_approved'].includes(order?.status)">
+        <!-- Approved but not yet fully (e.g. L1 only) — show Decline, Print, Accept for L2 -->
+        <template v-else-if="isApprovedNotDispatchable">
           <button @click="doDecline" :disabled="declining" class="px-4 py-2 border border-red-300 rounded-lg text-red-600 hover:bg-red-50">
             Decline
           </button>
@@ -338,6 +338,10 @@ const canDispatch = ref(false);
 
 const today = new Date().toISOString().slice(0, 10);
 const totalRequested = computed(() => items.value.reduce((s, it) => s + (Number(it.requested_qty) || 0), 0));
+const isApprovedNotDispatchable = computed(() => {
+  const s = (order.value?.status || '').toLowerCase();
+  return ['level1_approved', 'level2_approved'].includes(s) && !canDispatch.value;
+});
 const enrichedItems = computed(() => {
   return items.value.map((it) => {
     const stock = stockMap.value[it.item_id] || {};
@@ -374,11 +378,33 @@ function formatDateTime(d) {
   try { return new Date(d).toLocaleString('en-GB'); } catch { return d; }
 }
 function formatStatus(s) {
-  const m = { draft: 'Draft', submitted: 'Pending', level1_approved: 'Approved', level2_approved: 'Approved', rejected: 'Declined', dispatched: 'Sent', closed: 'Closed' };
+  const m = {
+    draft: 'Draft',
+    submitted: 'Pending',
+    level1_approved: 'L1 Approved',
+    level2_approved: 'L2 Approved',
+    rejected: 'Declined',
+    dispatched: 'Sent',
+    partially_dispatched: 'Partially Sent',
+    partially_received: 'Partially Received',
+    completed: 'Completed',
+    closed: 'Closed'
+  };
   return m[(s || '').toLowerCase()] || s;
 }
 function statusClass(s) {
-  const m = { draft: 'bg-gray-100 text-gray-800', submitted: 'bg-amber-100 text-amber-800', level1_approved: 'bg-blue-100 text-blue-800', level2_approved: 'bg-blue-100 text-blue-800', rejected: 'bg-red-100 text-red-800', dispatched: 'bg-green-100 text-green-800', closed: 'bg-gray-100 text-gray-800' };
+  const m = {
+    draft: 'bg-gray-100 text-gray-800',
+    submitted: 'bg-amber-100 text-amber-800',
+    level1_approved: 'bg-blue-100 text-blue-800',
+    level2_approved: 'bg-blue-100 text-blue-800',
+    rejected: 'bg-red-100 text-red-800',
+    dispatched: 'bg-green-100 text-green-800',
+    partially_dispatched: 'bg-green-100 text-green-800',
+    partially_received: 'bg-blue-100 text-blue-800',
+    completed: 'bg-green-100 text-green-800',
+    closed: 'bg-gray-100 text-gray-800'
+  };
   return m[(s || '').toLowerCase()] || 'bg-gray-100 text-gray-800';
 }
 function getCurrentUserName() {
