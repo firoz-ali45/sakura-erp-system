@@ -137,6 +137,18 @@ const props = defineProps({
   flowType: {
     type: String,
     default: 'purchase'
+  },
+  /** When flowType=transfer: transfer_orders_id from stock_transfer. If set, TO exists (never show "Not Created"). */
+  transferOrdersId: {
+    type: [String, Number],
+    required: false,
+    default: null
+  },
+  /** When flowType=transfer: TO number from parent (e.g. transfer.to_number). Used when transferOrdersId exists. */
+  transferOrderNumber: {
+    type: String,
+    required: false,
+    default: ''
   }
 });
 
@@ -192,7 +204,7 @@ const loadFlow = async () => {
     console.error('Document flow error:', err);
     error.value = 'Failed to load document flow';
     if (props.flowType === 'transfer' || currentType === 'TO' || currentType === 'TRS') {
-      buildTransferFlowEmpty(currentType);
+      buildTransferFlowFromProps(currentType);
     } else {
       buildFlowFromTraceGraph({ pr: null, po: null, grn: null, pur: null }, currentType);
     }
@@ -268,10 +280,40 @@ const buildTransferFlowEmpty = (currentType) => {
   flowNodes.value = nodes;
 };
 
+// When DB fetch fails but parent passed transferOrdersId — show TO exists
+const buildTransferFlowFromProps = (currentType) => {
+  const linkedToId = props.transferOrdersId ?? null;
+  const linkedToNum = (props.transferOrderNumber || '').trim();
+  const rawId = props.docId ?? props.routeDocId;
+  const currentId = rawId != null && rawId !== '' ? String(rawId) : null;
+  const currentNum = (props.currentNumber || '').trim();
+  const nodes = [
+    {
+      doc_type: 'TO',
+      doc_id: linkedToId || null,
+      doc_number: linkedToNum || (linkedToId ? 'TO (linked)' : null),
+      doc_status: linkedToId ? 'linked' : 'not_created',
+      is_current: currentType === 'TO',
+      sequence_order: 1
+    },
+    {
+      doc_type: 'TRS',
+      doc_id: currentType === 'TRS' && currentId ? currentId : null,
+      doc_number: currentType === 'TRS' && currentId ? (currentNum || currentId) : null,
+      doc_status: currentType === 'TRS' && currentId ? '—' : 'not_created',
+      is_current: currentType === 'TRS',
+      sequence_order: 2
+    },
+    { doc_type: 'RECEIVED', doc_id: null, doc_number: null, doc_status: 'not_created', is_current: false, sequence_order: 3 }
+  ];
+  flowNodes.value = nodes;
+};
+
 const buildTransferFlowManually = async (currentType, docId) => {
   const { supabaseClient } = await import('@/services/supabase.js');
   let toData = null;
   let trsData = null;
+  const linkedToId = props.transferOrdersId ?? null;
 
   if (currentType === 'TO') {
     const { data: to } = await supabaseClient
@@ -297,15 +339,16 @@ const buildTransferFlowManually = async (currentType, docId) => {
       .eq('id', docId)
       .single();
     trsData = st;
-    if (st?.transfer_orders_id) {
+    const toId = st?.transfer_orders_id ?? linkedToId;
+    if (toId) {
       const { data: to } = await supabaseClient
         .from('transfer_orders')
         .select('id, transfer_number, status')
-        .eq('id', st.transfer_orders_id)
+        .eq('id', toId)
         .single();
       toData = to;
-      if (!toData && st.transfer_orders_id) {
-        toData = { id: st.transfer_orders_id, transfer_number: 'TO-' + String(st.transfer_orders_id).slice(0, 8), status: 'linked' };
+      if (!toData && toId) {
+        toData = { id: toId, transfer_number: props.transferOrderNumber || 'TO (linked)', status: 'linked' };
       }
     }
   }
@@ -313,13 +356,14 @@ const buildTransferFlowManually = async (currentType, docId) => {
   const rawId = props.docId ?? props.routeDocId;
   const currentId = rawId != null && rawId !== '' ? String(rawId) : null;
   const currentNum = (props.currentNumber || '').trim();
+  const hasLinkedTo = !!(toData?.id || trsData?.transfer_orders_id || linkedToId);
 
   const nodes = [
     {
       doc_type: 'TO',
-      doc_id: toData?.id || (trsData?.transfer_orders_id ?? (currentType === 'TO' && currentId ? currentId : null)),
-      doc_number: toData?.transfer_number || toData?.to_number || (currentType === 'TO' && currentId ? currentNum || currentId : (trsData?.transfer_orders_id ? 'TO (linked)' : null)),
-      doc_status: toData?.status || (currentType === 'TO' && currentId ? '—' : (trsData?.transfer_orders_id ? 'linked' : 'not_created')),
+      doc_id: toData?.id || trsData?.transfer_orders_id || linkedToId || (currentType === 'TO' && currentId ? currentId : null),
+      doc_number: toData?.transfer_number || toData?.to_number || props.transferOrderNumber || (currentType === 'TO' && currentId ? currentNum || currentId : (hasLinkedTo ? 'TO (linked)' : null)),
+      doc_status: toData?.status || (currentType === 'TO' && currentId ? '—' : (hasLinkedTo ? 'linked' : 'not_created')),
       is_current: currentType === 'TO',
       sequence_order: 1
     },

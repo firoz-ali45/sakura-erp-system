@@ -205,6 +205,8 @@
         doc-type="trs"
         :doc-id="transfer.id"
         :current-number="transfer.transfer_number"
+        :transfer-orders-id="transfer.transfer_orders_id"
+        :transfer-order-number="transfer.to_number"
       />
 
       <div v-if="hasMissingBatch && transfer?.status === 'picking'" class="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-6 text-amber-800">

@@ -81,6 +81,19 @@
           <p v-else class="text-green-600 text-sm">None</p>
         </div>
 
+        <!-- Driver role mismatch (users.role vs user_roles) -->
+        <div class="bg-white rounded-lg shadow p-6">
+          <h3 class="font-bold text-lg mb-2">Driver Role Mismatch</h3>
+          <p class="text-sm text-gray-600 mb-3">Users with users.role=driver but no DRIVER in user_roles. Assign Driver role in User Management.</p>
+          <div v-if="(health.driver_role_mismatch || []).length" class="space-y-2">
+            <div v-for="(o, i) in health.driver_role_mismatch" :key="i" class="flex gap-2 text-sm py-2 border-b">
+              <span class="font-mono text-amber-600">{{ o.name || o.user_id }}</span>
+              <span>— users.role={{ o.users_role }}, no user_roles DRIVER</span>
+            </div>
+          </div>
+          <p v-else class="text-green-600 text-sm">None</p>
+        </div>
+
         <!-- Transfer orphan TO -->
         <div class="bg-white rounded-lg shadow p-6">
           <h3 class="font-bold text-lg mb-2">Transfer Orphan TO</h3>
@@ -95,7 +108,7 @@
         </div>
 
         <!-- Counts -->
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
           <div class="bg-white rounded-lg shadow p-4">
             <h4 class="font-semibold text-gray-700">Users without roles</h4>
             <p class="text-2xl font-bold mt-1" :class="health.users_without_roles_count ? 'text-amber-600' : 'text-gray-800'">
@@ -118,6 +131,12 @@
             <h4 class="font-semibold text-gray-700">Transfer orphan TO</h4>
             <p class="text-2xl font-bold mt-1" :class="(health.transfer_orphan_to || []).length ? 'text-red-600' : 'text-gray-800'">
               {{ (health.transfer_orphan_to || []).length }}
+            </p>
+          </div>
+          <div class="bg-white rounded-lg shadow p-4">
+            <h4 class="font-semibold text-gray-700">Driver role mismatch</h4>
+            <p class="text-2xl font-bold mt-1" :class="(health.driver_role_mismatch || []).length ? 'text-amber-600' : 'text-gray-800'">
+              {{ (health.driver_role_mismatch || []).length }}
             </p>
           </div>
         </div>

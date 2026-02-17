@@ -80,18 +80,40 @@ export async function getUsersByRoleCode(roleCode) {
   return getUsersByRoleId(roles[0].id);
 }
 
-/** Active drivers: users JOIN user_roles JOIN roles WHERE role_code=DRIVER, status=active. DB source of truth. */
+/** Active drivers: v_drivers view (users JOIN user_roles JOIN roles WHERE role_code=DRIVER). DB source of truth. NO cache. */
 export async function getActiveDrivers() {
   const client = await sb();
   if (!client) return [];
+  const { data, error } = await client.from('v_drivers').select('id, name, email, phone').order('name');
+  if (error) {
+    console.warn('getActiveDrivers fallback:', error.message);
+    return getActiveDriversFallback(client);
+  }
+  return (data || []).sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+}
+
+/** Fallback when v_drivers not available */
+async function getActiveDriversFallback(client) {
   const { data: roles } = await client.from('roles').select('id').ilike('role_code', 'DRIVER').neq('deleted', true);
   if (!roles?.length) return [];
   const roleIds = roles.map(r => r.id);
   const { data: ur } = await client.from('user_roles').select('user_id').in('role_id', roleIds);
   const userIds = [...new Set((ur || []).map(r => r.user_id).filter(Boolean))];
   if (!userIds.length) return [];
-  const { data: users } = await client.from('users').select('id, name, email, phone').eq('status', 'active').in('id', userIds).order('name');
+  const { data: users } = await client.from('users').select('id, name, email, phone').or('status.eq.active,status.is.null').in('id', userIds).order('name');
   return (users || []).sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+}
+
+/** Central: get users by role_code. All modules use this. */
+export async function getUsersByRole(roleCode) {
+  const client = await sb();
+  if (!client) return [];
+  const { data, error } = await client.rpc('fn_get_users_by_role', { p_role_code: roleCode });
+  if (error) {
+    console.warn('getUsersByRole:', error.message);
+    return roleCode === 'DRIVER' ? getActiveDrivers() : [];
+  }
+  return data || [];
 }
 
 export async function updateRole(id, payload, actingUserId = null) {
