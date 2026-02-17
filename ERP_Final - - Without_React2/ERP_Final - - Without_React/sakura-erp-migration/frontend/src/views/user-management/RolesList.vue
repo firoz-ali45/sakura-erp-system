@@ -76,9 +76,20 @@ import { usePermissions } from '@/composables/usePermissions';
 const router = useRouter();
 const { permissions, loadPermissions } = usePermissions();
 const canCreateRole = computed(() => {
+  if (_isAdmin()) return true;
   const p = permissions.value;
-  return p.has('*') || p.has('user_management_view') || p.has('user_management_roles');
+  return p.has('*') || p.has('user_management_view') || p.has('user_management_roles') || p.has('role_create');
 });
+
+function _isAdmin() {
+  try {
+    const u = localStorage.getItem('sakura_current_user');
+    if (!u) return false;
+    const parsed = JSON.parse(u);
+    const role = (parsed.role || parsed.primaryRoleCode || '').toLowerCase();
+    return role === 'admin' || role === 'administrator';
+  } catch { return false; }
+}
 const roles = ref([]);
 const tab = ref('Active');
 const tabs = ['Active', 'Inactive', 'Deleted'];

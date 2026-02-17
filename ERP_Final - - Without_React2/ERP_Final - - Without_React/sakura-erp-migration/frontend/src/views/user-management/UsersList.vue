@@ -170,8 +170,9 @@ import { formatDate as formatDateUtil } from '@/utils/dateFormat';
 const { t, locale } = useI18n();
 const { permissions, loadPermissions } = usePermissions();
 const canCreateUser = computed(() => {
+  if (_isAdmin()) return true;
   const p = permissions.value;
-  return p.has('*') || p.has('user_management_view') || p.has('user_management_users');
+  return p.has('*') || p.has('user_management_view') || p.has('user_management_users') || p.has('user_create');
 });
 const users = ref([]);
 const roles = ref([]);
@@ -205,6 +206,16 @@ const filteredUsers = computed(() => {
   }
   return list;
 });
+
+function _isAdmin() {
+  try {
+    const u = localStorage.getItem('sakura_current_user');
+    if (!u) return false;
+    const parsed = JSON.parse(u);
+    const role = (parsed.role || parsed.primaryRoleCode || '').toLowerCase();
+    return role === 'admin' || role === 'administrator';
+  } catch { return false; }
+}
 
 function getRoleName(role) {
   const r = roles.value.find(x => (x.role_code || '').toLowerCase() === (role || '').toLowerCase());
