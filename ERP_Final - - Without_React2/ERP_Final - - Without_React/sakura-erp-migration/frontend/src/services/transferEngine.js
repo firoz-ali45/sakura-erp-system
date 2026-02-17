@@ -127,11 +127,12 @@ export async function fetchDrivers() {
   const ready = await ensureSupabaseReady();
   if (!ready) return [];
   const { data, error } = await supabaseClient.from('v_drivers').select('id, name, email, phone').order('name');
-  if (error) {
-    const { data: usersData } = await supabaseClient.from('users').select('id, name, email, phone').ilike('role', 'driver').order('name');
-    return usersData || [];
-  }
-  return data || [];
+  if (!error && data?.length) return data;
+  const { getUsersByRoleCode } = await import('@/services/userManagementService.js');
+  const byRole = await getUsersByRoleCode('DRIVER');
+  if (byRole?.length) return byRole.map(u => ({ id: u.id, name: u.name, email: u.email, phone: u.phone }));
+  const { data: legacy } = await supabaseClient.from('users').select('id, name, email, phone').ilike('role', 'driver').order('name');
+  return legacy || [];
 }
 
 export async function dispatchToDriver(transferId, driverId, vehicleNo, sealNumber, expectedDeliveryTime, notes, userId) {

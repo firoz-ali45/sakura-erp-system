@@ -4,6 +4,7 @@
       <div class="flex justify-between items-center mb-4">
         <h2 class="text-2xl md:text-3xl font-bold text-gray-800">{{ $t('userManagement.sectionTitle') }} → {{ $t('userManagement.users') }}</h2>
         <button 
+          v-if="canCreateUser"
           @click="$router.push('/homeportal/user-management/user/new')" 
           class="px-4 py-2 bg-gradient-to-r from-green-600 to-green-700 text-white rounded-lg hover:from-green-700 hover:to-green-800 transition-all font-medium shadow-md flex items-center gap-2"
         >
@@ -37,7 +38,7 @@
           </div>
           <select v-model="roleFilter" class="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#284b44]">
             <option value="">{{ $t('userManagement.allRoles') }}</option>
-            <option v-for="r in roles" :key="r.id" :value="r.code">{{ r.name }}</option>
+            <option v-for="r in roles" :key="r.id" :value="r.role_code">{{ r.role_name }}</option>
           </select>
         </div>
       </div>
@@ -77,7 +78,7 @@
               <td class="px-6 py-4 whitespace-nowrap font-medium text-gray-900">{{ user.name }}</td>
               <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{{ user.email }}</td>
               <td class="px-6 py-4 whitespace-nowrap">
-                <span class="px-2 py-1 text-xs font-semibold rounded-full bg-[#284b44]/10 text-[#284b44]">{{ getRoleName(user.role) }}</span>
+                <span class="px-2 py-1 text-xs font-semibold rounded-full bg-[#284b44]/10 text-[#284b44]">{{ user.primaryRoleName || getRoleName(user.role) }}</span>
               </td>
               <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{{ user.department || '-' }}</td>
               <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{{ user.assignedLocations || 'All' }}</td>
@@ -96,12 +97,17 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue';
-import { getUsers } from '@/services/supabase';
-import { getRoles } from '@/services/userManagementService';
+import { getUsersEnriched, getRoles } from '@/services/userManagementService';
 import { useI18n } from '@/composables/useI18n';
+import { usePermissions } from '@/composables/usePermissions';
 import { formatDate as formatDateUtil } from '@/utils/dateFormat';
 
 const { t, locale } = useI18n();
+const { permissions, loadPermissions } = usePermissions();
+const canCreateUser = computed(() => {
+  const p = permissions.value;
+  return p.has('*') || p.has('user_management_view') || p.has('user_management_users');
+});
 const users = ref([]);
 const roles = ref([]);
 const loading = ref(false);
@@ -121,18 +127,19 @@ const filteredUsers = computed(() => {
   if (searchTerm.value) {
     const term = searchTerm.value.toLowerCase();
     list = list.filter(u => 
-      u.name?.toLowerCase().includes(term) || u.email?.toLowerCase().includes(term) || u.role?.toLowerCase().includes(term)
+      u.name?.toLowerCase().includes(term) || u.email?.toLowerCase().includes(term) || 
+      (u.primaryRoleName || u.role)?.toLowerCase().includes(term) || (u.primaryRoleCode || u.role)?.toLowerCase().includes(term)
     );
   }
   if (roleFilter.value) {
-    list = list.filter(u => (u.role || '').toLowerCase() === roleFilter.value.toLowerCase());
+    list = list.filter(u => (u.primaryRoleCode || u.role || '').toLowerCase() === roleFilter.value.toLowerCase());
   }
   return list;
 });
 
 function getRoleName(role) {
-  const r = roles.value.find(x => (x.code || '').toLowerCase() === (role || '').toLowerCase());
-  return r?.name || role;
+  const r = roles.value.find(x => (x.role_code || '').toLowerCase() === (role || '').toLowerCase());
+  return r?.role_name || role;
 }
 
 function getStatusLabel(s) {
@@ -157,7 +164,7 @@ function formatDate(d) {
 async function load() {
   loading.value = true;
   try {
-    const [u, r] = await Promise.all([getUsers(), getRoles()]);
+    const [u, r] = await Promise.all([getUsersEnriched(), getRoles()]);
     users.value = u || [];
     roles.value = r || [];
   } catch (e) {
@@ -167,7 +174,10 @@ async function load() {
   }
 }
 
-onMounted(load);
+onMounted(async () => {
+  await loadPermissions();
+  load();
+});
 </script>
 
 <style scoped>

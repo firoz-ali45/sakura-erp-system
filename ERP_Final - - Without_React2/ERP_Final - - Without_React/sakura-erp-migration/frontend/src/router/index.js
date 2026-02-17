@@ -1,5 +1,6 @@
 import { createRouter, createWebHashHistory } from 'vue-router';
 import { useAuthStore } from '../stores/auth';
+import { getCachedUserPermissions } from '@/services/permissionEngine';
 
 const routes = [
   {
@@ -246,55 +247,55 @@ const routes = [
         path: 'user-management/users',
         name: 'UserManagementUsers',
         component: () => import('../views/user-management/UsersList.vue'),
-        meta: { requiresAuth: true }
+        meta: { requiresAuth: true, requiredPermission: 'user_management_users' }
       },
       {
         path: 'user-management/user/:id',
         name: 'UserProfile',
         component: () => import('../views/user-management/UserProfile.vue'),
-        meta: { requiresAuth: true }
+        meta: { requiresAuth: true, requiredPermission: 'user_management_users' }
       },
       {
         path: 'user-management/roles',
         name: 'UserManagementRoles',
         component: () => import('../views/user-management/RolesList.vue'),
-        meta: { requiresAuth: true }
+        meta: { requiresAuth: true, requiredPermission: 'user_management_roles' }
       },
       {
         path: 'user-management/role/:id',
         name: 'RoleDetail',
         component: () => import('../views/user-management/RoleDetail.vue'),
-        meta: { requiresAuth: true }
+        meta: { requiresAuth: true, requiredPermission: 'user_management_roles' }
       },
       {
         path: 'user-management/permissions',
         name: 'UserManagementPermissions',
         component: () => import('../views/user-management/PermissionsPage.vue'),
-        meta: { requiresAuth: true }
+        meta: { requiresAuth: true, requiredPermission: 'user_management_permissions' }
       },
       {
         path: 'user-management/access-matrix',
         name: 'UserManagementAccessMatrix',
         component: () => import('../views/user-management/AccessMatrixPage.vue'),
-        meta: { requiresAuth: true }
+        meta: { requiresAuth: true, requiredPermission: 'user_management_users' }
       },
       {
         path: 'user-management/activity-logs',
         name: 'UserManagementActivityLogs',
         component: () => import('../views/user-management/ActivityLogsPage.vue'),
-        meta: { requiresAuth: true }
+        meta: { requiresAuth: true, requiredPermission: 'user_management_activity_logs' }
       },
       {
         path: 'user-management/login-sessions',
         name: 'UserManagementLoginSessions',
         component: () => import('../views/user-management/LoginSessionsPage.vue'),
-        meta: { requiresAuth: true }
+        meta: { requiresAuth: true, requiredPermission: 'user_management_sessions' }
       },
       {
         path: 'user-management/security-settings',
         name: 'UserManagementSecuritySettings',
         component: () => import('../views/user-management/SecuritySettingsPage.vue'),
-        meta: { requiresAuth: true }
+        meta: { requiresAuth: true, requiredPermission: 'user_management_security' }
       },
       {
         path: 'accounts-payable',
@@ -396,6 +397,28 @@ router.beforeEach(async (to, from, next) => {
       } else {
         next();
       }
+    } else if (to.meta.requiredPermission && isAuthenticated) {
+      // Permission check for user-management routes
+      let userId = null;
+      try {
+        userId = authStore.user?.value?.id ?? authStore.user?.id;
+        if (!userId && typeof window !== 'undefined' && localStorage.getItem('sakura_current_user')) {
+          const u = JSON.parse(localStorage.getItem('sakura_current_user') || '{}');
+          userId = u.id;
+        }
+      } catch (_) {}
+      if (!userId) {
+        next('/homeportal');
+        return;
+      }
+      const perms = await getCachedUserPermissions(userId);
+      const has = perms.includes('*') || perms.includes('user_management_view') || perms.includes(to.meta.requiredPermission);
+      if (!has) {
+        console.warn('🟡 [Router] Permission denied for', to.path, 'required:', to.meta.requiredPermission);
+        next('/homeportal');
+        return;
+      }
+      next();
     } else if (to.path === '/login' && isAuthenticated) {
       // User is authenticated and on login page - redirect to homeportal
       // BUT preserve the intended route if it was specified

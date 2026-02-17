@@ -235,7 +235,7 @@
         </div>
 
         <!-- User Management Expandable Section (SAP-style RBAC) -->
-        <div class="nav-group">
+        <div v-if="canAccessUserManagement" class="nav-group">
           <a 
             href="#" 
             @click.prevent="toggleNavGroup('userManagement-group')" 
@@ -256,31 +256,31 @@
             id="userManagement-group" 
             :class="['nav-group-content', 'pl-8', { 'hidden': !userManagementGroupOpen }]"
           >
-            <router-link to="/homeportal/user-management/users" class="nav-link nav-sub-item flex items-center p-3 my-1 rounded-lg" active-class="active">
+            <router-link v-if="canUsers" to="/homeportal/user-management/users" class="nav-link nav-sub-item flex items-center p-3 my-1 rounded-lg" active-class="active">
               <i class="fas fa-user w-5 text-center"></i>
               <span>{{ $t('userManagement.users') }}</span>
             </router-link>
-            <router-link to="/homeportal/user-management/roles" class="nav-link nav-sub-item flex items-center p-3 my-1 rounded-lg" active-class="active">
+            <router-link v-if="canRoles" to="/homeportal/user-management/roles" class="nav-link nav-sub-item flex items-center p-3 my-1 rounded-lg" active-class="active">
               <i class="fas fa-user-shield w-5 text-center"></i>
               <span>{{ $t('userManagement.roles') }}</span>
             </router-link>
-            <router-link to="/homeportal/user-management/permissions" class="nav-link nav-sub-item flex items-center p-3 my-1 rounded-lg" active-class="active">
+            <router-link v-if="canPermissions" to="/homeportal/user-management/permissions" class="nav-link nav-sub-item flex items-center p-3 my-1 rounded-lg" active-class="active">
               <i class="fas fa-key w-5 text-center"></i>
               <span>{{ $t('userManagement.permissions') }}</span>
             </router-link>
-            <router-link to="/homeportal/user-management/access-matrix" class="nav-link nav-sub-item flex items-center p-3 my-1 rounded-lg" active-class="active">
+            <router-link v-if="canAccessMatrix" to="/homeportal/user-management/access-matrix" class="nav-link nav-sub-item flex items-center p-3 my-1 rounded-lg" active-class="active">
               <i class="fas fa-th-list w-5 text-center"></i>
               <span>{{ $t('userManagement.accessMatrix') }}</span>
             </router-link>
-            <router-link to="/homeportal/user-management/activity-logs" class="nav-link nav-sub-item flex items-center p-3 my-1 rounded-lg" active-class="active">
+            <router-link v-if="canActivityLogs" to="/homeportal/user-management/activity-logs" class="nav-link nav-sub-item flex items-center p-3 my-1 rounded-lg" active-class="active">
               <i class="fas fa-history w-5 text-center"></i>
               <span>{{ $t('userManagement.activityLogs') }}</span>
             </router-link>
-            <router-link to="/homeportal/user-management/login-sessions" class="nav-link nav-sub-item flex items-center p-3 my-1 rounded-lg" active-class="active">
+            <router-link v-if="canSessions" to="/homeportal/user-management/login-sessions" class="nav-link nav-sub-item flex items-center p-3 my-1 rounded-lg" active-class="active">
               <i class="fas fa-sign-in-alt w-5 text-center"></i>
               <span>{{ $t('userManagement.loginSessions') }}</span>
             </router-link>
-            <router-link to="/homeportal/user-management/security-settings" class="nav-link nav-sub-item flex items-center p-3 my-1 rounded-lg" active-class="active">
+            <router-link v-if="canSecurity" to="/homeportal/user-management/security-settings" class="nav-link nav-sub-item flex items-center p-3 my-1 rounded-lg" active-class="active">
               <i class="fas fa-shield-alt w-5 text-center"></i>
               <span>{{ $t('userManagement.securitySettings') }}</span>
             </router-link>
@@ -625,6 +625,7 @@ import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { useAuthStore } from '@/stores/auth';
 import { useI18n } from '@/composables/useI18n';
+import { usePermissions } from '@/composables/usePermissions';
 import { formatDateTime } from '@/utils/dateFormat';
 import { formatNumber } from '@/utils/numberFormat';
 import { updateUserInSupabase, initSupabase, USE_SUPABASE, supabaseClient, getUsers } from '@/services/supabase';
@@ -684,6 +685,23 @@ const reportsGroupOpen = ref(false);
 const pendingUsersCount = ref(0);
 const dataConsistent = ref(true);
 const currentDateTime = ref('');
+
+// Permissions (RBAC)
+const { permissions, hasPermission, loadPermissions } = usePermissions();
+const canAccessUserManagement = computed(() => {
+  const p = permissions.value;
+  return p.has('*') || p.has('user_management_view') || p.has('user_management_users') ||
+    p.has('user_management_roles') || p.has('user_management_permissions') ||
+    p.has('user_management_activity_logs') || p.has('user_management_sessions') ||
+    p.has('user_management_security');
+});
+const canUsers = computed(() => { const p = permissions.value; return p.has('*') || p.has('user_management_view') || p.has('user_management_users'); });
+const canRoles = computed(() => { const p = permissions.value; return p.has('*') || p.has('user_management_view') || p.has('user_management_roles'); });
+const canPermissions = computed(() => { const p = permissions.value; return p.has('*') || p.has('user_management_view') || p.has('user_management_permissions'); });
+const canAccessMatrix = computed(() => { const p = permissions.value; return p.has('*') || p.has('user_management_view') || p.has('user_management_users'); });
+const canActivityLogs = computed(() => { const p = permissions.value; return p.has('*') || p.has('user_management_view') || p.has('user_management_activity_logs'); });
+const canSessions = computed(() => { const p = permissions.value; return p.has('*') || p.has('user_management_view') || p.has('user_management_sessions'); });
+const canSecurity = computed(() => { const p = permissions.value; return p.has('*') || p.has('user_management_view') || p.has('user_management_security'); });
 
 // Computed
 const user = computed(() => authStore.user);
@@ -1145,7 +1163,8 @@ const loadProfilePhoto = async () => {
 };
 
 // Lifecycle
-onMounted(() => {
+onMounted(async () => {
+  await loadPermissions();
   // Initialize sidebar overlay state (synchronous, fast)
   try {
     const overlay = document.getElementById('sidebar-overlay');

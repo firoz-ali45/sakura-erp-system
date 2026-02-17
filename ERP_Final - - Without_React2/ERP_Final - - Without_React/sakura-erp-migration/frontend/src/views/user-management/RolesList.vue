@@ -2,7 +2,7 @@
   <div class="min-h-screen bg-[#f0e1cd] p-4 md:p-6">
     <div class="flex justify-between items-center mb-6">
       <h2 class="text-2xl font-bold text-gray-800">{{ $t('userManagement.sectionTitle') }} → {{ $t('userManagement.roles') }}</h2>
-      <button @click="showCreateModal = true" class="px-4 py-2 bg-[#284b44] text-white rounded-lg hover:bg-[#1f3d38]">
+      <button v-if="canCreateRole" @click="showCreateModal = true" class="px-4 py-2 bg-[#284b44] text-white rounded-lg hover:bg-[#1f3d38]">
         <i class="fas fa-plus mr-2"></i>{{ $t('userManagement.createRole') }}
       </button>
     </div>
@@ -55,8 +55,14 @@
 import { ref, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { getRoles, createRole } from '@/services/userManagementService';
+import { usePermissions } from '@/composables/usePermissions';
 
 const router = useRouter();
+const { permissions, loadPermissions } = usePermissions();
+const canCreateRole = computed(() => {
+  const p = permissions.value;
+  return p.has('*') || p.has('user_management_view') || p.has('user_management_roles');
+});
 const roles = ref([]);
 const tab = ref('Active');
 const tabs = ['Active', 'Inactive', 'Deleted'];
@@ -90,6 +96,7 @@ async function submitCreateRole() {
 }
 
 onMounted(async () => {
+  await loadPermissions();
   roles.value = await getRoles();
 });
 </script>

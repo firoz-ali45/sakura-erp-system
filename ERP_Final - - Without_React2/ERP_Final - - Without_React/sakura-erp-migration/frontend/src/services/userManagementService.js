@@ -58,6 +58,14 @@ export async function getUsersByRoleId(roleId) {
   return (data || []).map(r => r.users).filter(Boolean);
 }
 
+export async function getUsersByRoleCode(roleCode) {
+  const client = await sb();
+  if (!client) return [];
+  const { data: roles } = await client.from('roles').select('id').ilike('role_code', roleCode).limit(1);
+  if (!roles?.length) return [];
+  return getUsersByRoleId(roles[0].id);
+}
+
 export async function updateRole(id, payload) {
   const client = await sb();
   if (!client) throw new Error('Supabase not ready');
@@ -138,6 +146,92 @@ export async function setRoleLocationAccess(roleId, locationIds, accessAllLocati
   return { success: true };
 }
 
+// --- USER PROFILE (single user with roles, locations, etc.) ---
+export async function getUserById(userId) {
+  const client = await sb();
+  if (!client) return null;
+  const { data, error } = await client.from('users').select('*').eq('id', userId).single();
+  if (error) return null;
+  return data;
+}
+
+export async function getUserRoles(userId) {
+  const client = await sb();
+  if (!client) return [];
+  const { data, error } = await client.from('user_roles')
+    .select('role_id, is_primary, roles(id, role_name, role_code, description, access_all_locations)')
+    .eq('user_id', userId);
+  if (error) return [];
+  return (data || []).map(ur => ({
+    role_id: ur.role_id,
+    is_primary: ur.is_primary,
+    ...(ur.roles || {})
+  })).filter(r => r.role_id);
+}
+
+export async function getUserLocationAccess(userId) {
+  const client = await sb();
+  if (!client) return [];
+  const { data, error } = await client.from('user_location_access')
+    .select('location_id, inventory_locations(id, location_code, location_name, location_type)')
+    .eq('user_id', userId);
+  if (error) return [];
+  return (data || []).map(ul => ul.inventory_locations).filter(Boolean);
+}
+
+// --- USERS (enriched with RBAC role & locations) ---
+export async function getUsersEnriched() {
+  const client = await sb();
+  if (!client) return [];
+  const { data: users, error } = await client.from('users').select('*').order('created_at', { ascending: false });
+  if (error) return [];
+  const { data: roles } = await client.from('roles').select('id, role_name, role_code, access_all_locations');
+  const roleMap = (roles || []).reduce((m, r) => { m[r.id] = r; return m; }, {});
+  const { data: userRoles } = await client.from('user_roles').select('user_id, role_id, is_primary');
+  const { data: userLocs } = await client.from('user_location_access').select('user_id, inventory_locations(location_name, location_code)');
+  const { data: allLocs } = await client.from('inventory_locations').select('id, location_name, location_code');
+  const locMap = (allLocs || []).reduce((m, l) => { m[l.id] = l; return m; }, {});
+  const urByUser = (userRoles || []).reduce((m, ur) => {
+    if (!m[ur.user_id]) m[ur.user_id] = [];
+    m[ur.user_id].push(ur);
+    return m;
+  }, {});
+  const ulByUser = (userLocs || []).reduce((m, ul) => {
+    if (!m[ul.user_id]) m[ul.user_id] = [];
+    const loc = ul.inventory_locations;
+    if (loc) m[ul.user_id].push(loc.location_name || loc.location_code);
+    return m;
+  }, {});
+  return (users || []).map(u => {
+    const urs = urByUser[u.id] || [];
+    const primary = urs.find(ur => ur.is_primary) || urs[0];
+    const r = primary ? roleMap[primary.role_id] : null;
+    const locs = ulByUser[u.id] || [];
+    let assignedLocations = locs.length ? locs.join(', ') : null;
+    if (!assignedLocations && r?.access_all_locations !== false) assignedLocations = 'All';
+    if (!assignedLocations) assignedLocations = '-';
+    return {
+      ...u,
+      primaryRoleCode: r?.role_code || u.role,
+      primaryRoleName: r?.role_name || u.role,
+      assignedLocations
+    };
+  });
+}
+
+export async function createUserWithRole(userData, roleId = null) {
+  const client = await sb();
+  if (!client) throw new Error('Supabase not ready');
+  const { createUserInSupabase } = await import('@/services/supabase.js');
+  const res = await createUserInSupabase(userData);
+  if (!res.success) throw new Error(res.error || 'Failed to create user');
+  const user = res.data;
+  if (roleId && user?.id) {
+    await client.from('user_roles').insert({ user_id: user.id, role_id: roleId, is_primary: true });
+  }
+  return user;
+}
+
 // --- fn_user_has_permission (RPC) ---
 export async function userHasPermission(userId, permissionCode) {
   const client = await sb();
@@ -168,21 +262,26 @@ export async function getActivityLogs(filters = {}) {
   if (!client) return [];
   let q = client.from('user_activity_logs').select('*, users(name, email)').order('created_at', { ascending: false }).limit(500);
   if (filters.user_id) q = q.eq('user_id', filters.user_id);
-  if (filters.action) q = q.eq('action', filters.action);
+  if (filters.action?.trim()) q = q.ilike('action', `%${filters.action.trim()}%`);
   const { data, error } = await q;
   if (error) return [];
   return data || [];
 }
 
 // --- LOGIN SESSIONS ---
-export async function getLoginSessions(activeOnly = true) {
+export async function getLoginSessions(activeOnly = true, userId = null) {
   const client = await sb();
   if (!client) return [];
   let q = client.from('login_sessions').select('*, users(name, email)').order('login_time', { ascending: false });
   if (activeOnly) q = q.eq('is_active', true);
+  if (userId) q = q.eq('user_id', userId);
   const { data, error } = await q;
   if (error) return [];
   return data || [];
+}
+
+export async function getLoginSessionsByUser(userId, activeOnly = false) {
+  return getLoginSessions(activeOnly, userId);
 }
 
 export async function forceLogoutSession(sessionId) {

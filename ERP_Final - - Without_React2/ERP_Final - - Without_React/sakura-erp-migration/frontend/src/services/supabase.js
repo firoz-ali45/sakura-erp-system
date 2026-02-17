@@ -127,10 +127,12 @@ export async function createUserInSupabase(userData) {
     const newUser = {
       email: userData.email.toLowerCase().trim(),
       name: userData.name.trim(),
-      password_hash: userData.password.trim(),
+      password_hash: (userData.password || userData.password_hash || '').trim(),
       phone: userData.phone || null,
       role: (userData.role || 'user').toLowerCase(),
       status: (userData.status || 'inactive').toLowerCase(),
+      department: userData.department || null,
+      employee_id: userData.employee_id || null,
       permissions: userData.permissions || {
         accountsPayable: false,
         forecasting: false,
