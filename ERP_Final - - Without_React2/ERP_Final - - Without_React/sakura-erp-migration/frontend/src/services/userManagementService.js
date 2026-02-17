@@ -14,7 +14,7 @@ async function sb() {
 export async function getRoles(filters = {}) {
   const client = await sb();
   if (!client) return [];
-  let q = client.from('roles').select('*').order('name');
+  let q = client.from('roles').select('*').order('role_name');
   if (filters.is_active !== undefined) {
     q = q.eq('is_active', filters.is_active);
   }
@@ -29,10 +29,10 @@ export async function getRoles(filters = {}) {
 export async function createRole({ role_name, role_code, description, is_active = true }) {
   const client = await sb();
   if (!client) throw new Error('Supabase not ready');
+  const code = role_code || role_name?.toUpperCase().replace(/\s+/g, '_');
   const { data, error } = await client.from('roles').insert({
-    name: role_name,
-    code: role_code || role_name?.toUpperCase().replace(/\s+/g, '_'),
-    role_code: role_code || role_name?.toUpperCase().replace(/\s+/g, '_'),
+    role_name,
+    role_code: code,
     description,
     is_active: is_active ?? true
   }).select().single();
@@ -67,7 +67,7 @@ export async function getPermissionsMaster() {
 export async function getRolePermissions(roleId) {
   const client = await sb();
   if (!client) return [];
-  const { data, error } = await client.from('role_permissions_master')
+  const { data, error } = await client.from('role_permissions')
     .select('permission_id, permissions_master(permission_code, module, action, description)')
     .eq('role_id', roleId);
   if (error) {
@@ -82,9 +82,9 @@ export async function setRolePermissions(roleId, permissionCodes) {
   if (!client) throw new Error('Supabase not ready');
   const { data: perms } = await client.from('permissions_master').select('id, permission_code').in('permission_code', permissionCodes);
   const permIds = (perms || []).map(p => p.id);
-  await client.from('role_permissions_master').delete().eq('role_id', roleId);
+  await client.from('role_permissions').delete().eq('role_id', roleId);
   if (permIds.length) {
-    await client.from('role_permissions_master').insert(permIds.map(pid => ({ role_id: roleId, permission_id: pid })));
+    await client.from('role_permissions').insert(permIds.map(pid => ({ role_id: roleId, permission_id: pid })));
   }
   return { success: true };
 }
@@ -132,7 +132,7 @@ export async function logActivity(userId, action, entityType = null, entityId = 
     action,
     entity_type: entityType,
     entity_id: entityId,
-    details
+    metadata: details
   });
 }
 

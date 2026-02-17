@@ -16,18 +16,16 @@ export function useTransferPermissions() {
       const { hasPermission, loadPermissions } = usePermissions();
       await loadPermissions();
 
-      if (hasPermission('*') || hasPermission('ADMIN')) {
+      if (hasPermission('*')) {
         canDispatch.value = true;
         canReceive.value = true;
         canApprove.value = true;
         return;
       }
-      if (hasPermission('TRANSFER_DISPATCH') || hasPermission('TRANSFER_RECEIVE') || hasPermission('TO_APPROVE')) {
-        canDispatch.value = hasPermission('TRANSFER_DISPATCH') || hasPermission('LOGISTICS_MANAGE') || hasPermission('WAREHOUSE_DISPATCH');
-        canReceive.value = hasPermission('TRANSFER_RECEIVE') || hasPermission('LOGISTICS_MANAGE') || hasPermission('BRANCH_RECEIVE');
-        canApprove.value = hasPermission('TO_APPROVE') || hasPermission('LOGISTICS_MANAGE');
-        return;
-      }
+      canDispatch.value = hasPermission('transfer_dispatch') || hasPermission('transfer_approve');
+      canReceive.value = hasPermission('transfer_receive') || hasPermission('transfer_approve');
+      canApprove.value = hasPermission('transfer_approve');
+      if (canDispatch.value || canReceive.value || canApprove.value) return;
 
       // Fallback: legacy role from localStorage
       const u = localStorage.getItem('sakura_current_user');

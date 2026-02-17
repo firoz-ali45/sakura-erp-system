@@ -1,11 +1,9 @@
 /**
  * Enterprise RBAC: permission checks for UI (hide/disable) and workflow.
- * Server must enforce; this is for UX only.
+ * Uses fn_user_permissions RPC + permissionEngine. Server must enforce.
  */
-import { ref, computed } from 'vue';
-
-let cachedPermissions = null;
-let cachedUserId = null;
+import { ref } from 'vue';
+import { getCachedUserPermissions, invalidatePermissionCache } from '@/services/permissionEngine.js';
 
 export function usePermissions() {
   const permissions = ref(new Set());
@@ -21,38 +19,13 @@ export function usePermissions() {
     try {
       const authStore = (await import('@/stores/auth')).useAuthStore();
       const user = authStore.user?.value ?? authStore.user;
-      const userId = user?.id ?? user?.email ?? user?.name ?? (typeof window !== 'undefined' && localStorage.getItem('sakura_current_user') ? (() => { try { const u = JSON.parse(localStorage.getItem('sakura_current_user') || '{}'); return u.id ?? u.email ?? u.name; } catch { return ''; } })() : '');
-      cachedUserId = userId || cachedUserId;
-      if (cachedPermissions && cachedUserId === userId) {
-        permissions.value = cachedPermissions;
-        return;
-      }
-      const { supabaseClient } = await import('@/services/supabase.js');
-      try {
-        const { data: rpcData } = await supabaseClient.rpc('fn_user_has_permission', { p_user_id: String(cachedUserId || userId), p_permission_code: 'ADMIN' });
-        if (rpcData === true) {
-          permissions.value = new Set(['*']);
-          cachedPermissions = permissions.value;
-          return;
-        }
-      } catch (_) {}
-      const { data: ur } = await supabaseClient.from('user_roles').select('role_id').eq('user_id', String(cachedUserId || userId));
-      const roleIds = (ur || []).map(r => r.role_id).filter(Boolean);
-      if (roleIds.length === 0) {
+      let userId = user?.id ?? (typeof window !== 'undefined' && localStorage.getItem('sakura_current_user') ? (() => { try { const u = JSON.parse(localStorage.getItem('sakura_current_user') || '{}'); return u.id; } catch { return null; } })() : null);
+      if (!userId) {
         permissions.value = new Set();
-        cachedPermissions = permissions.value;
         return;
       }
-      const { data: rp } = await supabaseClient.from('role_permissions').select('permission_id').in('role_id', roleIds);
-      const permIds = [...new Set((rp || []).map(r => r.permission_id).filter(Boolean))];
-      if (permIds.length === 0) {
-        permissions.value = new Set();
-        cachedPermissions = permissions.value;
-        return;
-      }
-      const { data: perms } = await supabaseClient.from('permissions').select('code').in('id', permIds);
-      permissions.value = new Set((perms || []).map(p => p.code).filter(Boolean));
-      cachedPermissions = permissions.value;
+      const perms = await getCachedUserPermissions(userId);
+      permissions.value = new Set(perms);
     } catch (e) {
       console.warn('Load permissions:', e);
       permissions.value = new Set();
@@ -61,5 +34,10 @@ export function usePermissions() {
     }
   };
 
-  return { permissions, loading, hasPermission, loadPermissions };
+  const clearCache = () => {
+    invalidatePermissionCache();
+    permissions.value = new Set();
+  };
+
+  return { permissions, loading, hasPermission, loadPermissions, clearCache };
 }
