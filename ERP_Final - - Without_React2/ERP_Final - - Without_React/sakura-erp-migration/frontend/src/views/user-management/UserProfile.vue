@@ -374,6 +374,7 @@ async function saveUserRoles() {
     }
     // Reload permissions (from primary role)
     userPermissionCodes.value = await getUserPermissions(user.value.id);
+    if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('erp:refresh-drivers'));
   } catch (e) {
     console.error(e);
     alert('Failed to save roles: ' + (e.message || 'Unknown error'));

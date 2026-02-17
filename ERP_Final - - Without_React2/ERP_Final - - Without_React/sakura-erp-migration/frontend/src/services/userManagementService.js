@@ -80,6 +80,20 @@ export async function getUsersByRoleCode(roleCode) {
   return getUsersByRoleId(roles[0].id);
 }
 
+/** Active drivers: users JOIN user_roles JOIN roles WHERE role_code=DRIVER, status=active. DB source of truth. */
+export async function getActiveDrivers() {
+  const client = await sb();
+  if (!client) return [];
+  const { data: roles } = await client.from('roles').select('id').ilike('role_code', 'DRIVER').neq('deleted', true);
+  if (!roles?.length) return [];
+  const roleIds = roles.map(r => r.id);
+  const { data: ur } = await client.from('user_roles').select('user_id').in('role_id', roleIds);
+  const userIds = [...new Set((ur || []).map(r => r.user_id).filter(Boolean))];
+  if (!userIds.length) return [];
+  const { data: users } = await client.from('users').select('id, name, email, phone').eq('status', 'active').in('id', userIds).order('name');
+  return (users || []).sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+}
+
 export async function updateRole(id, payload, actingUserId = null) {
   const client = await sb();
   if (!client) throw new Error('Supabase not ready');

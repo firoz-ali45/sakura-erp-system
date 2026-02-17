@@ -471,7 +471,7 @@
               <option value="">— Select Driver —</option>
               <option v-for="d in drivers" :key="d.id" :value="d.id">{{ d.name }} ({{ d.phone || d.email || '—' }})</option>
             </select>
-            <p v-if="!drivers.length" class="text-amber-600 text-sm mt-1">No drivers in system. Add users with role=driver.</p>
+            <p v-if="!drivers.length" class="text-amber-600 text-sm mt-1">No active drivers available. Create driver user and assign Driver role.</p>
           </div>
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1">Vehicle No <span class="text-red-500">*</span></label>
@@ -553,7 +553,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue';
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import PickingItemModal from '@/components/transfer/PickingItemModal.vue';
 import DocumentFlow from '@/components/common/DocumentFlow.vue';
@@ -971,6 +971,9 @@ async function openDispatchModal() {
   logisticsForm.value = { driver_id: '', vehicle_no: '', seal_number: '', expected_delivery_time: '', notes: '' };
   showDispatchModal.value = true;
 }
+function onRefreshDrivers() {
+  if (showDispatchModal.value) fetchDrivers().then(d => { drivers.value = d; });
+}
 
 async function confirmDispatchToDriver() {
   if (!transfer.value?.id || !logisticsForm.value.driver_id || !logisticsForm.value.vehicle_no?.trim()) return;
@@ -1169,7 +1172,13 @@ async function confirmReceive() {
 }
 
 watch(() => route.params.id, () => load(), { immediate: false });
-onMounted(() => load());
+onMounted(() => {
+  load();
+  if (typeof window !== 'undefined') window.addEventListener('erp:refresh-drivers', onRefreshDrivers);
+});
+onUnmounted(() => {
+  if (typeof window !== 'undefined') window.removeEventListener('erp:refresh-drivers', onRefreshDrivers);
+});
 </script>
 
 <style scoped>

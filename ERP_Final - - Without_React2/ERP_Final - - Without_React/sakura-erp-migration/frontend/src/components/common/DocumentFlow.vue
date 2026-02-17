@@ -276,7 +276,7 @@ const buildTransferFlowManually = async (currentType, docId) => {
   if (currentType === 'TO') {
     const { data: to } = await supabaseClient
       .from('transfer_orders')
-      .select('id, transfer_number, to_number, status')
+      .select('id, transfer_number, status')
       .eq('id', docId)
       .single();
     toData = to;
@@ -300,10 +300,13 @@ const buildTransferFlowManually = async (currentType, docId) => {
     if (st?.transfer_orders_id) {
       const { data: to } = await supabaseClient
         .from('transfer_orders')
-        .select('id, transfer_number, to_number, status')
+        .select('id, transfer_number, status')
         .eq('id', st.transfer_orders_id)
         .single();
       toData = to;
+      if (!toData && st.transfer_orders_id) {
+        toData = { id: st.transfer_orders_id, transfer_number: 'TO-' + String(st.transfer_orders_id).slice(0, 8), status: 'linked' };
+      }
     }
   }
 
@@ -314,9 +317,9 @@ const buildTransferFlowManually = async (currentType, docId) => {
   const nodes = [
     {
       doc_type: 'TO',
-      doc_id: toData?.id || (currentType === 'TO' && currentId ? currentId : null),
-      doc_number: toData?.transfer_number || toData?.to_number || (currentType === 'TO' && currentId ? currentNum || currentId : null),
-      doc_status: toData?.status || (currentType === 'TO' && currentId ? '—' : 'not_created'),
+      doc_id: toData?.id || (trsData?.transfer_orders_id ?? (currentType === 'TO' && currentId ? currentId : null)),
+      doc_number: toData?.transfer_number || toData?.to_number || (currentType === 'TO' && currentId ? currentNum || currentId : (trsData?.transfer_orders_id ? 'TO (linked)' : null)),
+      doc_status: toData?.status || (currentType === 'TO' && currentId ? '—' : (trsData?.transfer_orders_id ? 'linked' : 'not_created')),
       is_current: currentType === 'TO',
       sequence_order: 1
     },
