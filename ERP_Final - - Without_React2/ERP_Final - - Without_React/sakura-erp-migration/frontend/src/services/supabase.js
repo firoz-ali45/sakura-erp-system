@@ -336,6 +336,22 @@ export async function loginWithSupabase(email, password) {
       last_login: new Date().toISOString(),
       last_activity: new Date().toISOString()
     });
+
+    // Create login session & log activity (for Activity Logs & Login Sessions pages)
+    try {
+      await supabaseClient.from('login_sessions').insert({
+        user_id: userData.id,
+        session_token: `sess_${Date.now()}_${Math.random().toString(36).slice(2)}`,
+        device: typeof navigator !== 'undefined' ? navigator.userAgent?.slice(0, 200) : null,
+        ip_address: null,
+        login_time: new Date().toISOString(),
+        is_active: true
+      });
+      const { logActivity } = await import('@/services/userManagementService.js');
+      logActivity(userData.id, 'login', null, null, {});
+    } catch (e) {
+      console.warn('Login session/activity log:', e);
+    }
     
     console.log('✅ Login successful with Supabase');
     
