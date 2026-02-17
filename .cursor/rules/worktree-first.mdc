@@ -13,8 +13,13 @@ alwaysApply: true
 ## Workflow Rules
 1. **Coding**: Sab edits isi worktree folder me karo — `ERP_Final - - Without_React2\...\frontend\`, `migrations\`, `services\`, etc.
 2. **Commit & Push**: `.\sync-to-git.ps1` chalao
-3. **Vercel**: Push ke baad `.\trigger-vercel.ps1` ya `.\commit-and-deploy.ps1`
+3. **Vercel**: Push ke baad `.\deploy-vercel-cli.ps1` (sakura-erp-system-miuq) — trigger-vercel.ps1 use mat karo
 4. **Apply Button**: Composer ka "Apply" use mat karo — EPERM error. Direct prompt se edits karo.
+
+## AUTO-DEPLOY (Hamesha Yaad Rakho)
+**Jab bhi koi prompt/operation pura ho jaye:**
+- `.\sync-to-git.ps1` → `.\deploy-vercel-cli.ps1` chalao
+- User ko batao: "Deployment complete. Live: https://sakura-erp-system-miuq.vercel.app/"
 
 ## File Paths
 - Frontend: `ERP_Final - - Without_React2\ERP_Final - - Without_React\sakura-erp-migration\frontend\`

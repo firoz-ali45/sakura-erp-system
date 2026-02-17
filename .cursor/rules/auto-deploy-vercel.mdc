@@ -1,0 +1,33 @@
+---
+description: Auto-deploy to Vercel after completing any operation
+alwaysApply: true
+---
+
+# Auto-Deploy to Vercel (sakura-erp-system-miuq)
+
+## CRITICAL: Post-Operation Workflow
+
+**Jab bhi koi prompt/operation pura ho jaye**, automatically ye steps follow karo:
+
+1. **Commit & Push**: `.\sync-to-git.ps1` chalao (agar koi changes hon)
+2. **Deploy**: `.\deploy-vercel-cli.ps1` chalao
+3. **User ko batao**: "Deployment complete. Live: https://sakura-erp-system-miuq.vercel.app/"
+
+## Commands (run from repo root)
+
+```powershell
+.\sync-to-git.ps1
+.\deploy-vercel-cli.ps1
+```
+
+## Deployment Target
+
+- **URL**: https://sakura-erp-system-miuq.vercel.app/
+- **Method**: Vercel CLI (`vercel --prod`) from frontend folder
+- **Source**: `ERP_Final - - Without_React2\ERP_Final - - Without_React\sakura-erp-migration\frontend`
+
+## Notes
+
+- sync-to-git.ps1: Adds all, commits, pushes to origin main
+- deploy-vercel-cli.ps1: CDs to frontend, runs `npx vercel --prod --yes`
+- Agar sync me "No changes" aaye, phir bhi deploy chalao (latest code ensure karega)
