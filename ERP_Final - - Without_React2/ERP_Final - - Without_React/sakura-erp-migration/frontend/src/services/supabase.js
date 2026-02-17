@@ -286,6 +286,14 @@ export async function loginWithSupabase(email, password) {
       
       // Check for user not found
       if (userError.code === 'PGRST116' || userError.message?.includes('No rows')) {
+        try {
+          await supabaseClient.rpc('fn_log_login_attempt', {
+            p_email: emailToCheck,
+            p_success: false,
+            p_failure_reason: 'User not found',
+            p_user_agent: typeof navigator !== 'undefined' ? navigator.userAgent?.slice(0, 500) : null
+          });
+        } catch (_) {}
         return { success: false, error: 'User not found. Please check your email address.' };
       }
       
@@ -294,6 +302,14 @@ export async function loginWithSupabase(email, password) {
     
     if (!userData) {
       console.error('❌ User not found in Supabase');
+      try {
+        await supabaseClient.rpc('fn_log_login_attempt', {
+          p_email: emailToCheck,
+          p_success: false,
+          p_failure_reason: 'User not found',
+          p_user_agent: typeof navigator !== 'undefined' ? navigator.userAgent?.slice(0, 500) : null
+        });
+      } catch (_) {}
       return { success: false, error: 'User not found. Please check your email address.' };
     }
     
@@ -317,12 +333,30 @@ export async function loginWithSupabase(email, password) {
     
     if (storedPassword !== enteredPassword) {
       console.error('❌ Password mismatch');
+      try {
+        await supabaseClient.rpc('fn_log_login_attempt', {
+          p_email: emailToCheck,
+          p_success: false,
+          p_user_id: userData.id,
+          p_failure_reason: 'Invalid password',
+          p_user_agent: typeof navigator !== 'undefined' ? navigator.userAgent?.slice(0, 500) : null
+        });
+      } catch (_) {}
       return { success: false, error: 'Invalid password' };
     }
     
     // Check user status
     if (userData.status === 'suspended') {
       console.error('❌ User account is suspended');
+      try {
+        await supabaseClient.rpc('fn_log_login_attempt', {
+          p_email: emailToCheck,
+          p_success: false,
+          p_user_id: userData.id,
+          p_failure_reason: 'Account suspended',
+          p_user_agent: typeof navigator !== 'undefined' ? navigator.userAgent?.slice(0, 500) : null
+        });
+      } catch (_) {}
       return { success: false, error: 'Account is suspended' };
     }
     
@@ -337,18 +371,28 @@ export async function loginWithSupabase(email, password) {
       last_activity: new Date().toISOString()
     });
 
-    // Create login session & log activity (for Activity Logs & Login Sessions pages)
+    // Create login session via RPC (bypasses RLS) & log activity
     try {
-      await supabaseClient.from('login_sessions').insert({
-        user_id: userData.id,
-        session_token: `sess_${Date.now()}_${Math.random().toString(36).slice(2)}`,
-        device: typeof navigator !== 'undefined' ? navigator.userAgent?.slice(0, 200) : null,
-        ip_address: null,
-        login_time: new Date().toISOString(),
-        is_active: true
+      const device = typeof navigator !== 'undefined' ? navigator.userAgent?.slice(0, 500) : null;
+      const { data: sessionId } = await supabaseClient.rpc('fn_create_login_session', {
+        p_user_id: userData.id,
+        p_device: device,
+        p_ip: null,
+        p_location: null
       });
+      if (sessionId) {
+        try {
+          localStorage.setItem('sakura_session_id', sessionId);
+        } catch (_) {}
+      }
       const { logActivity } = await import('@/services/userManagementService.js');
       logActivity(userData.id, 'login', null, null, {});
+      await supabaseClient.rpc('fn_log_login_attempt', {
+        p_email: emailToCheck,
+        p_success: true,
+        p_user_id: userData.id,
+        p_user_agent: typeof navigator !== 'undefined' ? navigator.userAgent?.slice(0, 500) : null
+      });
     } catch (e) {
       console.warn('Login session/activity log:', e);
     }
@@ -3262,6 +3306,17 @@ export async function saveGRNToSupabase(grn) {
     }
     
     console.log('✅ GRN saved to Supabase');
+    const status = (grnFields.status || '').toLowerCase();
+    if (status && status !== 'draft') {
+      try {
+        const u = localStorage.getItem('sakura_current_user');
+        const uid = u ? (JSON.parse(u)?.id) : null;
+        if (uid) {
+          const { logActivity } = await import('@/services/userManagementService.js');
+          logActivity(uid, 'grn_submit', 'grn_inspections', grnData?.id, { status, grn_number: grnNumber });
+        }
+      } catch (_) {}
+    }
     return { success: true, data: fullGRN || grnData };
   } catch (error) {
     console.error('❌ Exception saving GRN to Supabase:', error);

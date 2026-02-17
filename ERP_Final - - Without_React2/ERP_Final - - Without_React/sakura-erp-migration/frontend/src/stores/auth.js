@@ -180,6 +180,7 @@ export const useAuthStore = defineStore('auth', () => {
 
   // Logout
   async function logout() {
+    const uid = user.value?.id;
     setToken(null);
     setUser(null);
     // Clear login state
@@ -189,11 +190,24 @@ export const useAuthStore = defineStore('auth', () => {
     sessionStorage.removeItem('sakura_tab_login');
     sessionStorage.removeItem('sakura_tab_id');
 
-    // Best-effort Supabase sign-out (if auth was ever initialized)
+    // Best-effort: close login session in DB, then Supabase sign-out
     try {
       await initSupabase();
-      if (USE_SUPABASE && supabaseClient?.auth?.signOut) {
-        await supabaseClient.auth.signOut();
+      if (USE_SUPABASE && supabaseClient) {
+        const sessionId = localStorage.getItem('sakura_session_id');
+        if (sessionId) {
+          try {
+            await supabaseClient.rpc('fn_close_login_session', { p_session_id: sessionId, p_forced: false });
+          } catch (_) {}
+          localStorage.removeItem('sakura_session_id');
+        }
+        if (supabaseClient.auth?.signOut) await supabaseClient.auth.signOut();
+        if (uid) {
+          try {
+            const { logActivity } = await import('@/services/userManagementService.js');
+            logActivity(uid, 'logout', null, null, {});
+          } catch (_) {}
+        }
       }
     } catch (err) {
       console.warn('Supabase sign-out skipped:', err?.message || err);

@@ -284,6 +284,26 @@
               <i class="fas fa-shield-alt w-5 text-center"></i>
               <span>{{ $t('userManagement.securitySettings') }}</span>
             </router-link>
+            <router-link to="/homeportal/user-management/audit-trail" class="nav-link nav-sub-item flex items-center p-3 my-1 rounded-lg" active-class="active">
+              <i class="fas fa-clipboard-list w-5 text-center"></i>
+              <span>Audit Trail</span>
+            </router-link>
+            <router-link to="/homeportal/user-management/api-tokens" class="nav-link nav-sub-item flex items-center p-3 my-1 rounded-lg" active-class="active">
+              <i class="fas fa-key w-5 text-center"></i>
+              <span>API Access Tokens</span>
+            </router-link>
+            <router-link to="/homeportal/user-management/device-history" class="nav-link nav-sub-item flex items-center p-3 my-1 rounded-lg" active-class="active">
+              <i class="fas fa-mobile-alt w-5 text-center"></i>
+              <span>Device History</span>
+            </router-link>
+            <router-link to="/homeportal/user-management/login-attempts" class="nav-link nav-sub-item flex items-center p-3 my-1 rounded-lg" active-class="active">
+              <i class="fas fa-sign-in-alt w-5 text-center"></i>
+              <span>Login Attempts</span>
+            </router-link>
+            <router-link to="/homeportal/user-management/blocked-users" class="nav-link nav-sub-item flex items-center p-3 my-1 rounded-lg" active-class="active">
+              <i class="fas fa-user-slash w-5 text-center"></i>
+              <span>Blocked Users</span>
+            </router-link>
           </div>
         </div>
 

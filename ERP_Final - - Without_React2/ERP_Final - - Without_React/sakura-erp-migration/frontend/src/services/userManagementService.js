@@ -5,6 +5,15 @@
  */
 import { supabaseClient, ensureSupabaseReady } from '@/services/supabase.js';
 
+function _currentUserId() {
+  try {
+    const u = localStorage.getItem('sakura_current_user');
+    if (!u) return null;
+    const parsed = JSON.parse(u);
+    return parsed?.id || null;
+  } catch { return null; }
+}
+
 async function sb() {
   await ensureSupabaseReady();
   return supabaseClient;
@@ -26,7 +35,7 @@ export async function getRoles(filters = {}) {
   return data || [];
 }
 
-export async function createRole({ role_name, role_code, description, is_active = true }) {
+export async function createRole({ role_name, role_code, description, is_active = true }, actingUserId = null) {
   const client = await sb();
   if (!client) throw new Error('Supabase not ready');
   const code = role_code || role_name?.toUpperCase().replace(/\s+/g, '_');
@@ -37,6 +46,8 @@ export async function createRole({ role_name, role_code, description, is_active 
     is_active: is_active ?? true
   }).select().single();
   if (error) throw error;
+  const uid = actingUserId || _currentUserId();
+  if (uid) logActivity(uid, 'role_create', 'roles', data?.id, { role_name, role_code: code });
   return data;
 }
 
@@ -66,7 +77,7 @@ export async function getUsersByRoleCode(roleCode) {
   return getUsersByRoleId(roles[0].id);
 }
 
-export async function updateRole(id, payload) {
+export async function updateRole(id, payload, actingUserId = null) {
   const client = await sb();
   if (!client) throw new Error('Supabase not ready');
   const { data, error } = await client.from('roles').update({
@@ -74,6 +85,8 @@ export async function updateRole(id, payload) {
     updated_at: new Date().toISOString()
   }).eq('id', id).select().single();
   if (error) throw error;
+  const uid = actingUserId || _currentUserId();
+  if (uid) logActivity(uid, 'role_edit', 'roles', id, { changes: Object.keys(payload) });
   return data;
 }
 
@@ -103,7 +116,7 @@ export async function getRolePermissions(roleId) {
   return (data || []).map(r => r.permissions_master).filter(Boolean);
 }
 
-export async function setRolePermissions(roleId, permissionCodes) {
+export async function setRolePermissions(roleId, permissionCodes, actingUserId = null) {
   const client = await sb();
   if (!client) throw new Error('Supabase not ready');
   const { data: perms } = await client.from('permissions_master').select('id, permission_code').in('permission_code', permissionCodes);
@@ -112,6 +125,8 @@ export async function setRolePermissions(roleId, permissionCodes) {
   if (permIds.length) {
     await client.from('role_permissions').insert(permIds.map(pid => ({ role_id: roleId, permission_id: pid })));
   }
+  const uid = actingUserId || _currentUserId();
+  if (uid) logActivity(uid, 'permission_change', 'roles', roleId, { permission_count: permIds.length });
   return { success: true };
 }
 
@@ -219,7 +234,7 @@ export async function getUsersEnriched() {
   });
 }
 
-export async function createUserWithRole(userData, roleId = null) {
+export async function createUserWithRole(userData, roleId = null, actingUserId = null) {
   const client = await sb();
   if (!client) throw new Error('Supabase not ready');
   const { createUserInSupabase } = await import('@/services/supabase.js');
@@ -229,6 +244,8 @@ export async function createUserWithRole(userData, roleId = null) {
   if (roleId && user?.id) {
     await client.from('user_roles').insert({ user_id: user.id, role_id: roleId, is_primary: true });
   }
+  const uid = actingUserId || _currentUserId();
+  if (uid) logActivity(uid, 'user_create', 'users', user?.id, { email: user?.email });
   return user;
 }
 
@@ -248,13 +265,20 @@ export async function userHasPermission(userId, permissionCode) {
 export async function logActivity(userId, action, entityType = null, entityId = null, details = {}) {
   const client = await sb();
   if (!client) return;
-  await client.from('user_activity_logs').insert({
-    user_id: userId,
-    action,
-    entity_type: entityType,
-    entity_id: entityId,
-    metadata: details
-  });
+  try {
+    const ua = typeof navigator !== 'undefined' ? navigator.userAgent?.slice(0, 500) : null;
+    await client.rpc('fn_log_user_action', {
+      p_user_id: userId,
+      p_action: action,
+      p_entity_type: entityType,
+      p_entity_id: entityId,
+      p_metadata: details && typeof details === 'object' ? details : {},
+      p_ip: null,
+      p_user_agent: ua
+    });
+  } catch (e) {
+    console.warn('logActivity:', e);
+  }
 }
 
 export async function getActivityLogs(filters = {}) {
@@ -287,7 +311,8 @@ export async function getLoginSessionsByUser(userId, activeOnly = false) {
 export async function forceLogoutSession(sessionId) {
   const client = await sb();
   if (!client) throw new Error('Supabase not ready');
-  await client.from('login_sessions').update({ is_active: false, logout_time: new Date().toISOString() }).eq('id', sessionId);
+  const { error } = await client.rpc('fn_close_login_session', { p_session_id: sessionId, p_forced: true });
+  if (error) throw error;
   return { success: true };
 }
 
@@ -303,9 +328,46 @@ export async function getSecuritySettings() {
   }, {});
 }
 
-export async function updateSecuritySetting(key, value) {
+export async function updateSecuritySetting(key, value, actingUserId = null) {
   const client = await sb();
   if (!client) throw new Error('Supabase not ready');
   await client.from('security_settings').upsert({ setting_key: key, setting_value: value, updated_at: new Date().toISOString() }, { onConflict: 'setting_key' });
+  const uid = actingUserId || _currentUserId();
+  if (uid) logActivity(uid, 'settings_change', 'security_settings', key, { key, value });
+  return { success: true };
+}
+
+// --- LOGIN ATTEMPTS ---
+export async function getLoginAttempts(limit = 200) {
+  const client = await sb();
+  if (!client) return [];
+  const { data, error } = await client.from('login_attempts').select('*').order('created_at', { ascending: false }).limit(limit);
+  if (error) return [];
+  return data || [];
+}
+
+// --- API TOKENS ---
+export async function getApiTokens() {
+  const client = await sb();
+  if (!client) return [];
+  const { data, error } = await client.from('api_access_tokens').select('*, users(name, email)').order('created_at', { ascending: false });
+  if (error) return [];
+  return data || [];
+}
+
+// --- BLOCKED USERS ---
+export async function getBlockedUsers() {
+  const client = await sb();
+  if (!client) return [];
+  const { data, error } = await client.from('users').select('id, name, email, status').in('status', ['suspended', 'blocked']).order('name');
+  if (error) return [];
+  return data || [];
+}
+
+export async function updateUserStatus(userId, status) {
+  const client = await sb();
+  if (!client) throw new Error('Supabase not ready');
+  const { error } = await client.from('users').update({ status, updated_at: new Date().toISOString() }).eq('id', userId);
+  if (error) throw error;
   return { success: true };
 }

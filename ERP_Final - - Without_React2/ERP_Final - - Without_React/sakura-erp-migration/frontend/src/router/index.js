@@ -297,6 +297,36 @@ const routes = [
         meta: { requiresAuth: true, requiredPermission: 'user_management_security' }
       },
       {
+        path: 'user-management/audit-trail',
+        name: 'UserManagementAuditTrail',
+        component: () => import('../views/user-management/AuditTrailPage.vue'),
+        meta: { requiresAuth: true }
+      },
+      {
+        path: 'user-management/api-tokens',
+        name: 'UserManagementApiTokens',
+        component: () => import('../views/user-management/ApiTokensPage.vue'),
+        meta: { requiresAuth: true }
+      },
+      {
+        path: 'user-management/device-history',
+        name: 'UserManagementDeviceHistory',
+        component: () => import('../views/user-management/DeviceHistoryPage.vue'),
+        meta: { requiresAuth: true }
+      },
+      {
+        path: 'user-management/login-attempts',
+        name: 'UserManagementLoginAttempts',
+        component: () => import('../views/user-management/LoginAttemptsPage.vue'),
+        meta: { requiresAuth: true }
+      },
+      {
+        path: 'user-management/blocked-users',
+        name: 'UserManagementBlockedUsers',
+        component: () => import('../views/user-management/BlockedUsersPage.vue'),
+        meta: { requiresAuth: true }
+      },
+      {
         path: 'accounts-payable',
         name: 'AccountsPayable',
         component: () => import('../views/finance/AccountsPayable.vue'),

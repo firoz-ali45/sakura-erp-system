@@ -148,6 +148,10 @@ export async function dispatchToDriver(transferId, driverId, vehicleNo, sealNumb
     p_user_id: userId || 'user'
   });
   if (error) return { ok: false, error: error.message };
+  if (userId) {
+    const { logActivity } = await import('@/services/userManagementService.js');
+    logActivity(userId, 'transfer_dispatch', 'transfer', transferId, { driver_id: driverId });
+  }
   return data || { ok: false };
 }
 
@@ -438,6 +442,10 @@ export async function dispatchTransfer(transferId, userId) {
     p_user_id: userId || 'user'
   });
   if (error) return { ok: false, error: error.message };
+  if (userId) {
+    const { logActivity } = await import('@/services/userManagementService.js');
+    logActivity(userId, 'transfer_dispatch', 'transfer', transferId, {});
+  }
   return data || { ok: false };
 }
 
@@ -449,6 +457,10 @@ export async function receiveTransfer(transferId, userId) {
     p_user_id: userId || 'user'
   });
   if (error) return { ok: false, error: error.message };
+  if (userId) {
+    const { logActivity } = await import('@/services/userManagementService.js');
+    logActivity(userId, 'transfer_receive', 'transfer', transferId, {});
+  }
   return data || { ok: false };
 }
 

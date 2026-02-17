@@ -323,7 +323,11 @@ const submitPayment = async () => {
       };
       const { data } = await supabaseClient.from('finance_payments').insert(payload).select('id, payment_number').single();
       await logAction('INSERT', 'finance_payments', data?.id, null, payload);
-      
+      const uid = authStore.user?.id;
+      if (uid) {
+        const { logActivity } = await import('@/services/userManagementService.js');
+        logActivity(uid, 'payment_create', 'finance_payments', data?.id, { amount: payload.amount });
+      }
       showCreateModal.value = false;
       newPayment.value = { supplier_id: '', invoice_id: null, amount: 0, payment_date: new Date().toISOString().slice(0, 10), reference_number: '', bank_id: '' };
       await loadPayments();
