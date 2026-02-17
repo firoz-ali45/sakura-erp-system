@@ -235,7 +235,7 @@
         </div>
 
         <!-- User Management Expandable Section (SAP-style RBAC) -->
-        <div v-if="canAccessUserManagement" class="nav-group">
+        <div class="nav-group">
           <a 
             href="#" 
             @click.prevent="toggleNavGroup('userManagement-group')" 
@@ -256,31 +256,31 @@
             id="userManagement-group" 
             :class="['nav-group-content', 'pl-8', { 'hidden': !userManagementGroupOpen }]"
           >
-            <router-link v-if="canUsers" to="/homeportal/user-management/users" class="nav-link nav-sub-item flex items-center p-3 my-1 rounded-lg" active-class="active">
+            <router-link to="/homeportal/user-management/users" class="nav-link nav-sub-item flex items-center p-3 my-1 rounded-lg" active-class="active">
               <i class="fas fa-user w-5 text-center"></i>
               <span>{{ $t('userManagement.users') }}</span>
             </router-link>
-            <router-link v-if="canRoles" to="/homeportal/user-management/roles" class="nav-link nav-sub-item flex items-center p-3 my-1 rounded-lg" active-class="active">
+            <router-link to="/homeportal/user-management/roles" class="nav-link nav-sub-item flex items-center p-3 my-1 rounded-lg" active-class="active">
               <i class="fas fa-user-shield w-5 text-center"></i>
               <span>{{ $t('userManagement.roles') }}</span>
             </router-link>
-            <router-link v-if="canPermissions" to="/homeportal/user-management/permissions" class="nav-link nav-sub-item flex items-center p-3 my-1 rounded-lg" active-class="active">
+            <router-link to="/homeportal/user-management/permissions" class="nav-link nav-sub-item flex items-center p-3 my-1 rounded-lg" active-class="active">
               <i class="fas fa-key w-5 text-center"></i>
               <span>{{ $t('userManagement.permissions') }}</span>
             </router-link>
-            <router-link v-if="canAccessMatrix" to="/homeportal/user-management/access-matrix" class="nav-link nav-sub-item flex items-center p-3 my-1 rounded-lg" active-class="active">
+            <router-link to="/homeportal/user-management/access-matrix" class="nav-link nav-sub-item flex items-center p-3 my-1 rounded-lg" active-class="active">
               <i class="fas fa-th-list w-5 text-center"></i>
               <span>{{ $t('userManagement.accessMatrix') }}</span>
             </router-link>
-            <router-link v-if="canActivityLogs" to="/homeportal/user-management/activity-logs" class="nav-link nav-sub-item flex items-center p-3 my-1 rounded-lg" active-class="active">
+            <router-link to="/homeportal/user-management/activity-logs" class="nav-link nav-sub-item flex items-center p-3 my-1 rounded-lg" active-class="active">
               <i class="fas fa-history w-5 text-center"></i>
               <span>{{ $t('userManagement.activityLogs') }}</span>
             </router-link>
-            <router-link v-if="canSessions" to="/homeportal/user-management/login-sessions" class="nav-link nav-sub-item flex items-center p-3 my-1 rounded-lg" active-class="active">
+            <router-link to="/homeportal/user-management/login-sessions" class="nav-link nav-sub-item flex items-center p-3 my-1 rounded-lg" active-class="active">
               <i class="fas fa-sign-in-alt w-5 text-center"></i>
               <span>{{ $t('userManagement.loginSessions') }}</span>
             </router-link>
-            <router-link v-if="canSecurity" to="/homeportal/user-management/security-settings" class="nav-link nav-sub-item flex items-center p-3 my-1 rounded-lg" active-class="active">
+            <router-link to="/homeportal/user-management/security-settings" class="nav-link nav-sub-item flex items-center p-3 my-1 rounded-lg" active-class="active">
               <i class="fas fa-shield-alt w-5 text-center"></i>
               <span>{{ $t('userManagement.securitySettings') }}</span>
             </router-link>
