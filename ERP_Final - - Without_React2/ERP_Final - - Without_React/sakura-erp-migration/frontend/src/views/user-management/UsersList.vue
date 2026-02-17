@@ -1,16 +1,66 @@
 <template>
   <div class="min-h-screen bg-[#f0e1cd] p-4 md:p-6">
     <div class="mb-6">
-      <div class="flex justify-between items-center mb-4">
+      <div class="flex flex-wrap justify-between items-center gap-3 mb-4">
         <h2 class="text-2xl md:text-3xl font-bold text-gray-800">{{ $t('userManagement.sectionTitle') }} → {{ $t('userManagement.users') }}</h2>
-        <button 
-          v-if="canCreateUser"
-          @click="$router.push('/homeportal/user-management/user/new')" 
-          class="px-4 py-2 bg-gradient-to-r from-green-600 to-green-700 text-white rounded-lg hover:from-green-700 hover:to-green-800 transition-all font-medium shadow-md flex items-center gap-2"
-        >
-          <i class="fas fa-user-plus"></i>
-          <span>{{ $t('userManagement.createUser') }}</span>
-        </button>
+        <div class="flex flex-wrap items-center gap-2">
+          <button 
+            v-if="canCreateUser"
+            @click="$router.push('/homeportal/user-management/user/new')" 
+            class="px-3 py-2 bg-[#284b44] text-white rounded-lg hover:bg-[#1e3d38] text-sm font-medium flex items-center gap-1.5"
+          >
+            <i class="fas fa-user-plus"></i>
+            <span>Create New User</span>
+          </button>
+          <button 
+            v-if="selectedUser && canCreateUser"
+            @click="$router.push(`/homeportal/user-management/user/${selectedUser.id}`)"
+            class="px-3 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 text-sm font-medium flex items-center gap-1.5"
+          >
+            <i class="fas fa-edit"></i>
+            <span>Edit User</span>
+          </button>
+          <button 
+            v-if="selectedUser && activeTab !== 'deleted'"
+            @click="doDeleteUser"
+            class="px-3 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 text-sm font-medium flex items-center gap-1.5"
+          >
+            <i class="fas fa-trash"></i>
+            <span>Delete (soft)</span>
+          </button>
+          <button 
+            v-if="selectedUser && (selectedUser.status || 'active') === 'active'"
+            @click="doSuspendUser"
+            class="px-3 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 text-sm font-medium flex items-center gap-1.5"
+          >
+            <i class="fas fa-ban"></i>
+            <span>Suspend</span>
+          </button>
+          <button 
+            v-if="selectedUser && (selectedUser.status || '').toLowerCase() === 'suspended'"
+            @click="doRestoreUser"
+            class="px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm font-medium flex items-center gap-1.5"
+          >
+            <i class="fas fa-user-check"></i>
+            <span>Restore</span>
+          </button>
+          <button 
+            v-if="selectedUser"
+            @click="showResetPassword = true"
+            class="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium flex items-center gap-1.5"
+          >
+            <i class="fas fa-key"></i>
+            <span>Reset Password</span>
+          </button>
+          <button 
+            v-if="selectedUser"
+            @click="doForceLogout"
+            class="px-3 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 text-sm font-medium flex items-center gap-1.5"
+          >
+            <i class="fas fa-sign-out-alt"></i>
+            <span>Force Logout</span>
+          </button>
+        </div>
       </div>
 
       <!-- Tabs: Active | Inactive | Suspended | Deleted -->
@@ -72,8 +122,9 @@
               v-else 
               v-for="user in filteredUsers" 
               :key="user.id" 
-              class="hover:bg-gray-50 cursor-pointer"
-              @click="$router.push(`/homeportal/user-management/user/${user.id}`)"
+              :class="['hover:bg-gray-50 cursor-pointer', selectedUser?.id === user.id ? 'bg-[#284b44]/5 ring-1 ring-[#284b44]/30' : '']"
+              @click="selectedUser = selectedUser?.id === user.id ? null : user"
+              @dblclick="$router.push(`/homeportal/user-management/user/${user.id}`)"
             >
               <td class="px-6 py-4 whitespace-nowrap font-medium text-gray-900">{{ user.name }}</td>
               <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{{ user.email }}</td>
@@ -92,12 +143,26 @@
         </table>
       </div>
     </div>
+
+    <!-- Reset Password Modal -->
+    <div v-if="showResetPassword && selectedUser" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" @click.self="showResetPassword = false">
+      <div class="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
+        <h3 class="text-lg font-bold text-gray-800 mb-2">Reset Password</h3>
+        <p class="text-sm text-gray-600 mb-4">New password for {{ selectedUser.name }} ({{ selectedUser.email }})</p>
+        <input v-model="resetPasswordValue" type="password" placeholder="New password" class="w-full px-3 py-2 border rounded-lg mb-4" />
+        <div class="flex gap-2">
+          <button @click="doResetPassword" class="px-4 py-2 bg-[#284b44] text-white rounded-lg" :disabled="!resetPasswordValue?.trim()">Reset</button>
+          <button @click="showResetPassword = false; resetPasswordValue = ''" class="px-4 py-2 bg-gray-200 rounded-lg">Cancel</button>
+        </div>
+        <p v-if="resetError" class="text-red-600 text-sm mt-2">{{ resetError }}</p>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup>
 import { ref, computed, onMounted } from 'vue';
-import { getUsersEnriched, getRoles } from '@/services/userManagementService';
+import { getUsersEnriched, getRoles, updateUserStatus, forceLogoutUser, resetUserPassword } from '@/services/userManagementService';
 import { useI18n } from '@/composables/useI18n';
 import { usePermissions } from '@/composables/usePermissions';
 import { formatDate as formatDateUtil } from '@/utils/dateFormat';
@@ -114,6 +179,10 @@ const loading = ref(false);
 const searchTerm = ref('');
 const roleFilter = ref('');
 const activeTab = ref('active');
+const selectedUser = ref(null);
+const showResetPassword = ref(false);
+const resetPasswordValue = ref('');
+const resetError = ref('');
 
 const tabs = [
   { value: 'active', label: 'Active' },
@@ -171,6 +240,66 @@ async function load() {
     console.error(e);
   } finally {
     loading.value = false;
+  }
+}
+
+async function doDeleteUser() {
+  if (!selectedUser.value || !confirm(`Soft delete ${selectedUser.value.name}? User will move to Deleted tab.`)) return;
+  try {
+    await updateUserStatus(selectedUser.value.id, 'deleted');
+    selectedUser.value = null;
+    await load();
+  } catch (e) {
+    console.error(e);
+    alert('Failed to delete user');
+  }
+}
+
+async function doSuspendUser() {
+  if (!selectedUser.value || !confirm(`Suspend ${selectedUser.value.name}?`)) return;
+  try {
+    await updateUserStatus(selectedUser.value.id, 'suspended');
+    selectedUser.value = null;
+    await load();
+  } catch (e) {
+    console.error(e);
+    alert('Failed to suspend user');
+  }
+}
+
+async function doRestoreUser() {
+  if (!selectedUser.value || !confirm(`Restore ${selectedUser.value.name}?`)) return;
+  try {
+    await updateUserStatus(selectedUser.value.id, 'active');
+    selectedUser.value = null;
+    await load();
+  } catch (e) {
+    console.error(e);
+    alert('Failed to restore user');
+  }
+}
+
+async function doResetPassword() {
+  if (!selectedUser.value || !resetPasswordValue.value?.trim()) return;
+  resetError.value = '';
+  try {
+    await resetUserPassword(selectedUser.value.id, resetPasswordValue.value.trim());
+    showResetPassword.value = false;
+    resetPasswordValue.value = '';
+  } catch (e) {
+    resetError.value = e.message || 'Failed to reset password';
+  }
+}
+
+async function doForceLogout() {
+  if (!selectedUser.value || !confirm(`Force logout all sessions for ${selectedUser.value.name}?`)) return;
+  try {
+    await forceLogoutUser(selectedUser.value.id);
+    alert('User sessions closed.');
+    selectedUser.value = null;
+  } catch (e) {
+    console.error(e);
+    alert('Failed to force logout');
   }
 }
 

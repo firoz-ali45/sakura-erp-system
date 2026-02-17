@@ -1,8 +1,14 @@
 <template>
   <div class="min-h-screen bg-[#f0e1cd] p-4 md:p-6">
-    <div class="mb-6">
-      <h2 class="text-2xl font-bold text-gray-800">{{ $t('userManagement.sectionTitle') }} → {{ $t('userManagement.activityLogs') }}</h2>
-      <p class="text-gray-600 mt-1">User activity audit trail</p>
+    <div class="mb-6 flex flex-wrap justify-between items-center gap-3">
+      <div>
+        <h2 class="text-2xl font-bold text-gray-800">{{ $t('userManagement.sectionTitle') }} → {{ $t('userManagement.activityLogs') }}</h2>
+        <p class="text-gray-600 mt-1">User activity audit trail — filterable & exportable</p>
+      </div>
+      <button @click="exportLogs" class="px-4 py-2 bg-[#284b44] text-white rounded-lg hover:bg-[#1e3d38] flex items-center gap-2">
+        <i class="fas fa-download"></i>
+        <span>Export CSV</span>
+      </button>
     </div>
 
     <!-- Filters -->
@@ -87,6 +93,30 @@ function formatDate(d) {
     const dt = new Date(d);
     return isNaN(dt.getTime()) ? '-' : dt.toLocaleString();
   } catch { return '-'; }
+}
+
+function exportLogs() {
+  if (logs.value.length === 0) {
+    alert('No data to export');
+    return;
+  }
+  const headers = ['Date', 'User', 'Email', 'Action', 'Module', 'Reference', 'IP'];
+  const rows = logs.value.map(l => [
+    formatDate(l.created_at),
+    l.users?.name || '-',
+    l.users?.email || '-',
+    l.action || '-',
+    l.entity_type || '-',
+    l.entity_id || '-',
+    l.ip_address || '-'
+  ]);
+  const csv = [headers.join(','), ...rows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(','))].join('\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `activity-logs-${new Date().toISOString().slice(0, 10)}.csv`;
+  a.click();
+  URL.revokeObjectURL(a.href);
 }
 
 async function loadLogs() {

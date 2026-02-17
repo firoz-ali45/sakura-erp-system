@@ -1,10 +1,25 @@
 <template>
   <div class="min-h-screen bg-[#f0e1cd] p-4 md:p-6">
-    <div class="flex justify-between items-center mb-6">
+    <div class="flex flex-wrap justify-between items-center gap-3 mb-6">
       <h2 class="text-2xl font-bold text-gray-800">{{ $t('userManagement.sectionTitle') }} → {{ $t('userManagement.roles') }}</h2>
-      <button v-if="canCreateRole" @click="showCreateModal = true" class="px-4 py-2 bg-[#284b44] text-white rounded-lg hover:bg-[#1f3d38]">
-        <i class="fas fa-plus mr-2"></i>{{ $t('userManagement.createRole') }}
-      </button>
+      <div class="flex flex-wrap items-center gap-2">
+        <button v-if="canCreateRole" @click="showCreateModal = true" class="px-3 py-2 bg-[#284b44] text-white rounded-lg hover:bg-[#1f3d38] text-sm font-medium flex items-center gap-1.5">
+          <i class="fas fa-plus"></i>
+          <span>Create Role</span>
+        </button>
+        <button v-if="selectedRole && canCreateRole" @click="$router.push(`/homeportal/user-management/role/${selectedRole.id}`)" class="px-3 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 text-sm font-medium flex items-center gap-1.5">
+          <i class="fas fa-edit"></i>
+          <span>Edit Role</span>
+        </button>
+        <button v-if="selectedRole && tab !== 'Deleted'" @click="doDeleteRole" class="px-3 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 text-sm font-medium flex items-center gap-1.5">
+          <i class="fas fa-trash"></i>
+          <span>Delete (soft)</span>
+        </button>
+        <button v-if="selectedRole && canCreateRole" @click="doCloneRole" class="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium flex items-center gap-1.5">
+          <i class="fas fa-copy"></i>
+          <span>Clone Role</span>
+        </button>
+      </div>
     </div>
     <div class="flex gap-2 mb-4">
       <button v-for="t in tabs" :key="t" @click="tab = t" :class="['px-4 py-2 rounded', tab === t ? 'bg-[#284b44] text-white' : 'bg-gray-200']">{{ t }}</button>
@@ -13,8 +28,9 @@
       <div
         v-for="role in filteredRoles"
         :key="role.id"
-        class="bg-white rounded-lg shadow p-6 cursor-pointer hover:shadow-lg transition-shadow"
-        @click="$router.push(`/homeportal/user-management/role/${role.id}`)"
+        :class="['bg-white rounded-lg shadow p-6 cursor-pointer hover:shadow-lg transition-shadow', selectedRole?.id === role.id ? 'ring-2 ring-[#284b44]' : '']"
+        @click="selectedRole = selectedRole?.id === role.id ? null : role"
+        @dblclick="$router.push(`/homeportal/user-management/role/${role.id}`)"
       >
         <h3 class="font-bold text-lg text-[#284b44]">{{ role.role_name }}</h3>
         <p class="text-sm text-gray-600 mt-1">{{ role.description || '-' }}</p>
@@ -54,7 +70,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
-import { getRoles, createRole } from '@/services/userManagementService';
+import { getRoles, createRole, updateRole, cloneRole } from '@/services/userManagementService';
 import { usePermissions } from '@/composables/usePermissions';
 
 const router = useRouter();
@@ -66,16 +82,43 @@ const canCreateRole = computed(() => {
 const roles = ref([]);
 const tab = ref('Active');
 const tabs = ['Active', 'Inactive', 'Deleted'];
+const selectedRole = ref(null);
 const showCreateModal = ref(false);
 const createForm = ref({ role_name: '', role_code: '', description: '' });
 const createError = ref('');
 
 const filteredRoles = computed(() => {
   const t = tab.value.toLowerCase();
-  if (t === 'active') return roles.value.filter(r => r.is_active !== false);
-  if (t === 'inactive') return roles.value.filter(r => r.is_active === false);
+  if (t === 'active') return roles.value.filter(r => (r.is_active !== false) && !r.deleted);
+  if (t === 'inactive') return roles.value.filter(r => (r.is_active === false) && !r.deleted);
+  if (t === 'deleted') return roles.value.filter(r => !!r.deleted);
   return roles.value;
 });
+
+async function doDeleteRole() {
+  if (!selectedRole.value || !confirm(`Soft delete role "${selectedRole.value.role_name}"?`)) return;
+  try {
+    await updateRole(selectedRole.value.id, { deleted: true, is_active: false });
+    selectedRole.value = null;
+    roles.value = await getRoles();
+  } catch (e) {
+    console.error(e);
+    alert('Failed to delete role');
+  }
+}
+
+async function doCloneRole() {
+  if (!selectedRole.value) return;
+  try {
+    const created = await cloneRole(selectedRole.value.id);
+    selectedRole.value = null;
+    roles.value = await getRoles();
+    router.push(`/homeportal/user-management/role/${created.id}`);
+  } catch (e) {
+    console.error(e);
+    alert('Failed to clone role');
+  }
+}
 
 async function submitCreateRole() {
   createError.value = '';

@@ -369,5 +369,45 @@ export async function updateUserStatus(userId, status) {
   if (!client) throw new Error('Supabase not ready');
   const { error } = await client.from('users').update({ status, updated_at: new Date().toISOString() }).eq('id', userId);
   if (error) throw error;
+  const uid = _currentUserId();
+  if (uid) logActivity(uid, status === 'deleted' ? 'user_delete' : 'user_status_change', 'users', userId, { status });
   return { success: true };
+}
+
+export async function forceLogoutUser(userId) {
+  const client = await sb();
+  if (!client) throw new Error('Supabase not ready');
+  const { data, error } = await client.rpc('fn_force_logout_user', { p_user_id: userId });
+  if (error) throw error;
+  const uid = _currentUserId();
+  if (uid) logActivity(uid, 'force_logout_user', 'users', userId, { sessions_closed: data ?? 0 });
+  return { sessionsClosed: data ?? 0 };
+}
+
+export async function resetUserPassword(userId, newPassword) {
+  const client = await sb();
+  if (!client) throw new Error('Supabase not ready');
+  const { error } = await client.rpc('fn_reset_user_password', { p_user_id: userId, p_new_password: newPassword });
+  if (error) throw error;
+  const uid = _currentUserId();
+  if (uid) logActivity(uid, 'password_reset', 'users', userId, {});
+  return { success: true };
+}
+
+export async function cloneRole(roleId) {
+  const client = await sb();
+  if (!client) throw new Error('Supabase not ready');
+  const role = await getRoleById(roleId);
+  if (!role) throw new Error('Role not found');
+  const perms = await getRolePermissions(roleId);
+  const permCodes = perms.map(p => p.permission_code);
+  const locs = await getRoleLocationAccess(roleId);
+  const locIds = locs.map(l => l.id).filter(Boolean);
+  const accessAll = role.access_all_locations !== false;
+  const newName = (role.role_name || '') + ' (Copy)';
+  const newCode = (role.role_code || '') + '_COPY_' + Date.now();
+  const created = await createRole({ role_name: newName, role_code: newCode, description: role.description || '' });
+  if (permCodes.length) await setRolePermissions(created.id, permCodes);
+  await setRoleLocationAccess(created.id, locIds, accessAll);
+  return created;
 }

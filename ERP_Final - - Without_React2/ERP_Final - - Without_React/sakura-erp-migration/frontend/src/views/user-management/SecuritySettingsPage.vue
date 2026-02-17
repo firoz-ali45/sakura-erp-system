@@ -19,6 +19,10 @@
             <label class="block text-sm font-medium text-gray-700 mb-1">Minimum length</label>
             <input v-model.number="form.passwordPolicy.min_length" type="number" min="6" max="32" class="w-full px-3 py-2 border rounded-lg" />
           </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Password expiry (days)</label>
+            <input v-model.number="form.passwordPolicy.expiry_days" type="number" min="0" max="365" class="w-full px-3 py-2 border rounded-lg" placeholder="0 = never" />
+          </div>
           <div class="space-y-2">
             <label class="flex items-center gap-2 cursor-pointer">
               <input v-model="form.passwordPolicy.require_number" type="checkbox" class="rounded" />
@@ -44,34 +48,49 @@
         <span v-if="savedPolicy" class="ml-2 text-green-600 text-sm">Saved</span>
       </div>
 
-      <!-- Session Timeout -->
+      <!-- Login Security -->
       <div class="bg-white rounded-lg shadow p-6">
-        <h3 class="font-bold text-lg mb-4">Session Timeout</h3>
-        <div class="flex items-center gap-4">
-          <div class="flex-1">
-            <label class="block text-sm font-medium text-gray-700 mb-1">Timeout (minutes)</label>
+        <h3 class="font-bold text-lg mb-4">Login Security</h3>
+        <div class="space-y-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Session timeout (minutes)</label>
             <input v-model.number="form.sessionTimeoutMinutes" type="number" min="5" max="1440" class="w-full px-3 py-2 border rounded-lg" />
           </div>
-          <div class="flex items-end">
-            <button @click="saveSessionTimeout" class="px-4 py-2 bg-[#284b44] text-white rounded-lg" :disabled="saving">
-              {{ saving ? 'Saving...' : 'Save' }}
-            </button>
-            <span v-if="savedTimeout" class="ml-2 text-green-600 text-sm">Saved</span>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Max login attempts</label>
+            <input v-model.number="form.maxLoginAttempts" type="number" min="3" max="20" class="w-full px-3 py-2 border rounded-lg" />
           </div>
-        </div>
-      </div>
-
-      <!-- 2FA / MFA -->
-      <div class="bg-white rounded-lg shadow p-6">
-        <h3 class="font-bold text-lg mb-4">Two-Factor Authentication</h3>
-        <div class="space-y-4">
           <label class="flex items-center justify-between cursor-pointer">
             <span>2FA enabled (global)</span>
             <input v-model="form.twoFaEnabled" type="checkbox" class="rounded" @change="saveTwoFa" />
           </label>
           <label class="flex items-center justify-between cursor-pointer">
+            <span>OTP login optional</span>
+            <input v-model="form.otpOptional" type="checkbox" class="rounded" @change="saveOtpOptional" />
+          </label>
+          <label class="flex items-center justify-between cursor-pointer">
             <span>MFA required for all users</span>
             <input v-model="form.mfaRequired" type="checkbox" class="rounded" @change="saveMfaRequired" />
+          </label>
+        </div>
+        <div class="flex gap-2 mt-4">
+          <button @click="saveSessionTimeout" class="px-4 py-2 bg-[#284b44] text-white rounded-lg" :disabled="saving">Save</button>
+          <button @click="saveLoginSecurity" class="px-4 py-2 bg-[#284b44] text-white rounded-lg" :disabled="saving">Save Login Security</button>
+        </div>
+        <span v-if="savedTimeout" class="ml-2 text-green-600 text-sm">Saved</span>
+      </div>
+
+      <!-- Device Control -->
+      <div class="bg-white rounded-lg shadow p-6">
+        <h3 class="font-bold text-lg mb-4">Device Control</h3>
+        <div class="space-y-4">
+          <label class="flex items-center justify-between cursor-pointer">
+            <span>Allow only registered devices</span>
+            <input v-model="form.allowOnlyRegisteredDevices" type="checkbox" class="rounded" @change="saveDeviceControl" />
+          </label>
+          <label class="flex items-center justify-between cursor-pointer">
+            <span>New device approval required</span>
+            <input v-model="form.newDeviceApproval" type="checkbox" class="rounded" @change="saveDeviceControl" />
           </label>
         </div>
       </div>
@@ -91,20 +110,26 @@ const savedTimeout = ref(false);
 const form = reactive({
   passwordPolicy: {
     min_length: 8,
+    expiry_days: 0,
     require_number: true,
     require_special: false,
     require_lowercase: true,
     require_uppercase: true
   },
   sessionTimeoutMinutes: 30,
+  maxLoginAttempts: 5,
   twoFaEnabled: false,
-  mfaRequired: false
+  otpOptional: true,
+  mfaRequired: false,
+  allowOnlyRegisteredDevices: false,
+  newDeviceApproval: false
 });
 
 function applySettings(settings) {
   const policy = settings.password_policy;
   if (policy && typeof policy === 'object') {
     form.passwordPolicy.min_length = policy.min_length ?? 8;
+    form.passwordPolicy.expiry_days = policy.expiry_days ?? 0;
     form.passwordPolicy.require_number = policy.require_number ?? true;
     form.passwordPolicy.require_special = policy.require_special ?? false;
     form.passwordPolicy.require_lowercase = policy.require_lowercase ?? true;
@@ -112,8 +137,12 @@ function applySettings(settings) {
   }
   const timeout = settings.session_timeout_minutes;
   form.sessionTimeoutMinutes = (typeof timeout === 'number' ? timeout : parseInt(timeout, 10)) || 30;
+  form.maxLoginAttempts = settings.max_login_attempts ?? 5;
   form.twoFaEnabled = !!settings.two_fa_enabled;
+  form.otpOptional = settings.otp_optional !== false;
   form.mfaRequired = !!settings.mfa_required;
+  form.allowOnlyRegisteredDevices = !!settings.allow_only_registered_devices;
+  form.newDeviceApproval = !!settings.new_device_approval;
 }
 
 async function savePasswordPolicy() {
@@ -155,6 +184,31 @@ async function saveTwoFa() {
 async function saveMfaRequired() {
   try {
     await updateSecuritySetting('mfa_required', form.mfaRequired);
+  } catch (e) {
+    console.error(e);
+  }
+}
+
+async function saveOtpOptional() {
+  try {
+    await updateSecuritySetting('otp_optional', form.otpOptional);
+  } catch (e) {
+    console.error(e);
+  }
+}
+
+async function saveLoginSecurity() {
+  try {
+    await updateSecuritySetting('max_login_attempts', form.maxLoginAttempts);
+  } catch (e) {
+    console.error(e);
+  }
+}
+
+async function saveDeviceControl() {
+  try {
+    await updateSecuritySetting('allow_only_registered_devices', form.allowOnlyRegisteredDevices);
+    await updateSecuritySetting('new_device_approval', form.newDeviceApproval);
   } catch (e) {
     console.error(e);
   }
