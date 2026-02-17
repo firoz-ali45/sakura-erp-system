@@ -1,6 +1,5 @@
 import { createRouter, createWebHashHistory } from 'vue-router';
 import { useAuthStore } from '../stores/auth';
-import { getCachedUserPermissions } from '@/services/permissionEngine';
 
 const routes = [
   {
@@ -397,28 +396,6 @@ router.beforeEach(async (to, from, next) => {
       } else {
         next();
       }
-    } else if (to.meta.requiredPermission && isAuthenticated) {
-      // Permission check for user-management routes
-      let userId = null;
-      try {
-        userId = authStore.user?.value?.id ?? authStore.user?.id;
-        if (!userId && typeof window !== 'undefined' && localStorage.getItem('sakura_current_user')) {
-          const u = JSON.parse(localStorage.getItem('sakura_current_user') || '{}');
-          userId = u.id;
-        }
-      } catch (_) {}
-      if (!userId) {
-        next('/homeportal');
-        return;
-      }
-      const perms = await getCachedUserPermissions(userId);
-      const has = perms.includes('*') || perms.includes('user_management_view') || perms.includes(to.meta.requiredPermission);
-      if (!has) {
-        console.warn('🟡 [Router] Permission denied for', to.path, 'required:', to.meta.requiredPermission);
-        next('/homeportal');
-        return;
-      }
-      next();
     } else if (to.path === '/login' && isAuthenticated) {
       // User is authenticated and on login page - redirect to homeportal
       // BUT preserve the intended route if it was specified
