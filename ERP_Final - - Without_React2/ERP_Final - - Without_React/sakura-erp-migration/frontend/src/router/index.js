@@ -238,11 +238,63 @@ const routes = [
         component: () => import('../views/inventory/More.vue'),
     meta: { requiresAuth: true }
   },
-  {
+      {
         path: 'user-management',
-    name: 'UserManagement',
-    component: () => import('../views/UserManagement.vue'),
-    meta: { requiresAuth: true }
+        redirect: '/homeportal/user-management/users'
+      },
+      {
+        path: 'user-management/users',
+        name: 'UserManagementUsers',
+        component: () => import('../views/user-management/UsersList.vue'),
+        meta: { requiresAuth: true }
+      },
+      {
+        path: 'user-management/user/:id',
+        name: 'UserProfile',
+        component: () => import('../views/user-management/UserProfile.vue'),
+        meta: { requiresAuth: true }
+      },
+      {
+        path: 'user-management/roles',
+        name: 'UserManagementRoles',
+        component: () => import('../views/user-management/RolesList.vue'),
+        meta: { requiresAuth: true }
+      },
+      {
+        path: 'user-management/role/:id',
+        name: 'RoleDetail',
+        component: () => import('../views/user-management/RoleDetail.vue'),
+        meta: { requiresAuth: true }
+      },
+      {
+        path: 'user-management/permissions',
+        name: 'UserManagementPermissions',
+        component: () => import('../views/user-management/PermissionsPage.vue'),
+        meta: { requiresAuth: true }
+      },
+      {
+        path: 'user-management/access-matrix',
+        name: 'UserManagementAccessMatrix',
+        component: () => import('../views/user-management/AccessMatrixPage.vue'),
+        meta: { requiresAuth: true }
+      },
+      {
+        path: 'user-management/activity-logs',
+        name: 'UserManagementActivityLogs',
+        component: () => import('../views/user-management/ActivityLogsPage.vue'),
+        meta: { requiresAuth: true }
+      },
+      {
+        path: 'user-management/login-sessions',
+        name: 'UserManagementLoginSessions',
+        component: () => import('../views/user-management/LoginSessionsPage.vue'),
+        meta: { requiresAuth: true }
+      },
+      {
+        path: 'user-management/security-settings',
+        name: 'UserManagementSecuritySettings',
+        component: () => import('../views/user-management/SecuritySettingsPage.vue'),
+        meta: { requiresAuth: true }
       },
       {
         path: 'accounts-payable',
