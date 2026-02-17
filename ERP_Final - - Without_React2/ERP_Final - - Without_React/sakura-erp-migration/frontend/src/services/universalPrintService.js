@@ -1,11 +1,11 @@
 /**
- * Shared PDF/Print generator for PO, GRN, Transfer Order, and all future docs.
- * Uses universalPrintService for locked format. Batch+expiry table for transfers.
+ * Universal Print Service — LOCKED FORMAT for ALL transaction PDFs.
+ * Same layout as Purchase Order: Sakura logo center, title, status, fields, items table.
+ * Use this for: PO, GRN, TO, TRS, and all future docs.
  */
-import { buildItemsTableWithBatch } from '@/services/universalPrintService.js';
 
-const LOGO_URL = window.location.origin + '/Sakura_Pink_Logo.png';
-const PRINT_FRAME_ID = 'print-frame-sakura';
+const LOGO_URL = (typeof window !== 'undefined' ? window.location.origin : '') + '/Sakura_Pink_Logo.png';
+const PRINT_FRAME_ID = 'print-frame-sakura-universal';
 
 function escapeHtml(text) {
   if (!text) return '';
@@ -14,24 +14,24 @@ function escapeHtml(text) {
   return div.innerHTML;
 }
 
-function formatCurrency(amount) {
+export function formatCurrency(amount) {
   return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'SAR' }).format(amount || 0);
 }
 
-function formatDate(date) {
+export function formatDate(date) {
   if (!date) return '—';
   const d = new Date(date);
   return d.toLocaleDateString('en-GB', { year: 'numeric', month: '2-digit', day: '2-digit' });
 }
 
-function formatDateTime(date) {
+export function formatDateTime(date) {
   if (!date) return 'N/A';
   const d = new Date(date);
   return d.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true });
 }
 
 /**
- * Build header block: top bar (date/time left, system name right), centered logo, title row (doc number left, status right)
+ * Build header block: top bar, centered logo, title row (doc number, status)
  */
 export function buildHeaderBlock({ printDate, printTime, systemName, title, docNumber, statusText }) {
   const parts = [];
@@ -59,9 +59,9 @@ export function buildFieldRow(label, value) {
 }
 
 /**
- * Build items table (columns: Name, SKU, Quantity, Available Quantity, Unit Cost, Total Cost)
+ * Build items table — standard columns: Name, SKU, Quantity, Available, Unit Cost, Total Cost
  */
-export function buildItemsTable(items, columns = ['name', 'sku', 'quantity', 'available', 'unitCost', 'totalCost']) {
+export function buildItemsTable(items) {
   const parts = [];
   parts.push('<div style="margin-bottom: 24px;">');
   parts.push('<h3 style="font-size: 16px; font-weight: 600; color: #111827; margin: 0 0 12px 0;">Items</h3>');
@@ -78,7 +78,7 @@ export function buildItemsTable(items, columns = ['name', 'sku', 'quantity', 'av
   (items || []).forEach((it) => {
     const name = escapeHtml(it.item_name || it.name || '—');
     const sku = escapeHtml(it.sku || '—');
-    const qty = Number(it.requested_qty ?? it.quantity ?? it.qty ?? 0);
+    const qty = Number(it.requested_qty ?? it.quantity ?? it.qty ?? it.picked_qty ?? it.transfer_qty ?? 0);
     const avail = Number(it.available_qty ?? it.available ?? 0);
     const unitCost = formatCurrency(it.unit_cost ?? it.avg_cost ?? 0);
     const totalCost = formatCurrency(it.total_cost ?? (qty * (it.unit_cost ?? it.avg_cost ?? 0)));
@@ -100,112 +100,54 @@ export function buildItemsTable(items, columns = ['name', 'sku', 'quantity', 'av
 }
 
 /**
- * Build Transfer Order print HTML
+ * Build items table WITH batch + expiry (for transfer docs)
  */
-export function buildTransferOrderPrintHtml(order, items) {
-  const now = new Date();
-  const printDate = now.toLocaleDateString('en-US');
-  const printTime = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
-  const statusMap = { draft: 'Draft', submitted: 'Pending', level1_approved: 'Approved', level2_approved: 'Approved', dispatched: 'Sent', closed: 'Closed', rejected: 'Declined' };
-  const statusText = statusMap[(order?.status || '').toLowerCase()] || order?.status || '';
-
+export function buildItemsTableWithBatch(items) {
   const parts = [];
-  parts.push(buildHeaderBlock({
-    printDate,
-    printTime,
-    systemName: 'Sakura ERP Management System',
-    title: 'Transfer Order',
-    docNumber: order?.transfer_number || 'Draft',
-    statusText
-  }));
-
   parts.push('<div style="margin-bottom: 24px;">');
-  parts.push(buildFieldRow('Source', order?.from_name || order?.from_code || '—'));
-  parts.push(buildFieldRow('Destination', order?.to_name || order?.to_code || '—'));
-  parts.push(buildFieldRow('Date', order?.business_date ? formatDate(order.business_date) : '—'));
-  parts.push(buildFieldRow('Creator', order?.requested_by || order?.creator || '—'));
-  parts.push(buildFieldRow('Created At', order?.created_at ? formatDateTime(order.created_at) : '—'));
-  parts.push(buildFieldRow('Number of Items', (items || []).length));
-  parts.push(buildFieldRow('Total Qty', (items || []).reduce((s, it) => s + (Number(it.requested_qty) || 0), 0)));
-  parts.push('</div>');
+  parts.push('<h3 style="font-size: 16px; font-weight: 600; color: #111827; margin: 0 0 12px 0;">Items</h3>');
+  parts.push('<table style="width: 100%; border-collapse: collapse;">');
+  parts.push('<thead><tr style="background-color: #f9fafb;">');
+  parts.push('<th style="padding: 10px 16px; text-align: left; font-size: 11px; font-weight: 600; color: #374151; text-transform: uppercase;">Name</th>');
+  parts.push('<th style="padding: 10px 16px; text-align: left; font-size: 11px; font-weight: 600; color: #374151; text-transform: uppercase;">SKU</th>');
+  parts.push('<th style="padding: 10px 16px; text-align: left; font-size: 11px; font-weight: 600; color: #374151; text-transform: uppercase;">Batch</th>');
+  parts.push('<th style="padding: 10px 16px; text-align: left; font-size: 11px; font-weight: 600; color: #374151; text-transform: uppercase;">Expiry</th>');
+  parts.push('<th style="padding: 10px 16px; text-align: right; font-size: 11px; font-weight: 600; color: #374151; text-transform: uppercase;">Qty</th>');
+  parts.push('<th style="padding: 10px 16px; text-align: right; font-size: 11px; font-weight: 600; color: #374151; text-transform: uppercase;">Unit Cost</th>');
+  parts.push('<th style="padding: 10px 16px; text-align: right; font-size: 11px; font-weight: 600; color: #374151; text-transform: uppercase;">Total Cost</th>');
+  parts.push('</tr></thead><tbody>');
 
-  parts.push(buildItemsTable(items));
+  (items || []).forEach((it) => {
+    const name = escapeHtml(it.item_name || it.name || '—');
+    const sku = escapeHtml(it.sku || '—');
+    const batch = escapeHtml(it.batch_no || it.lot_no || '—');
+    const expiry = formatDate(it.batch_expiry || it.expiry_date);
+    const qty = Number(it.picked_qty ?? it.transfer_qty ?? it.requested_qty ?? it.quantity ?? 0);
+    const unitCost = formatCurrency(it.unit_cost ?? it.avg_cost ?? 0);
+    const totalCost = formatCurrency(it.total_cost ?? (qty * (it.unit_cost ?? it.avg_cost ?? 0)));
+    parts.push('<tr>');
+    parts.push('<td style="padding: 10px 16px; font-size: 12px; color: #111827; border-bottom: 1px solid #e5e7eb;">' + name + '</td>');
+    parts.push('<td style="padding: 10px 16px; font-size: 12px; color: #374151; font-family: monospace; border-bottom: 1px solid #e5e7eb;">' + sku + '</td>');
+    parts.push('<td style="padding: 10px 16px; font-size: 12px; border-bottom: 1px solid #e5e7eb;">' + batch + '</td>');
+    parts.push('<td style="padding: 10px 16px; font-size: 12px; border-bottom: 1px solid #e5e7eb;">' + expiry + '</td>');
+    parts.push('<td style="padding: 10px 16px; font-size: 12px; text-align: right; border-bottom: 1px solid #e5e7eb;">' + qty.toFixed(2) + '</td>');
+    parts.push('<td style="padding: 10px 16px; font-size: 12px; text-align: right; border-bottom: 1px solid #e5e7eb;">' + unitCost + '</td>');
+    parts.push('<td style="padding: 10px 16px; font-size: 12px; text-align: right; font-weight: 600; border-bottom: 1px solid #e5e7eb;">' + totalCost + '</td>');
+    parts.push('</tr>');
+  });
 
-  parts.push('<div style="margin-top: 32px; padding-top: 16px; border-top: 1px solid #d1d5db; display: flex; justify-content: space-between; align-items: center; font-size: 11px; color: #6b7280;">');
-  parts.push('<div>Sakura ERP Management System</div>');
-  parts.push('<div>Page 1 / 1</div>');
-  parts.push('</div>');
-
+  if (!items?.length) {
+    parts.push('<tr><td colspan="8" style="padding: 32px 16px; text-align: center; color: #6b7280;">No items</td></tr>');
+  }
+  parts.push('</tbody></table></div>');
   return parts.join('');
-}
-
-/**
- * Open print dialog for Transfer Order.
- */
-export function printTransferOrder(order, items) {
-  const html = buildTransferOrderPrintHtml(order, items);
-  return printDocument(html, 'Transfer Order - ' + (order?.transfer_number || 'Draft'));
-}
-
-/**
- * Build Stock Transfer Document print HTML (TRS-000001, Linked TO: TO-000010).
- * Uses batch + expiry in items table (universal format).
- */
-export function buildStockTransferPrintHtml(transfer, items) {
-  const now = new Date();
-  const printDate = now.toLocaleDateString('en-US');
-  const printTime = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
-  const statusMap = { draft: 'Draft', picking: 'Picking', picked: 'Picked', in_transit: 'In Transit', partially_received: 'Partially Received', completed: 'Completed', cancelled: 'Cancelled' };
-  const statusText = statusMap[(transfer?.status || '').toLowerCase()] || transfer?.status || '';
-
-  const parts = [];
-  parts.push(buildHeaderBlock({
-    printDate,
-    printTime,
-    systemName: 'Sakura Management Hub',
-    title: 'Stock Transfer Document',
-    docNumber: transfer?.transfer_number || 'Draft',
-    statusText
-  }));
-
-  parts.push('<div style="margin-bottom: 24px;">');
-  parts.push(buildFieldRow('Transfer No', transfer?.transfer_number || '—'));
-  parts.push(buildFieldRow('Linked TO', transfer?.to_number || '—'));
-  parts.push(buildFieldRow('Source', transfer?.from_name || transfer?.from_code || '—'));
-  parts.push(buildFieldRow('Destination', transfer?.to_name || transfer?.to_code || '—'));
-  parts.push(buildFieldRow('Date', transfer?.business_date ? formatDate(transfer.business_date) : '—'));
-  parts.push(buildFieldRow('Creator', transfer?.created_by || '—'));
-  parts.push(buildFieldRow('Items', (items || []).length));
-  parts.push(buildFieldRow('Total Qty', (items || []).reduce((s, it) => s + (Number(it.picked_qty ?? it.requested_qty ?? it.quantity ?? it.qty) || 0), 0)));
-  parts.push('</div>');
-
-  parts.push(buildItemsTableWithBatch(items));
-
-  parts.push('<div style="margin-top: 32px; padding-top: 16px; border-top: 1px solid #d1d5db; display: grid; grid-template-columns: 1fr 1fr; gap: 24px; font-size: 11px;">');
-  parts.push('<div><strong>Dispatch signature:</strong> _________________</div>');
-  parts.push('<div><strong>Receive signature:</strong> _________________</div>');
-  parts.push('</div>');
-
-  parts.push('<div style="margin-top: 32px; padding-top: 16px; border-top: 1px solid #d1d5db; display: flex; justify-content: space-between; align-items: center; font-size: 11px; color: #6b7280;">');
-  parts.push('<div>Sakura Management Hub</div>');
-  parts.push('<div>Page 1 / 1</div>');
-  parts.push('</div>');
-
-  return parts.join('');
-}
-
-/**
- * Open print dialog for Stock Transfer Document.
- */
-export function printStockTransfer(transfer, items) {
-  const html = buildStockTransferPrintHtml(transfer, items);
-  return printDocument(html, 'Stock Transfer - ' + (transfer?.transfer_number || 'Draft'));
 }
 
 /**
  * Generic print document. Opens hidden iframe, writes HTML, triggers print.
  */
 export function printDocument(htmlContent, title = 'Document') {
+  if (typeof document === 'undefined') return;
   let printFrame = document.getElementById(PRINT_FRAME_ID);
   if (!printFrame) {
     printFrame = document.createElement('iframe');
@@ -231,9 +173,6 @@ export function printDocument(htmlContent, title = 'Document') {
       printWindow.print();
     } catch (err) {
       console.error('Print error:', err);
-      if (typeof window !== 'undefined' && window.showNotification) {
-        window.showNotification('Error printing document', 'error');
-      }
     }
   };
   if (printFrame.contentDocument?.readyState === 'complete') {

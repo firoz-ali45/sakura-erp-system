@@ -5,6 +5,9 @@
 -- Run after: 03_HARD_RESET_FINANCE_RBAC.sql
 -- ============================================================================
 
+-- PART 0: Allow new roles in users table (drop restrictive CHECK if exists)
+ALTER TABLE users DROP CONSTRAINT IF EXISTS users_role_check;
+
 -- ============================================================================
 -- PART 1: NEW PERMISSIONS (Transfer, Warehouse, Branch, Logistics, Audit)
 -- ============================================================================

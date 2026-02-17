@@ -132,6 +132,11 @@ const props = defineProps({
     type: [String, Number],
     required: false,
     default: null
+  },
+  /** 'purchase' (PR→PO→GRN→PUR) or 'transfer' (TO→TRS→Received) */
+  flowType: {
+    type: String,
+    default: 'purchase'
   }
 });
 
@@ -147,7 +152,10 @@ const docConfig = {
   PO: { label: 'Purchase Order', icon: '🧾', route: '/homeportal/purchase-order-detail/' },
   GRN: { label: 'GRN (MIGO)', icon: '📦', route: '/homeportal/grn-detail/' },
   PUR: { label: 'Purchasing (MIRO)', icon: '💰', route: '/homeportal/purchasing-detail/' },
-  PAYMENT: { label: 'Payment', icon: '💳', route: '/homeportal/payment-detail/' }
+  PAYMENT: { label: 'Payment', icon: '💳', route: '/homeportal/payment-detail/' },
+  TO: { label: 'Transfer Order', icon: '📋', route: '/homeportal/transfer-order-detail/' },
+  TRS: { label: 'Stock Transfer', icon: '🚚', route: '/homeportal/transfer-sending/' },
+  RECEIVED: { label: 'Received', icon: '✅', route: '/homeportal/transfer-sending/' }
 };
 
 // Document flow: fn_trace_graph only (doc_graph table). Returns pr/po/grn/pur as IDs.
@@ -157,7 +165,12 @@ const loadFlow = async () => {
   const rawId = props.docId ?? props.routeDocId;
   const currentId = rawId != null && rawId !== '' ? String(rawId) : null;
   if (!currentId) {
-    buildFlowFromTraceGraph({ pr: null, po: null, grn: null, pur: null }, normalizeDocType(props.docType));
+    const norm = normalizeDocType(props.docType);
+    if (props.flowType === 'transfer' || norm === 'TO' || norm === 'TRS') {
+      buildTransferFlowEmpty(norm);
+    } else {
+      buildFlowFromTraceGraph({ pr: null, po: null, grn: null, pur: null }, norm);
+    }
     loading.value = false;
     return;
   }
@@ -170,12 +183,19 @@ const loadFlow = async () => {
     const ready = await ensureSupabaseReady();
     if (!ready) throw new Error('Database connection not available');
 
-    // BULLETPROOF: Use client-side manual trace ONLY — no RPC dependency.
-    await buildFlowManually(currentType, currentId, props.linkedPrId);
+    if (props.flowType === 'transfer' || currentType === 'TO' || currentType === 'TRS') {
+      await buildTransferFlowManually(currentType, currentId);
+    } else {
+      await buildFlowManually(currentType, currentId, props.linkedPrId);
+    }
   } catch (err) {
     console.error('Document flow error:', err);
     error.value = 'Failed to load document flow';
-    buildFlowFromTraceGraph({ pr: null, po: null, grn: null, pur: null }, currentType);
+    if (props.flowType === 'transfer' || currentType === 'TO' || currentType === 'TRS') {
+      buildTransferFlowEmpty(currentType);
+    } else {
+      buildFlowFromTraceGraph({ pr: null, po: null, grn: null, pur: null }, currentType);
+    }
   } finally {
     loading.value = false;
   }
@@ -186,6 +206,7 @@ function normalizeDocType(t) {
   if (u === 'INV' || u === 'INVOICE') return 'PUR';
   if (u === 'GR') return 'GRN';
   if (u === 'PAY' || u === 'PMT') return 'PAYMENT';
+  if (u === 'TRANSFER') return 'TRS';
   return u;
 }
 
@@ -233,6 +254,89 @@ const buildFlowFromTraceGraph = (graph, currentType) => {
       all_docs: hasDoc ? (fromBackend ? [doc] : [{ id: doc_id, [numberKeys[type]]: doc_number }]) : []
     };
   });
+
+  flowNodes.value = nodes;
+};
+
+// Transfer flow: TO → TRS → Received
+const buildTransferFlowEmpty = (currentType) => {
+  const nodes = [
+    { doc_type: 'TO', doc_id: null, doc_number: null, doc_status: 'not_created', is_current: currentType === 'TO', sequence_order: 1 },
+    { doc_type: 'TRS', doc_id: null, doc_number: null, doc_status: 'not_created', is_current: currentType === 'TRS', sequence_order: 2 },
+    { doc_type: 'RECEIVED', doc_id: null, doc_number: null, doc_status: 'not_created', is_current: false, sequence_order: 3 }
+  ];
+  flowNodes.value = nodes;
+};
+
+const buildTransferFlowManually = async (currentType, docId) => {
+  const { supabaseClient } = await import('@/services/supabase.js');
+  let toData = null;
+  let trsData = null;
+
+  if (currentType === 'TO') {
+    const { data: to } = await supabaseClient
+      .from('transfer_orders')
+      .select('id, transfer_number, to_number, status')
+      .eq('id', docId)
+      .single();
+    toData = to;
+    if (to) {
+      const { data: st } = await supabaseClient
+        .from('stock_transfers')
+        .select('id, transfer_number, status')
+        .eq('transfer_orders_id', docId)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      trsData = st;
+    }
+  } else if (currentType === 'TRS') {
+    const { data: st } = await supabaseClient
+      .from('stock_transfers')
+      .select('id, transfer_number, transfer_orders_id, status')
+      .eq('id', docId)
+      .single();
+    trsData = st;
+    if (st?.transfer_orders_id) {
+      const { data: to } = await supabaseClient
+        .from('transfer_orders')
+        .select('id, transfer_number, to_number, status')
+        .eq('id', st.transfer_orders_id)
+        .single();
+      toData = to;
+    }
+  }
+
+  const rawId = props.docId ?? props.routeDocId;
+  const currentId = rawId != null && rawId !== '' ? String(rawId) : null;
+  const currentNum = (props.currentNumber || '').trim();
+
+  const nodes = [
+    {
+      doc_type: 'TO',
+      doc_id: toData?.id || (currentType === 'TO' && currentId ? currentId : null),
+      doc_number: toData?.transfer_number || toData?.to_number || (currentType === 'TO' && currentId ? currentNum || currentId : null),
+      doc_status: toData?.status || (currentType === 'TO' && currentId ? '—' : 'not_created'),
+      is_current: currentType === 'TO',
+      sequence_order: 1
+    },
+    {
+      doc_type: 'TRS',
+      doc_id: trsData?.id || (currentType === 'TRS' && currentId ? currentId : null),
+      doc_number: trsData?.transfer_number || (currentType === 'TRS' && currentId ? currentNum || currentId : null),
+      doc_status: trsData?.status || (currentType === 'TRS' && currentId ? '—' : 'not_created'),
+      is_current: currentType === 'TRS',
+      sequence_order: 2
+    },
+    {
+      doc_type: 'RECEIVED',
+      doc_id: trsData?.status === 'completed' ? trsData?.id : null,
+      doc_number: trsData?.status === 'completed' ? (trsData?.transfer_number || 'Completed') : null,
+      doc_status: trsData?.status === 'completed' ? 'completed' : 'not_created',
+      is_current: false,
+      sequence_order: 3
+    }
+  ];
 
   flowNodes.value = nodes;
 };

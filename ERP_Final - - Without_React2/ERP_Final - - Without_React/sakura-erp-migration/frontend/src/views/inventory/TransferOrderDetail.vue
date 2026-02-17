@@ -33,7 +33,7 @@
           </button>
           <button
             @click="submitForReview"
-            :disabled="submitting || hasStockWarning"
+            :disabled="submitting"
             class="px-6 py-2 rounded-lg text-white font-semibold disabled:opacity-50"
             style="background-color: #284b44;"
           >
@@ -149,13 +149,25 @@
         </div>
       </div>
 
-      <!-- STEP 7: Validation banner -->
+      <!-- Document Flow: TO → Transfer → Receiving -->
+      <DocumentFlow
+        v-if="order?.id"
+        flow-type="transfer"
+        doc-type="to"
+        :doc-id="order.id"
+        :current-number="order.transfer_number || order.to_number"
+      />
+
+      <!-- STEP 7: Warning banner (informational only — submit allowed; dispatch blocked until stock available) -->
       <div
         v-if="order.status === 'draft' && hasStockWarning"
-        class="bg-red-50 border border-red-200 rounded-xl p-4 mb-6 flex items-center gap-3"
+        class="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-6 flex items-center gap-3"
       >
-        <i class="fas fa-exclamation-triangle text-red-600"></i>
-        <p class="text-red-800 font-medium">Transferred quantity exceeds available quantity</p>
+        <i class="fas fa-exclamation-triangle text-amber-600"></i>
+        <div>
+          <p class="text-amber-800 font-medium">Transferred quantity exceeds available quantity</p>
+          <p class="text-amber-700 text-sm mt-1">TO is a demand document. You can submit for approval. Dispatch will be blocked until stock is available.</p>
+        </div>
       </div>
 
       <!-- STEP 3: Items section -->
@@ -311,6 +323,7 @@ import { printTransferOrder } from '@/services/pdfPrintService.js';
 import AddItemModal from '@/components/transfer/AddItemModal.vue';
 import EditItemModal from '@/components/transfer/EditItemModal.vue';
 import ImportItemsModal from '@/components/transfer/ImportItemsModal.vue';
+import DocumentFlow from '@/components/common/DocumentFlow.vue';
 
 const route = useRoute();
 const router = useRouter();

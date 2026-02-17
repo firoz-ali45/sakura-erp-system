@@ -7,6 +7,42 @@ import { ensureSupabaseReady, supabaseClient } from '@/services/supabase.js';
 
 // --- Stock Transfers (TRS-000001, separate from TO) ---
 
+export async function removeItemFromStockTransfer(transferId, itemId) {
+  const ready = await ensureSupabaseReady();
+  if (!ready || !transferId || !itemId) return { ok: false, error: 'Not ready' };
+  const { data, error } = await supabaseClient.rpc('fn_remove_item_from_stock_transfer', {
+    p_transfer_id: transferId,
+    p_item_id: itemId
+  });
+  if (error) return { ok: false, error: error.message };
+  return data || { ok: false };
+}
+
+export async function addItemToStockTransfer(transferId, itemId, transferQty) {
+  const ready = await ensureSupabaseReady();
+  if (!ready || !transferId || !itemId) return { ok: false, error: 'Not ready' };
+  const { data, error } = await supabaseClient.rpc('fn_add_item_to_stock_transfer', {
+    p_transfer_id: transferId,
+    p_item_id: itemId,
+    p_transfer_qty: Number(transferQty) || 0
+  });
+  if (error) return { ok: false, error: error.message };
+  return data || { ok: false };
+}
+
+export async function createDirectTransfer(fromLocationId, toLocationId, businessDate, createdBy) {
+  const ready = await ensureSupabaseReady();
+  if (!ready || !fromLocationId || !toLocationId) return { ok: false, error: 'Not ready' };
+  const { data, error } = await supabaseClient.rpc('fn_create_direct_transfer', {
+    p_from_location_id: fromLocationId,
+    p_to_location_id: toLocationId,
+    p_business_date: businessDate ? String(businessDate).slice(0, 10) : null,
+    p_created_by: createdBy || 'user'
+  });
+  if (error) return { ok: false, error: error.message };
+  return data || { ok: false };
+}
+
 export async function createTransferFromTo(toId) {
   const ready = await ensureSupabaseReady();
   if (!ready || !toId) return { ok: false, error: 'Not ready' };
@@ -50,6 +86,32 @@ export async function fetchStockTransfersList() {
   return data || [];
 }
 
+export async function startPickingStockTransfer(transferId, userId) {
+  const ready = await ensureSupabaseReady();
+  if (!ready || !transferId) return { ok: false, error: 'Not ready' };
+  const { data, error } = await supabaseClient.rpc('fn_start_picking_stock_transfer', {
+    p_transfer_id: transferId,
+    p_user_id: userId || 'user'
+  });
+  if (error) return { ok: false, error: error.message };
+  return data || { ok: false };
+}
+
+export async function updateStockTransferItemPicking(transferId, itemId, batchId, pickedQty, damagedQty, unitCost) {
+  const ready = await ensureSupabaseReady();
+  if (!ready || !transferId || !itemId) return { ok: false, error: 'Not ready' };
+  const { data, error } = await supabaseClient.rpc('fn_update_stock_transfer_item_picking', {
+    p_transfer_id: transferId,
+    p_item_id: itemId,
+    p_batch_id: batchId || null,
+    p_picked_qty: Number(pickedQty) || 0,
+    p_damaged_qty: Number(damagedQty) || 0,
+    p_unit_cost: unitCost != null ? Number(unitCost) : null
+  });
+  if (error) return { ok: false, error: error.message };
+  return data || { ok: false };
+}
+
 export async function confirmPickingStockTransfer(transferId, userId) {
   const ready = await ensureSupabaseReady();
   if (!ready || !transferId) return { ok: false, error: 'Not ready' };
@@ -61,11 +123,175 @@ export async function confirmPickingStockTransfer(transferId, userId) {
   return data || { ok: false };
 }
 
+export async function fetchDrivers() {
+  const ready = await ensureSupabaseReady();
+  if (!ready) return [];
+  const { data, error } = await supabaseClient.from('v_drivers').select('id, name, email, phone').order('name');
+  if (error) {
+    const { data: usersData } = await supabaseClient.from('users').select('id, name, email, phone').ilike('role', 'driver').order('name');
+    return usersData || [];
+  }
+  return data || [];
+}
+
+export async function dispatchToDriver(transferId, driverId, vehicleNo, sealNumber, expectedDeliveryTime, notes, userId) {
+  const ready = await ensureSupabaseReady();
+  if (!ready || !transferId || !driverId) return { ok: false, error: 'Not ready' };
+  const { data, error } = await supabaseClient.rpc('fn_dispatch_to_driver', {
+    p_transfer_id: transferId,
+    p_driver_id: driverId,
+    p_vehicle_no: vehicleNo || null,
+    p_seal_number: sealNumber || null,
+    p_expected_delivery_time: expectedDeliveryTime || null,
+    p_notes: notes || null,
+    p_user_id: userId || 'user'
+  });
+  if (error) return { ok: false, error: error.message };
+  return data || { ok: false };
+}
+
+export async function warehouseMarkInTransit(transferId, userId) {
+  const ready = await ensureSupabaseReady();
+  if (!ready || !transferId) return { ok: false, error: 'Not ready' };
+  const { data, error } = await supabaseClient.rpc('fn_warehouse_mark_in_transit', {
+    p_transfer_id: transferId,
+    p_user_id: userId || 'user'
+  });
+  if (error) return { ok: false, error: error.message };
+  return data || { ok: false };
+}
+
+export async function driverAcceptTransfer(transferId, driverId) {
+  const ready = await ensureSupabaseReady();
+  if (!ready || !transferId || !driverId) return { ok: false, error: 'Not ready' };
+  const { data, error } = await supabaseClient.rpc('fn_driver_accept_transfer', {
+    p_transfer_id: transferId,
+    p_driver_id: driverId
+  });
+  if (error) return { ok: false, error: error.message };
+  return data || { ok: false };
+}
+
+export async function driverArrived(transferId, driverId) {
+  const ready = await ensureSupabaseReady();
+  if (!ready || !transferId || !driverId) return { ok: false, error: 'Not ready' };
+  const { data, error } = await supabaseClient.rpc('fn_driver_arrived', {
+    p_transfer_id: transferId,
+    p_driver_id: driverId
+  });
+  if (error) return { ok: false, error: error.message };
+  return data || { ok: false };
+}
+
+export async function warehouseMarkArrived(transferId, userId) {
+  const ready = await ensureSupabaseReady();
+  if (!ready || !transferId) return { ok: false, error: 'Not ready' };
+  const { data, error } = await supabaseClient.rpc('fn_warehouse_mark_arrived', {
+    p_transfer_id: transferId,
+    p_user_id: userId || 'user'
+  });
+  if (error) return { ok: false, error: error.message };
+  return data || { ok: false };
+}
+
+export async function qualityCheckTransfer(transferId, conditionStatus, temperature, damageFlag, expiredItemsFlag, notes, userId) {
+  const ready = await ensureSupabaseReady();
+  if (!ready || !transferId) return { ok: false, error: 'Not ready' };
+  const { data, error } = await supabaseClient.rpc('fn_quality_check_transfer', {
+    p_transfer_id: transferId,
+    p_condition_status: conditionStatus,
+    p_temperature: temperature != null ? Number(temperature) : null,
+    p_damage_flag: !!damageFlag,
+    p_expired_items_flag: !!expiredItemsFlag,
+    p_notes: notes || null,
+    p_user_id: userId || 'user'
+  });
+  if (error) return { ok: false, error: error.message };
+  return data || { ok: false };
+}
+
+export async function generateDeliveryOtp(transferId) {
+  const ready = await ensureSupabaseReady();
+  if (!ready || !transferId) return { ok: false, error: 'Not ready' };
+  const { data, error } = await supabaseClient.rpc('fn_generate_delivery_otp', { p_transfer_id: transferId });
+  if (error) return { ok: false, error: error.message };
+  return data || { ok: false };
+}
+
+export async function verifyDeliveryOtp(transferId, otp, userId) {
+  const ready = await ensureSupabaseReady();
+  if (!ready || !transferId || !otp) return { ok: false, error: 'Not ready' };
+  const { data, error } = await supabaseClient.rpc('fn_verify_delivery_otp', {
+    p_transfer_id: transferId,
+    p_otp: String(otp).trim(),
+    p_user_id: userId || 'user'
+  });
+  if (error) return { ok: false, error: error.message };
+  return data || { ok: false };
+}
+
+export async function fetchLogisticsHandover(transferId) {
+  const ready = await ensureSupabaseReady();
+  if (!ready || !transferId) return null;
+  const { data, error } = await supabaseClient
+    .from('v_logistics_handover_full')
+    .select('*')
+    .eq('transfer_id', transferId)
+    .order('handover_time', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (error) return null;
+  return data;
+}
+
+export async function fetchQualityChecks(transferId) {
+  const ready = await ensureSupabaseReady();
+  if (!ready || !transferId) return [];
+  const { data, error } = await supabaseClient
+    .from('transfer_quality_checks')
+    .select('*')
+    .eq('transfer_id', transferId)
+    .order('created_at', { ascending: false });
+  if (error) return [];
+  return data || [];
+}
+
+export async function insertTransferLogisticsEvent(transferId, payload, createdBy) {
+  const ready = await ensureSupabaseReady();
+  if (!ready || !transferId) return { ok: false, error: 'Not ready' };
+  const { data, error } = await supabaseClient.rpc('fn_insert_transfer_logistics_event', {
+    p_transfer_id: transferId,
+    p_vehicle_no: payload?.vehicle_no || null,
+    p_driver_name: payload?.driver_name || null,
+    p_temp_check: payload?.temp_check || null,
+    p_damage_check: payload?.damage_check || null,
+    p_notes: payload?.notes || null,
+    p_created_by: createdBy || 'user'
+  });
+  if (error) return { ok: false, error: error.message };
+  return data || { ok: false };
+}
+
 export async function dispatchStockTransfer(transferId, userId) {
   const ready = await ensureSupabaseReady();
   if (!ready || !transferId) return { ok: false, error: 'Not ready' };
   const { data, error } = await supabaseClient.rpc('fn_dispatch_stock_transfer', {
     p_transfer_id: transferId,
+    p_user_id: userId || 'user'
+  });
+  if (error) return { ok: false, error: error.message };
+  return data || { ok: false };
+}
+
+export async function insertTransferDamageReport(transferId, itemId, damagedQty, responsibility, notes, userId) {
+  const ready = await ensureSupabaseReady();
+  if (!ready || !transferId || !itemId || !responsibility) return { ok: false, error: 'Not ready' };
+  const { data, error } = await supabaseClient.rpc('fn_insert_transfer_damage_report', {
+    p_transfer_id: transferId,
+    p_item_id: itemId,
+    p_damaged_qty: Number(damagedQty) || 0,
+    p_responsibility: responsibility,
+    p_notes: notes || null,
     p_user_id: userId || 'user'
   });
   if (error) return { ok: false, error: error.message };
@@ -84,6 +310,14 @@ export async function receiveStockTransferItem(transferId, itemId, batchId, rece
     p_rejected_qty: Number(rejectedQty) || 0,
     p_user_id: userId || 'user'
   });
+  if (error) return { ok: false, error: error.message };
+  return data || { ok: false };
+}
+
+export async function deleteStockTransfer(transferId) {
+  const ready = await ensureSupabaseReady();
+  if (!ready || !transferId) return { ok: false, error: 'Not ready' };
+  const { data, error } = await supabaseClient.rpc('fn_delete_stock_transfer', { p_transfer_id: transferId });
   if (error) return { ok: false, error: error.message };
   return data || { ok: false };
 }
@@ -470,6 +704,48 @@ export async function fetchItemStockAtLocation(locationId) {
     x.avg_cost = x.available_qty > 0 ? x.total_value / x.available_qty : 0;
     return x;
   });
+}
+
+/** Batches for item at location, FEFO (nearest expiry first). For batch selection in picking. */
+export async function fetchBatchesForItemAtLocation(locationId, itemId) {
+  const ready = await ensureSupabaseReady();
+  if (!ready || !locationId || !itemId) return [];
+  const { data, error } = await supabaseClient
+    .from('v_inventory_balance')
+    .select('batch_id, batch_no, current_qty, avg_cost, total_value')
+    .eq('location_id', locationId)
+    .eq('item_id', itemId)
+    .gt('current_qty', 0)
+    .order('batch_no'); // FEFO: order by expiry - v_inventory_balance may need expiry; use batch_no as fallback
+  if (error) return [];
+  return data || [];
+}
+
+/** Batches with expiry for FEFO. Uses inventory_batches for expiry. */
+export async function fetchBatchesFefoAtLocation(locationId, itemId) {
+  const ready = await ensureSupabaseReady();
+  if (!ready || !locationId || !itemId) return [];
+  const { data, error } = await supabaseClient
+    .from('v_inventory_balance')
+    .select('batch_id, batch_no, current_qty, avg_cost, total_value')
+    .eq('location_id', locationId)
+    .eq('item_id', itemId)
+    .gt('current_qty', 0);
+  if (error) return [];
+  const rows = data || [];
+  const batchIds = rows.map((r) => r.batch_id).filter(Boolean);
+  if (!batchIds.length) return rows;
+  const { data: batchData } = await supabaseClient
+    .from('inventory_batches')
+    .select('id, expiry_date')
+    .in('id', batchIds);
+  const expiryMap = (batchData || []).reduce((acc, b) => {
+    acc[b.id] = b.expiry_date ? new Date(b.expiry_date).getTime() : 9999999999999;
+    return acc;
+  }, {});
+  return rows
+    .map((r) => ({ ...r, expiry_date: batchData?.find((b) => b.id === r.batch_id)?.expiry_date }))
+    .sort((a, b) => (expiryMap[a.batch_id] || 9999999999999) - (expiryMap[b.batch_id] || 9999999999999));
 }
 
 /** Map item_id -> { available_qty, avg_cost, batches } at location. For enriching transfer items. */

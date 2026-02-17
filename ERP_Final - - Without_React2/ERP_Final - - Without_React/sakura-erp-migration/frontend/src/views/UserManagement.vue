@@ -64,6 +64,15 @@
             <option value="">{{ $t('userManagement.allRoles') }}</option>
             <option value="admin">{{ $t('userManagement.roleAdmin') }}</option>
             <option value="manager">{{ $t('userManagement.roleManager') }}</option>
+            <option value="supervisor">{{ $t('userManagement.roleSupervisor') }}</option>
+            <option value="logistics_manager">{{ $t('userManagement.roleLogisticsManager') }}</option>
+            <option value="warehouse_manager">{{ $t('userManagement.roleWarehouseManager') }}</option>
+            <option value="branch_manager">{{ $t('userManagement.roleBranchManager') }}</option>
+            <option value="driver">{{ $t('userManagement.roleDriver') }}</option>
+            <option value="finance">{{ $t('userManagement.roleFinance') }}</option>
+            <option value="auditor">{{ $t('userManagement.roleAuditor') }}</option>
+            <option value="procurement">{{ $t('userManagement.roleProcurement') }}</option>
+            <option value="inventory_manager">{{ $t('userManagement.roleInventoryManager') }}</option>
             <option value="user">{{ $t('userManagement.roleUser') }}</option>
             <option value="viewer">{{ $t('userManagement.roleViewer') }}</option>
           </select>
@@ -299,10 +308,19 @@
                 required 
                 class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-400"
               >
-                <option value="viewer">{{ $t('userManagement.roleViewer') }}</option>
-                <option value="user">{{ $t('userManagement.roleUser') }}</option>
-                <option value="manager">{{ $t('userManagement.roleManager') }}</option>
                 <option value="admin">{{ $t('userManagement.roleAdmin') }}</option>
+                <option value="manager">{{ $t('userManagement.roleManager') }}</option>
+                <option value="supervisor">{{ $t('userManagement.roleSupervisor') }}</option>
+                <option value="logistics_manager">{{ $t('userManagement.roleLogisticsManager') }}</option>
+                <option value="warehouse_manager">{{ $t('userManagement.roleWarehouseManager') }}</option>
+                <option value="branch_manager">{{ $t('userManagement.roleBranchManager') }}</option>
+                <option value="driver">{{ $t('userManagement.roleDriver') }}</option>
+                <option value="finance">{{ $t('userManagement.roleFinance') }}</option>
+                <option value="auditor">{{ $t('userManagement.roleAuditor') }}</option>
+                <option value="procurement">{{ $t('userManagement.roleProcurement') }}</option>
+                <option value="inventory_manager">{{ $t('userManagement.roleInventoryManager') }}</option>
+                <option value="user">{{ $t('userManagement.roleUser') }}</option>
+                <option value="viewer">{{ $t('userManagement.roleViewer') }}</option>
               </select>
             </div>
             <div>
@@ -773,10 +791,19 @@ const resendVerificationEmail = async (userId) => {
 };
 
 const getRoleBadgeClass = (role) => {
-  const roleLower = (role || '').toLowerCase();
+  const roleLower = (role || '').toLowerCase().replace(/-/g, '_');
   const classes = {
     'admin': 'bg-red-100 text-red-800',
     'manager': 'bg-purple-100 text-purple-800',
+    'supervisor': 'bg-indigo-100 text-indigo-800',
+    'logistics_manager': 'bg-blue-100 text-blue-800',
+    'warehouse_manager': 'bg-amber-100 text-amber-800',
+    'branch_manager': 'bg-teal-100 text-teal-800',
+    'driver': 'bg-slate-100 text-slate-800',
+    'finance': 'bg-emerald-100 text-emerald-800',
+    'auditor': 'bg-orange-100 text-orange-800',
+    'procurement': 'bg-cyan-100 text-cyan-800',
+    'inventory_manager': 'bg-lime-100 text-lime-800',
     'user': 'bg-[#284b44] bg-opacity-10 text-[#284b44]',
     'viewer': 'bg-gray-100 text-gray-800'
   };
@@ -794,10 +821,19 @@ const getStatusBadgeClass = (status) => {
 };
 
 const getRoleLabel = (role) => {
-  const roleLower = (role || '').toLowerCase();
+  const roleLower = (role || '').toLowerCase().replace(/-/g, '_');
   const labels = {
     'admin': t('userManagement.roleAdmin'),
     'manager': t('userManagement.roleManager'),
+    'supervisor': t('userManagement.roleSupervisor'),
+    'logistics_manager': t('userManagement.roleLogisticsManager'),
+    'warehouse_manager': t('userManagement.roleWarehouseManager'),
+    'branch_manager': t('userManagement.roleBranchManager'),
+    'driver': t('userManagement.roleDriver'),
+    'finance': t('userManagement.roleFinance'),
+    'auditor': t('userManagement.roleAuditor'),
+    'procurement': t('userManagement.roleProcurement'),
+    'inventory_manager': t('userManagement.roleInventoryManager'),
     'user': t('userManagement.roleUser'),
     'viewer': t('userManagement.roleViewer')
   };

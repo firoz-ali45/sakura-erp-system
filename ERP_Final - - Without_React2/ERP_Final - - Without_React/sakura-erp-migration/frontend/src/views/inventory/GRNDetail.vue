@@ -1098,7 +1098,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, nextTick } from 'vue';
+import { ref, computed, onMounted, nextTick, defineAsyncComponent } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { 
   getGRNById, 
@@ -1110,8 +1110,9 @@ import {
   loadBatchesForGRN,
   loadGRNsFromSupabase
 } from '@/services/supabase';
-import DocumentFlow from '@/components/common/DocumentFlow.vue';
-import ItemFlow from '@/components/common/ItemFlow.vue';
+// Lazy-load to avoid "Cannot access before initialization" (circular/order dependency)
+const DocumentFlow = defineAsyncComponent(() => import('@/components/common/DocumentFlow.vue'));
+const ItemFlow = defineAsyncComponent(() => import('@/components/common/ItemFlow.vue'));
 import { loadItemsFromSupabase } from '@/services/supabase';
 import { loadPurchaseOrdersFromSupabase } from '@/services/supabase';
 import { showConfirmDialog } from '@/utils/confirmDialog';
@@ -1515,10 +1516,14 @@ const loadGRN = async () => {
           grn.value.batches = [];
         }
         // ERP Document Closure: Check if Purchasing exists for this GRN (hide Create Purchasing if yes)
-        const { canCreateNextDocument } = await import('@/services/erpViews.js');
-        const result = await canCreateNextDocument('GRN', grnId);
-        canCreatePurchase.value = result;
-        console.log('RPC fn_can_create_next_document', { docType: 'GRN', grnId, result });
+        try {
+          const { canCreateNextDocument } = await import('@/services/erpViews.js');
+          canCreatePurchase.value = await canCreateNextDocument('GRN', grnId);
+          console.log('RPC fn_can_create_next_document', { docType: 'GRN', grnId, result: canCreatePurchase.value });
+        } catch (e) {
+          console.warn('canCreateNextDocument:', e);
+          canCreatePurchase.value = false;
+        }
 
         // Initialize QC data for batches
         grn.value.batches.forEach(batch => {

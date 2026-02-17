@@ -1,8 +1,8 @@
 // Supabase Configuration - Same as index.html
 import { cachedFetch, cacheKeys, invalidateCache } from '@/utils/dataCache';
 
-const SUPABASE_URL = 'https://kexwnurwavszvmlpifsf.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtleHdudXJ3YXZzenZtbHBpZnNmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjUyNzk5OTksImV4cCI6MjA4MDg1NTk5OX0.w7RlFdXVFdKtqJJ99L0Q1ofzUiwillyy-g1ASEj1q-U';
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || 'https://kexwnurwavszvmlpifsf.supabase.co';
+const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtleHdudXJ3YXZzenZtbHBpZnNmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjUyNzk5OTksImV4cCI6MjA4MDg1NTk5OX0.w7RlFdXVFdKtqJJ99L0Q1ofzUiwillyy-g1ASEj1q-U';
 
 // Initialize Supabase Client
 export let supabaseClient = null;
