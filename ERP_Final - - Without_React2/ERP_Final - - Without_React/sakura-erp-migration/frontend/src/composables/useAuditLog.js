@@ -2,11 +2,6 @@
  * Enterprise audit trail composable.
  * Logs actions to audit_logs for compliance and traceability.
  */
-<<<<<<< HEAD
-=======
-import { shallowRef } from 'vue';
-
->>>>>>> ef51b17 (Sync: 2026-02-17 10:54 - project updates)
 let _auditLogger = null;
 
 export function useAuditLog() {
