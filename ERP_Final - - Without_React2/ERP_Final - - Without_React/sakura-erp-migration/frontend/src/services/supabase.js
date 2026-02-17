@@ -374,10 +374,16 @@ export async function loginWithSupabase(email, password) {
     // Create login session via RPC (bypasses RLS) & log activity
     try {
       const device = typeof navigator !== 'undefined' ? navigator.userAgent?.slice(0, 500) : null;
+      let ip = null;
+      try {
+        const ipRes = await fetch('https://api.ipify.org?format=json', { signal: AbortSignal.timeout(3000) });
+        const ipData = await ipRes.json();
+        ip = ipData?.ip || null;
+      } catch (_) {}
       const { data: sessionId } = await supabaseClient.rpc('fn_create_login_session', {
         p_user_id: userData.id,
         p_device: device,
-        p_ip: null,
+        p_ip: ip,
         p_location: null
       });
       if (sessionId) {

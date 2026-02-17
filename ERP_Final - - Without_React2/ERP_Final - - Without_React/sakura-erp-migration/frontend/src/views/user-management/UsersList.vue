@@ -21,7 +21,7 @@
             <span>Edit User</span>
           </button>
           <button 
-            v-if="selectedUser && activeTab !== 'deleted'"
+            v-if="selectedUser && activeTab !== 'deleted' && canDeleteUser"
             @click="doDeleteUser"
             class="px-3 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 text-sm font-medium flex items-center gap-1.5"
           >
@@ -162,7 +162,7 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue';
-import { getUsersEnriched, getRoles, updateUserStatus, forceLogoutUser, resetUserPassword } from '@/services/userManagementService';
+import { getUsersEnriched, getRoles, updateUserStatus, forceLogoutUser, resetUserPassword, isSuperAdmin } from '@/services/userManagementService';
 import { useI18n } from '@/composables/useI18n';
 import { usePermissions } from '@/composables/usePermissions';
 import { formatDate as formatDateUtil } from '@/utils/dateFormat';
@@ -174,6 +174,7 @@ const canCreateUser = computed(() => {
   const p = permissions.value;
   return p.has('*') || p.has('user_management_view') || p.has('user_management_users') || p.has('user_create');
 });
+const canDeleteUser = ref(false);
 const users = ref([]);
 const roles = ref([]);
 const loading = ref(false);
@@ -247,6 +248,8 @@ async function load() {
     const [u, r] = await Promise.all([getUsersEnriched(), getRoles()]);
     users.value = u || [];
     roles.value = r || [];
+    const uid = JSON.parse(localStorage.getItem('sakura_current_user') || '{}')?.id;
+    canDeleteUser.value = uid ? await isSuperAdmin(uid) : false;
   } catch (e) {
     console.error(e);
   } finally {

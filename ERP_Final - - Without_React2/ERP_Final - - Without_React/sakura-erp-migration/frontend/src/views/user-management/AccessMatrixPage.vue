@@ -3,11 +3,9 @@
     <div class="mb-6 flex justify-between items-center">
       <div>
         <h2 class="text-2xl font-bold text-gray-800">{{ $t('userManagement.sectionTitle') }} → {{ $t('userManagement.accessMatrix') }}</h2>
-        <p class="text-gray-600 mt-1">Role × Permission matrix (click to toggle, SAP-style)</p>
+        <p class="text-gray-600 mt-1">Role × Permission matrix (click to toggle — saves immediately to DB, SAP-style)</p>
       </div>
-      <button v-if="hasChanges" @click="saveAll" class="px-4 py-2 bg-[#284b44] text-white rounded-lg hover:bg-[#1e3d38]" :disabled="saving">
-        {{ saving ? 'Saving...' : 'Save Changes' }}
-      </button>
+      <span v-if="saving" class="text-sm text-gray-500">Saving...</span>
     </div>
 
     <div v-if="loading" class="text-center py-12">
@@ -59,7 +57,6 @@ const rolePerms = ref({});
 const allPermissions = ref([]);
 const loading = ref(true);
 const saving = ref(false);
-const pendingChanges = ref({});
 
 const allPermissionCodes = computed(() => {
   const codes = new Set();
@@ -67,67 +64,36 @@ const allPermissionCodes = computed(() => {
   return [...codes].sort();
 });
 
-const hasChanges = computed(() => Object.keys(pendingChanges.value).length > 0);
-
 function hasPermission(roleId, permissionCode) {
   const perms = rolePerms.value[roleId] || [];
-  const pending = pendingChanges.value[roleId];
-  if (pending && pending.has(permissionCode)) return true;
-  if (pending && pending.has('!' + permissionCode)) return false;
   return perms.some(p => p.permission_code === permissionCode) || perms.some(p => p.permission_code === '*');
 }
 
 function getEffectivePerms(roleId) {
   const perms = rolePerms.value[roleId] || [];
-  const base = new Set(perms.map(p => p.permission_code).filter(c => c !== '*'));
-  const pending = pendingChanges.value[roleId];
-  if (pending) {
-    for (const c of pending) {
-      if (c.startsWith('!')) base.delete(c.slice(1));
-      else base.add(c);
-    }
-  }
-  return [...base];
+  const hasStar = perms.some(p => p.permission_code === '*');
+  if (hasStar) return allPermissions.value.map(p => p.permission_code).filter(c => c !== '*');
+  return perms.map(p => p.permission_code).filter(c => c !== '*');
 }
 
-async function saveAll() {
+async function togglePermission(roleId, permissionCode) {
+  const perms = rolePerms.value[roleId] || [];
+  const current = perms.some(p => p.permission_code === permissionCode) || perms.some(p => p.permission_code === '*');
+  let codes = getEffectivePerms(roleId);
+  if (current) {
+    codes = codes.filter(c => c !== permissionCode);
+  } else {
+    codes = [...codes, permissionCode];
+  }
   saving.value = true;
   try {
-    for (const roleId of Object.keys(pendingChanges.value)) {
-      const codes = getEffectivePerms(roleId);
-      await setRolePermissions(roleId, codes);
-    }
-    pendingChanges.value = {};
-    const permMap = {};
-    for (const role of roles.value) {
-      permMap[role.id] = await getRolePermissions(role.id);
-    }
-    rolePerms.value = permMap;
+    await setRolePermissions(roleId, codes);
+    rolePerms.value[roleId] = await getRolePermissions(roleId);
   } catch (e) {
     console.error(e);
     alert('Failed to save');
   } finally {
     saving.value = false;
-  }
-}
-
-function togglePermission(roleId, permissionCode) {
-  const perms = rolePerms.value[roleId] || [];
-  const current = perms.some(p => p.permission_code === permissionCode) || perms.some(p => p.permission_code === '*');
-  const p = pendingChanges.value[roleId] || new Set();
-  const next = new Set(p);
-  if (current) {
-    next.add('!' + permissionCode);
-    next.delete(permissionCode);
-  } else {
-    next.add(permissionCode);
-    next.delete('!' + permissionCode);
-  }
-  if (next.size === 0) {
-    const { [roleId]: _, ...rest } = pendingChanges.value;
-    pendingChanges.value = rest;
-  } else {
-    pendingChanges.value = { ...pendingChanges.value, [roleId]: next };
   }
 }
 

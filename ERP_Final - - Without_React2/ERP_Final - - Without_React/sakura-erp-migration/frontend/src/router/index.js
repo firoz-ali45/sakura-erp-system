@@ -327,6 +327,12 @@ const routes = [
         meta: { requiresAuth: true }
       },
       {
+        path: 'admin/erp-health',
+        name: 'ErpHealthDashboard',
+        component: () => import('../views/admin/ErpHealthDashboard.vue'),
+        meta: { requiresAuth: true }
+      },
+      {
         path: 'accounts-payable',
         name: 'AccountsPayable',
         component: () => import('../views/finance/AccountsPayable.vue'),

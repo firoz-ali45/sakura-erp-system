@@ -26,6 +26,20 @@ export async function userHasPermission(userId, permissionCode) {
   return !!data;
 }
 
+/** 3-layer permission: role + location + action. p_location_id optional. */
+export async function userHasPermissionWithLocation(userId, permissionCode, locationId = null) {
+  if (!userId || !permissionCode) return false;
+  const c = await client();
+  if (!c) return false;
+  const { data, error } = await c.rpc('fn_user_has_permission_with_location', {
+    p_user_id: userId,
+    p_permission_code: permissionCode,
+    p_location_id: locationId || null
+  });
+  if (error) { console.warn('userHasPermissionWithLocation error:', error); return false; }
+  return !!data;
+}
+
 export async function getUserPermissions(userId) {
   if (!userId) return [];
   const c = await client();

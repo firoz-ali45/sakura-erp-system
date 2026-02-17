@@ -113,18 +113,46 @@
             </form>
           </div>
 
-          <!-- Roles -->
+          <!-- Roles (Assign/Edit - DB persistent) -->
           <div class="bg-white rounded-lg shadow p-6">
-            <h3 class="font-bold text-lg mb-4">Roles</h3>
-            <div v-if="userRoles.length" class="space-y-2">
-              <div v-for="r in userRoles" :key="r.role_id" class="flex items-center gap-2">
-                <span class="px-2 py-1 text-xs font-semibold rounded-full bg-[#284b44]/10 text-[#284b44]">
-                  {{ r.role_name || r.role_code }}
-                  <span v-if="r.is_primary" class="ml-1 text-[10px]">(Primary)</span>
-                </span>
+            <div class="flex justify-between items-center mb-4">
+              <h3 class="font-bold text-lg">Roles</h3>
+              <button v-if="!editingRoles" @click="editingRoles = true" class="text-sm text-[#284b44] hover:underline">
+                <i class="fas fa-edit mr-1"></i> Assign Role
+              </button>
+              <div v-else class="flex gap-2">
+                <button @click="saveUserRoles" class="text-sm px-3 py-1 bg-[#284b44] text-white rounded" :disabled="savingRoles">Save</button>
+                <button @click="cancelEditRoles" class="text-sm px-3 py-1 bg-gray-200 rounded">Cancel</button>
               </div>
             </div>
-            <p v-else class="text-gray-500 text-sm">No roles assigned</p>
+            <div v-if="!editingRoles" class="space-y-2">
+              <div v-if="userRoles.length" class="space-y-2">
+                <div v-for="r in userRoles" :key="r.role_id" class="flex items-center gap-2">
+                  <span class="px-2 py-1 text-xs font-semibold rounded-full bg-[#284b44]/10 text-[#284b44]">
+                    {{ r.role_name || r.role_code }}
+                    <span v-if="r.is_primary" class="ml-1 text-[10px]">(Primary)</span>
+                  </span>
+                </div>
+              </div>
+              <p v-else class="text-gray-500 text-sm">No roles assigned</p>
+            </div>
+            <div v-else class="space-y-3">
+              <label class="block text-sm font-medium text-gray-700">Select role(s)</label>
+              <div class="space-y-2 max-h-40 overflow-y-auto">
+                <label v-for="r in roles" :key="r.id" class="flex items-center gap-2 cursor-pointer">
+                  <input type="checkbox" :value="r.id" v-model="selectedRoleIds" class="rounded" />
+                  <span class="text-sm">{{ r.role_name }} ({{ r.role_code }})</span>
+                </label>
+              </div>
+              <div v-if="selectedRoleIds.length">
+                <label class="block text-sm text-gray-600 mb-1">Primary role</label>
+                <select v-model="primaryRoleId" class="w-full px-3 py-2 border rounded-lg text-sm">
+                  <option v-for="rid in selectedRoleIds" :key="rid" :value="rid">
+                    {{ roles.find(r => r.id === rid)?.role_name || rid }}
+                  </option>
+                </select>
+              </div>
+            </div>
           </div>
 
           <!-- Locations -->
@@ -231,7 +259,8 @@ import {
   getActivityLogs,
   getLoginSessionsByUser,
   forceLogoutSession,
-  getPermissionsMaster
+  getPermissionsMaster,
+  setUserRoles
 } from '@/services/userManagementService';
 import { getUserPermissions } from '@/services/permissionEngine';
 import { updateUserInSupabase } from '@/services/supabase';
@@ -255,6 +284,10 @@ const saving = ref(false);
 const editingBasic = ref(false);
 const editForm = ref({});
 const savingBasic = ref(false);
+const editingRoles = ref(false);
+const selectedRoleIds = ref([]);
+const primaryRoleId = ref(null);
+const savingRoles = ref(false);
 
 const isNew = computed(() => route.params.id === 'new');
 
@@ -307,7 +340,8 @@ async function saveBasicInfo() {
       status: editForm.value.status
     });
     if (res.success) {
-      user.value = { ...user.value, ...res.data };
+      // Enterprise: reload from DB - never trust frontend state
+      user.value = await getUserById(user.value.id);
       editingBasic.value = false;
     } else {
       console.error(res.error);
@@ -322,6 +356,36 @@ async function saveBasicInfo() {
 function cancelEditBasic() {
   editingBasic.value = false;
   editForm.value = { ...getEditFormFromUser(user.value) };
+}
+
+async function saveUserRoles() {
+  if (!user.value) return;
+  savingRoles.value = true;
+  try {
+    await setUserRoles(user.value.id, selectedRoleIds.value, primaryRoleId.value || selectedRoleIds.value[0]);
+    editingRoles.value = false;
+    // Enterprise: reload from DB - never trust frontend state
+    userRoles.value = await getUserRoles(user.value.id);
+    const primary = userRoles.value.find(r => r.is_primary) || userRoles.value[0];
+    if (primary) {
+      roleLocations.value = await getRoleLocationAccess(primary.role_id);
+    } else {
+      roleLocations.value = [];
+    }
+    // Reload permissions (from primary role)
+    userPermissionCodes.value = await getUserPermissions(user.value.id);
+  } catch (e) {
+    console.error(e);
+    alert('Failed to save roles: ' + (e.message || 'Unknown error'));
+  } finally {
+    savingRoles.value = false;
+  }
+}
+
+function cancelEditRoles() {
+  editingRoles.value = false;
+  selectedRoleIds.value = userRoles.value.map(r => r.role_id).filter(Boolean);
+  primaryRoleId.value = (userRoles.value.find(r => r.is_primary) || userRoles.value[0])?.role_id || null;
 }
 
 function getEditFormFromUser(u) {
@@ -380,6 +444,8 @@ async function loadProfile(userId) {
     ]);
     user.value = u;
     userRoles.value = rolesData;
+    selectedRoleIds.value = rolesData.map(r => r.role_id).filter(Boolean);
+    primaryRoleId.value = (rolesData.find(r => r.is_primary) || rolesData[0])?.role_id || null;
     userLocations.value = locs;
     activityLogs.value = logs;
     sessions.value = sess.filter(s => s.is_active);

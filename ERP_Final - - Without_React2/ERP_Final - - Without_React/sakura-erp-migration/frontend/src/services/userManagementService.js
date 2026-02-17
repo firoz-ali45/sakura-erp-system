@@ -23,7 +23,7 @@ async function sb() {
 export async function getRoles(filters = {}) {
   const client = await sb();
   if (!client) return [];
-  let q = client.from('roles').select('*').order('role_name');
+  let q = client.from('roles').select('*').order('role_name').neq('deleted', true);
   if (filters.is_active !== undefined) {
     q = q.eq('is_active', filters.is_active);
   }
@@ -47,7 +47,10 @@ export async function createRole({ role_name, role_code, description, is_active 
   }).select().single();
   if (error) throw error;
   const uid = actingUserId || _currentUserId();
-  if (uid) logActivity(uid, 'role_create', 'roles', data?.id, { role_name, role_code: code });
+  if (uid) {
+    logActivity(uid, 'role_create', 'roles', data?.id, { role_name, role_code: code });
+    logErpAudit(uid, 'create', 'roles', data?.id, 'User Management', null, { role_name, role_code: code });
+  }
   return data;
 }
 
@@ -86,7 +89,10 @@ export async function updateRole(id, payload, actingUserId = null) {
   }).eq('id', id).select().single();
   if (error) throw error;
   const uid = actingUserId || _currentUserId();
-  if (uid) logActivity(uid, 'role_edit', 'roles', id, { changes: Object.keys(payload) });
+  if (uid) {
+    logActivity(uid, 'role_edit', 'roles', id, { changes: Object.keys(payload) });
+    logErpAudit(uid, 'edit', 'roles', id, 'User Management', null, payload);
+  }
   return data;
 }
 
@@ -119,14 +125,27 @@ export async function getRolePermissions(roleId) {
 export async function setRolePermissions(roleId, permissionCodes, actingUserId = null) {
   const client = await sb();
   if (!client) throw new Error('Supabase not ready');
-  const { data: perms } = await client.from('permissions_master').select('id, permission_code').in('permission_code', permissionCodes);
-  const permIds = (perms || []).map(p => p.id);
-  await client.from('role_permissions').delete().eq('role_id', roleId);
-  if (permIds.length) {
-    await client.from('role_permissions').insert(permIds.map(pid => ({ role_id: roleId, permission_id: pid })));
-  }
+  const codes = Array.isArray(permissionCodes) ? permissionCodes : [...(permissionCodes || [])];
+  const { error } = await client.rpc('fn_set_role_permissions', { p_role_id: roleId, p_permission_codes: codes });
+  if (error) throw error;
   const uid = actingUserId || _currentUserId();
-  if (uid) logActivity(uid, 'permission_change', 'roles', roleId, { permission_count: permIds.length });
+  if (uid) logActivity(uid, 'permission_change', 'roles', roleId, { permission_count: codes.length });
+  return { success: true };
+}
+
+export async function setUserRoles(userId, roleIds, primaryRoleId = null, actingUserId = null) {
+  const client = await sb();
+  if (!client) throw new Error('Supabase not ready');
+  const ids = Array.isArray(roleIds) ? roleIds.filter(Boolean) : [];
+  const uid = actingUserId || _currentUserId();
+  const { error } = await client.rpc('fn_assign_user_roles', {
+    p_user_id: userId,
+    p_role_ids: ids,
+    p_primary_role_id: primaryRoleId || ids[0] || null,
+    p_assigned_by: uid
+  });
+  if (error) throw error;
+  if (uid) logActivity(uid, 'role_assign', 'users', userId, { role_count: ids.length });
   return { success: true };
 }
 
@@ -174,14 +193,14 @@ export async function getUserRoles(userId) {
   const client = await sb();
   if (!client) return [];
   const { data, error } = await client.from('user_roles')
-    .select('role_id, is_primary, roles(id, role_name, role_code, description, access_all_locations)')
+    .select('role_id, is_primary, roles(id, role_name, role_code, description, access_all_locations, deleted)')
     .eq('user_id', userId);
   if (error) return [];
   return (data || []).map(ur => ({
     role_id: ur.role_id,
     is_primary: ur.is_primary,
     ...(ur.roles || {})
-  })).filter(r => r.role_id);
+  })).filter(r => r.role_id && !r.deleted);
 }
 
 export async function getUserLocationAccess(userId) {
@@ -242,7 +261,7 @@ export async function createUserWithRole(userData, roleId = null, actingUserId =
   if (!res.success) throw new Error(res.error || 'Failed to create user');
   const user = res.data;
   if (roleId && user?.id) {
-    await client.from('user_roles').insert({ user_id: user.id, role_id: roleId, is_primary: true });
+    await setUserRoles(user.id, [roleId], roleId);
   }
   const uid = actingUserId || _currentUserId();
   if (uid) logActivity(uid, 'user_create', 'users', user?.id, { email: user?.email });
@@ -261,7 +280,7 @@ export async function userHasPermission(userId, permissionCode) {
   return !!data;
 }
 
-// --- USER ACTIVITY LOGS ---
+// --- USER ACTIVITY LOGS (writes to user_activity_logs + erp_audit_logs) ---
 export async function logActivity(userId, action, entityType = null, entityId = null, details = {}) {
   const client = await sb();
   if (!client) return;
@@ -271,7 +290,7 @@ export async function logActivity(userId, action, entityType = null, entityId = 
       p_user_id: userId,
       p_action: action,
       p_entity_type: entityType,
-      p_entity_id: entityId,
+      p_entity_id: entityId ? String(entityId) : null,
       p_metadata: details && typeof details === 'object' ? details : {},
       p_ip: null,
       p_user_agent: ua
@@ -281,15 +300,61 @@ export async function logActivity(userId, action, entityType = null, entityId = 
   }
 }
 
+// --- ERP AUDIT TRAIL (create/edit/delete/approve - full enterprise trail) ---
+export async function logErpAudit(userId, action, entityType, entityId, module, oldValues = null, newValues = null, sessionId = null) {
+  const client = await sb();
+  if (!client) return;
+  try {
+    const ua = typeof navigator !== 'undefined' ? navigator.userAgent?.slice(0, 500) : null;
+    const sid = sessionId || (typeof localStorage !== 'undefined' ? localStorage.getItem('sakura_session_id') : null);
+    await client.rpc('fn_log_erp_audit', {
+      p_user_id: userId,
+      p_action: action,
+      p_entity_type: entityType,
+      p_entity_id: entityId ? String(entityId) : null,
+      p_module: module,
+      p_old_values: oldValues,
+      p_new_values: newValues,
+      p_ip: null,
+      p_user_agent: ua,
+      p_session_id: sid || null
+    });
+  } catch (e) {
+    console.warn('logErpAudit:', e);
+  }
+}
+
 export async function getActivityLogs(filters = {}) {
   const client = await sb();
   if (!client) return [];
-  let q = client.from('user_activity_logs').select('*, users(name, email)').order('created_at', { ascending: false }).limit(500);
+  let q = client.from('erp_audit_logs').select('*, users(name, email)').order('created_at', { ascending: false }).limit(500);
   if (filters.user_id) q = q.eq('user_id', filters.user_id);
   if (filters.action?.trim()) q = q.ilike('action', `%${filters.action.trim()}%`);
+  if (filters.module?.trim()) q = q.ilike('module', `%${filters.module.trim()}%`);
+  const { data, error } = await q;
+  if (error) return [];
+  return (data || []).map(r => ({ ...r, users: r.users, entity_type: r.entity_type, entity_id: r.entity_id, ip_address: r.ip_address }));
+}
+
+export async function getErpAuditLogs(filters = {}, limit = 500) {
+  const client = await sb();
+  if (!client) return [];
+  let q = client.from('erp_audit_logs').select('*, users(name, email)').order('created_at', { ascending: false }).limit(limit);
+  if (filters.user_id) q = q.eq('user_id', filters.user_id);
+  if (filters.action?.trim()) q = q.ilike('action', `%${filters.action.trim()}%`);
+  if (filters.module?.trim()) q = q.ilike('module', `%${filters.module.trim()}%`);
+  if (filters.entity_type?.trim()) q = q.ilike('entity_type', `%${filters.entity_type.trim()}%`);
   const { data, error } = await q;
   if (error) return [];
   return data || [];
+}
+
+export async function isSuperAdmin(userId) {
+  const client = await sb();
+  if (!client || !userId) return false;
+  const { data, error } = await client.rpc('fn_is_super_admin', { p_user_id: userId });
+  if (error) return false;
+  return !!data;
 }
 
 // --- LOGIN SESSIONS ---
@@ -370,7 +435,10 @@ export async function updateUserStatus(userId, status) {
   const { error } = await client.from('users').update({ status, updated_at: new Date().toISOString() }).eq('id', userId);
   if (error) throw error;
   const uid = _currentUserId();
-  if (uid) logActivity(uid, status === 'deleted' ? 'user_delete' : 'user_status_change', 'users', userId, { status });
+  if (uid) {
+    logActivity(uid, status === 'deleted' ? 'user_delete' : 'user_status_change', 'users', userId, { status });
+    logErpAudit(uid, status === 'deleted' ? 'delete' : 'edit', 'users', userId, 'User Management', null, { status });
+  }
   return { success: true };
 }
 

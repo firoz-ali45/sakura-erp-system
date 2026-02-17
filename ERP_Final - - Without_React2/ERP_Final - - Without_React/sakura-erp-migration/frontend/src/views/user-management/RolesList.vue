@@ -11,7 +11,7 @@
           <i class="fas fa-edit"></i>
           <span>Edit Role</span>
         </button>
-        <button v-if="selectedRole && tab !== 'Deleted'" @click="doDeleteRole" class="px-3 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 text-sm font-medium flex items-center gap-1.5">
+        <button v-if="selectedRole && tab !== 'Deleted' && canDeleteRole" @click="doDeleteRole" class="px-3 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 text-sm font-medium flex items-center gap-1.5">
           <i class="fas fa-trash"></i>
           <span>Delete (soft)</span>
         </button>
@@ -70,7 +70,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
-import { getRoles, createRole, updateRole, cloneRole } from '@/services/userManagementService';
+import { getRoles, createRole, updateRole, cloneRole, isSuperAdmin } from '@/services/userManagementService';
 import { usePermissions } from '@/composables/usePermissions';
 
 const router = useRouter();
@@ -91,6 +91,7 @@ function _isAdmin() {
   } catch { return false; }
 }
 const roles = ref([]);
+const canDeleteRole = ref(false);
 const tab = ref('Active');
 const tabs = ['Active', 'Inactive', 'Deleted'];
 const selectedRole = ref(null);
@@ -152,5 +153,7 @@ async function submitCreateRole() {
 onMounted(async () => {
   await loadPermissions();
   roles.value = await getRoles();
+  const uid = JSON.parse(localStorage.getItem('sakura_current_user') || '{}')?.id;
+  canDeleteRole.value = uid ? await isSuperAdmin(uid) : false;
 });
 </script>

@@ -138,26 +138,37 @@ function toggleModule(module) {
   expandedModules.value = s;
 }
 
-function togglePermission(code) {
+async function togglePermission(code) {
   const s = new Set(selectedPermissions.value);
   if (s.has(code)) s.delete(code);
   else s.add(code);
   selectedPermissions.value = s;
+  // Enterprise: save immediately to DB (no UI-only state)
+  await savePermissionsToDb([...s]);
 }
 
-async function savePermissions() {
+async function savePermissionsToDb(codes) {
   if (!role.value) return;
   saving.value = true;
   permSaved.value = false;
   try {
-    await setRolePermissions(role.value.id, [...selectedPermissions.value]);
+    await setRolePermissions(role.value.id, codes);
     permSaved.value = true;
     setTimeout(() => { permSaved.value = false; }, 2000);
+    // Reload from DB - never trust frontend state
+    const fresh = await getRolePermissions(role.value.id);
+    rolePermissions.value = fresh;
+    selectedPermissions.value = new Set(fresh.map(p => p.permission_code));
   } catch (e) {
     console.error(e);
+    selectedPermissions.value = new Set(rolePermissions.value.map(p => p.permission_code));
   } finally {
     saving.value = false;
   }
+}
+
+async function savePermissions() {
+  await savePermissionsToDb([...selectedPermissions.value]);
 }
 
 async function saveLocationAccess() {
@@ -168,6 +179,9 @@ async function saveLocationAccess() {
     await setRoleLocationAccess(role.value.id, selectedLocationIds.value, accessAllLocations.value);
     locSaved.value = true;
     setTimeout(() => { locSaved.value = false; }, 2000);
+    // Reload from DB
+    const locs = await getRoleLocationAccess(role.value.id);
+    selectedLocationIds.value = locs.map(l => l.id).filter(Boolean);
   } catch (e) {
     console.error(e);
   } finally {
