@@ -1,0 +1,4 @@
+-- PHASE 1: Enterprise RBAC - Applied via Supabase MCP
+-- Tables: permissions_master, roles, role_permissions, role_location_access
+-- user_roles, user_location_access, user_activity_logs, login_sessions
+-- Permissions: 48 | Roles: 12 (Admin, Manager, User, etc.)
