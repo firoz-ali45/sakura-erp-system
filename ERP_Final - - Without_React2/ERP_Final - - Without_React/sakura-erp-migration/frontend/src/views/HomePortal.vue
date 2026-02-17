@@ -234,6 +234,59 @@
           </div>
         </div>
 
+        <!-- User Management Expandable Section (SAP-style RBAC) -->
+        <div class="nav-group">
+          <a 
+            href="#" 
+            @click.prevent="toggleNavGroup('userManagement-group')" 
+            class="nav-link nav-group-header flex items-center p-4 my-2 rounded-lg justify-between"
+          >
+            <div class="flex items-center">
+              <i class="fas fa-users-cog w-6 text-center"></i>
+              <span>{{ $t('homePortal.userManagement') }}</span>
+              <span v-if="pendingUsersCount > 0" class="ml-2 bg-red-500 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
+                {{ pendingUsersCount }}
+              </span>
+            </div>
+            <i 
+              :class="['fas', 'nav-group-icon', 'transition-transform', 'duration-200', userManagementGroupOpen ? 'fa-chevron-down' : 'fa-chevron-up']"
+            ></i>
+          </a>
+          <div 
+            id="userManagement-group" 
+            :class="['nav-group-content', 'pl-8', { 'hidden': !userManagementGroupOpen }]"
+          >
+            <router-link to="/homeportal/user-management/users" class="nav-link nav-sub-item flex items-center p-3 my-1 rounded-lg" active-class="active">
+              <i class="fas fa-user w-5 text-center"></i>
+              <span>{{ $t('userManagement.users') }}</span>
+            </router-link>
+            <router-link to="/homeportal/user-management/roles" class="nav-link nav-sub-item flex items-center p-3 my-1 rounded-lg" active-class="active">
+              <i class="fas fa-user-shield w-5 text-center"></i>
+              <span>{{ $t('userManagement.roles') }}</span>
+            </router-link>
+            <router-link to="/homeportal/user-management/permissions" class="nav-link nav-sub-item flex items-center p-3 my-1 rounded-lg" active-class="active">
+              <i class="fas fa-key w-5 text-center"></i>
+              <span>{{ $t('userManagement.permissions') }}</span>
+            </router-link>
+            <router-link to="/homeportal/user-management/access-matrix" class="nav-link nav-sub-item flex items-center p-3 my-1 rounded-lg" active-class="active">
+              <i class="fas fa-th-list w-5 text-center"></i>
+              <span>{{ $t('userManagement.accessMatrix') }}</span>
+            </router-link>
+            <router-link to="/homeportal/user-management/activity-logs" class="nav-link nav-sub-item flex items-center p-3 my-1 rounded-lg" active-class="active">
+              <i class="fas fa-history w-5 text-center"></i>
+              <span>{{ $t('userManagement.activityLogs') }}</span>
+            </router-link>
+            <router-link to="/homeportal/user-management/login-sessions" class="nav-link nav-sub-item flex items-center p-3 my-1 rounded-lg" active-class="active">
+              <i class="fas fa-sign-in-alt w-5 text-center"></i>
+              <span>{{ $t('userManagement.loginSessions') }}</span>
+            </router-link>
+            <router-link to="/homeportal/user-management/security-settings" class="nav-link nav-sub-item flex items-center p-3 my-1 rounded-lg" active-class="active">
+              <i class="fas fa-shield-alt w-5 text-center"></i>
+              <span>{{ $t('userManagement.securitySettings') }}</span>
+            </router-link>
+          </div>
+        </div>
+
         <!-- Manage Expandable Section -->
         <div class="nav-group">
           <a 
@@ -254,17 +307,6 @@
             id="manage-group" 
             :class="['nav-group-content', 'pl-8', { 'hidden': !manageGroupOpen }]"
           >
-            <router-link 
-              to="/homeportal/user-management" 
-              class="nav-link nav-sub-item flex items-center p-3 my-1 rounded-lg relative"
-              active-class="active"
-            >
-              <i class="fas fa-users-cog w-5 text-center"></i>
-              <span>{{ $t('homePortal.userManagement') }}</span>
-              <span v-if="pendingUsersCount > 0" class="absolute top-2 right-2 bg-red-500 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
-                {{ pendingUsersCount }}
-              </span>
-            </router-link>
             <router-link 
               to="/homeportal/tags" 
               class="nav-link nav-sub-item flex items-center p-3 my-1 rounded-lg"
@@ -612,6 +654,10 @@ watch(() => route.fullPath, (newPath, oldPath) => {
     query: route.query
   });
   
+  // Auto-expand User Management section when on user-management routes
+  if (newPath && newPath.includes('user-management')) {
+    userManagementGroupOpen.value = true;
+  }
   // Auto-collapse sidebar on mobile when route changes (mobile-first)
   if (window.innerWidth < 768 && sidebarOpen.value) {
     sidebarOpen.value = false;
@@ -632,6 +678,7 @@ const dashboardFrameSrc = ref('');
 const iframeLoading = ref(true);
 const inventoryGroupOpen = ref(true);
 const financeGroupOpen = ref(true);
+const userManagementGroupOpen = ref(false);
 const manageGroupOpen = ref(false);
 const reportsGroupOpen = ref(false);
 const pendingUsersCount = ref(0);
@@ -661,6 +708,8 @@ const toggleSidebar = () => {
 const toggleNavGroup = (groupName) => {
   if (groupName === 'inventory-group') {
     inventoryGroupOpen.value = !inventoryGroupOpen.value;
+  } else if (groupName === 'userManagement-group') {
+    userManagementGroupOpen.value = !userManagementGroupOpen.value;
   } else if (groupName === 'finance-group') {
     financeGroupOpen.value = !financeGroupOpen.value;
   } else if (groupName === 'manage-group') {

@@ -719,6 +719,16 @@
     }
   },
   "userManagement": {
+    "sectionTitle": "User Management",
+    "users": "Users",
+    "roles": "Roles",
+    "permissions": "Permissions",
+    "accessMatrix": "Access Control Matrix",
+    "activityLogs": "Activity Logs",
+    "loginSessions": "Login Sessions",
+    "securitySettings": "Security Settings",
+    "createUser": "Create User",
+    "createRole": "Create Role",
     "pendingApproval": "Pending Approval",
     "searchPlaceholder": "Search users by name, email, or role...",
     "allRoles": "All Roles",

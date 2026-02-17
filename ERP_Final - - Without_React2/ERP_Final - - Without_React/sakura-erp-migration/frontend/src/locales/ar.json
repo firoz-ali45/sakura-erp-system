@@ -688,6 +688,16 @@
     }
   },
   "userManagement": {
+    "sectionTitle": "إدارة المستخدمين",
+    "users": "المستخدمون",
+    "roles": "الأدوار",
+    "permissions": "الصلاحيات",
+    "accessMatrix": "مصفوفة التحكم في الوصول",
+    "activityLogs": "سجلات النشاط",
+    "loginSessions": "جلسات تسجيل الدخول",
+    "securitySettings": "إعدادات الأمان",
+    "createUser": "إنشاء مستخدم",
+    "createRole": "إنشاء دور",
     "pendingApproval": "قيد الموافقة",
     "searchPlaceholder": "البحث عن المستخدمين بالاسم أو البريد الإلكتروني أو الدور...",
     "allRoles": "جميع الأدوار",
