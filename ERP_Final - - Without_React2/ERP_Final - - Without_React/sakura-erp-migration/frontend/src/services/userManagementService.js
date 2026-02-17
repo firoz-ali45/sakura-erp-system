@@ -40,6 +40,24 @@ export async function createRole({ role_name, role_code, description, is_active 
   return data;
 }
 
+export async function getRoleById(id) {
+  const client = await sb();
+  if (!client) return null;
+  const { data, error } = await client.from('roles').select('*').eq('id', id).single();
+  if (error) return null;
+  return data;
+}
+
+export async function getUsersByRoleId(roleId) {
+  const client = await sb();
+  if (!client) return [];
+  const { data, error } = await client.from('user_roles')
+    .select('user_id, is_primary, users(id, name, email, status)')
+    .eq('role_id', roleId);
+  if (error) return [];
+  return (data || []).map(r => r.users).filter(Boolean);
+}
+
 export async function updateRole(id, payload) {
   const client = await sb();
   if (!client) throw new Error('Supabase not ready');
@@ -89,15 +107,24 @@ export async function setRolePermissions(roleId, permissionCodes) {
   return { success: true };
 }
 
+// --- INVENTORY LOCATIONS (for role location picker) ---
+export async function getInventoryLocations() {
+  const client = await sb();
+  if (!client) return [];
+  const { data, error } = await client.from('inventory_locations').select('id, location_code, location_name, location_type').eq('is_active', true).order('location_code');
+  if (error) return [];
+  return data || [];
+}
+
 // --- ROLE LOCATION ACCESS ---
 export async function getRoleLocationAccess(roleId) {
   const client = await sb();
   if (!client) return [];
   const { data, error } = await client.from('role_location_access')
-    .select('location_id, inventory_locations(location_code, location_name, location_type)')
+    .select('location_id, inventory_locations(id, location_code, location_name, location_type)')
     .eq('role_id', roleId);
   if (error) return [];
-  return (data || []).map(r => r.inventory_locations).filter(Boolean);
+  return (data || []).map(r => r.inventory_locations ? { ...r.inventory_locations, id: r.location_id } : null).filter(Boolean);
 }
 
 export async function setRoleLocationAccess(roleId, locationIds, accessAllLocations) {
