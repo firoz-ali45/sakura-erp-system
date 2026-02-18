@@ -13,9 +13,9 @@ export async function initSupabase() {
   if (typeof window !== 'undefined' && !supabaseClient) {
     try {
       const { createClient } = await import('@supabase/supabase-js');
-      
-      if (SUPABASE_URL && SUPABASE_URL !== 'YOUR_SUPABASE_PROJECT_URL' && 
-          SUPABASE_ANON_KEY && SUPABASE_ANON_KEY !== 'YOUR_SUPABASE_ANON_KEY') {
+
+      if (SUPABASE_URL && SUPABASE_URL !== 'YOUR_SUPABASE_PROJECT_URL' &&
+        SUPABASE_ANON_KEY && SUPABASE_ANON_KEY !== 'YOUR_SUPABASE_ANON_KEY') {
         supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
         // Update exported variables
         window.supabaseClient = supabaseClient;
@@ -54,12 +54,12 @@ export async function getUsers() {
           .from('users')
           .select('id,name,email,phone,role,status,profile_photo_url,permissions,notes,created_at,updated_at,last_login,last_activity')
           .order('created_at', { ascending: false });
-        
+
         if (error) {
           console.error('Error fetching users from Supabase:', error);
           return getUsersFromLocalStorage();
         }
-        
+
         return data || [];
       } catch (error) {
         console.error('Exception fetching users from Supabase:', error);
@@ -89,7 +89,7 @@ export async function createUserInSupabase(userData) {
   if (!USE_SUPABASE || !supabaseClient) {
     return { success: false, error: 'Supabase not configured' };
   }
-  
+
   try {
     // First, check if user already exists
     const { data: existingUser, error: checkError } = await supabaseClient
@@ -97,7 +97,7 @@ export async function createUserInSupabase(userData) {
       .select('*')
       .eq('email', userData.email.toLowerCase().trim())
       .single();
-    
+
     // If user exists, update password instead of creating new
     if (existingUser && !checkError) {
       console.log('User already exists, updating password...');
@@ -111,16 +111,16 @@ export async function createUserInSupabase(userData) {
         .eq('email', userData.email.toLowerCase().trim())
         .select()
         .single();
-      
+
       if (updateError) {
         console.error('Error updating user in Supabase:', updateError);
         return { success: false, error: updateError.message };
       }
-      
+
       invalidateCache(cacheKeys.users());
       return { success: true, data: updatedData, updated: true };
     }
-    
+
     // Create new user record in users table
     // Store password in password_hash field (plain text for compatibility with localStorage)
     // Convert role and status to lowercase to match Supabase constraint
@@ -147,26 +147,26 @@ export async function createUserInSupabase(userData) {
       updated_at: new Date().toISOString(),
       last_activity: new Date().toISOString()
     };
-    
+
     console.log('📝 Creating user in Supabase:', {
       email: newUser.email,
       name: newUser.name,
       role: newUser.role,
       status: newUser.status
     });
-    
+
     const { data, error } = await supabaseClient
       .from('users')
       .insert([newUser])
       .select()
       .single();
-    
+
     if (error) {
       console.error('❌ Error creating user in Supabase:', error);
       console.error('Error details:', JSON.stringify(error, null, 2));
       return { success: false, error: error.message };
     }
-    
+
     // Invalidate cache after create
     invalidateCache(cacheKeys.users());
     return { success: true, data };
@@ -183,7 +183,7 @@ export async function updateUserInSupabase(userId, updates) {
   if (!USE_SUPABASE || !supabaseClient) {
     return { success: false, error: 'Supabase not configured' };
   }
-  
+
   try {
     // Ensure role and status are lowercase if provided
     const updateData = { ...updates };
@@ -194,19 +194,19 @@ export async function updateUserInSupabase(userId, updates) {
       updateData.status = updateData.status.toLowerCase();
     }
     updateData.updated_at = new Date().toISOString();
-    
+
     const { data, error } = await supabaseClient
       .from('users')
       .update(updateData)
       .eq('id', userId)
       .select()
       .single();
-    
+
     if (error) {
       console.error('❌ Error updating user in Supabase:', error);
       return { success: false, error: error.message };
     }
-    
+
     // Invalidate cache after update
     invalidateCache(cacheKeys.users());
     return { success: true, data };
@@ -223,18 +223,18 @@ export async function deleteUserFromSupabase(userId) {
   if (!USE_SUPABASE || !supabaseClient) {
     return { success: false, error: 'Supabase not configured' };
   }
-  
+
   try {
     const { error } = await supabaseClient
       .from('users')
       .delete()
       .eq('id', userId);
-    
+
     if (error) {
       console.error('❌ Error deleting user from Supabase:', error);
       return { success: false, error: error.message };
     }
-    
+
     // Invalidate cache after delete
     invalidateCache(cacheKeys.users());
     return { success: true };
@@ -253,37 +253,37 @@ export async function loginWithSupabase(email, password) {
   if (!isReady || !supabaseClient) {
     return { success: false, error: 'Supabase not configured or not connected. Please check your internet connection.' };
   }
-  
+
   try {
     const emailToCheck = email.toLowerCase().trim();
     const passwordToCheck = String(password).trim();
-    
+
     console.log('🔍 Login attempt:');
     console.log('  - Email:', emailToCheck);
     console.log('  - Password length:', passwordToCheck.length);
-    
+
     // Get user from users table first
     const { data: userData, error: userError } = await supabaseClient
       .from('users')
       .select('*')
       .eq('email', emailToCheck)
       .single();
-    
+
     // Handle network errors
     if (userError) {
       console.error('❌ Supabase query error:', userError);
-      
+
       // Check for network errors
-      if (userError.message?.includes('Failed to fetch') || 
-          userError.message?.includes('NetworkError') ||
-          userError.code === 'PGRST116' ||
-          userError.message?.includes('fetch')) {
-        return { 
-          success: false, 
-          error: 'Network error: Cannot connect to Supabase. Please check your internet connection and try again.' 
+      if (userError.message?.includes('Failed to fetch') ||
+        userError.message?.includes('NetworkError') ||
+        userError.code === 'PGRST116' ||
+        userError.message?.includes('fetch')) {
+        return {
+          success: false,
+          error: 'Network error: Cannot connect to Supabase. Please check your internet connection and try again.'
         };
       }
-      
+
       // Check for user not found
       if (userError.code === 'PGRST116' || userError.message?.includes('No rows')) {
         try {
@@ -293,13 +293,13 @@ export async function loginWithSupabase(email, password) {
             p_failure_reason: 'User not found',
             p_user_agent: typeof navigator !== 'undefined' ? navigator.userAgent?.slice(0, 500) : null
           });
-        } catch (_) {}
+        } catch (_) { }
         return { success: false, error: 'User not found. Please check your email address.' };
       }
-      
+
       return { success: false, error: userError.message || 'User not found' };
     }
-    
+
     if (!userData) {
       console.error('❌ User not found in Supabase');
       try {
@@ -309,10 +309,10 @@ export async function loginWithSupabase(email, password) {
           p_failure_reason: 'User not found',
           p_user_agent: typeof navigator !== 'undefined' ? navigator.userAgent?.slice(0, 500) : null
         });
-      } catch (_) {}
+      } catch (_) { }
       return { success: false, error: 'User not found. Please check your email address.' };
     }
-    
+
     console.log('✅ User found in Supabase:');
     console.log('  - ID:', userData.id);
     console.log('  - Name:', userData.name);
@@ -321,16 +321,16 @@ export async function loginWithSupabase(email, password) {
     console.log('  - Status:', userData.status);
     console.log('  - Password hash exists:', !!userData.password_hash);
     console.log('  - Password hash type:', typeof userData.password_hash);
-    
+
     // Compare password (stored in password_hash field)
     const storedPassword = userData.password_hash ? String(userData.password_hash).trim() : '';
     const enteredPassword = passwordToCheck;
-    
+
     console.log('🔐 Password comparison:');
     console.log('  - Stored password length:', storedPassword.length);
     console.log('  - Entered password length:', enteredPassword.length);
     console.log('  - Passwords match:', storedPassword === enteredPassword);
-    
+
     if (storedPassword !== enteredPassword) {
       console.error('❌ Password mismatch');
       try {
@@ -341,10 +341,10 @@ export async function loginWithSupabase(email, password) {
           p_failure_reason: 'Invalid password',
           p_user_agent: typeof navigator !== 'undefined' ? navigator.userAgent?.slice(0, 500) : null
         });
-      } catch (_) {}
+      } catch (_) { }
       return { success: false, error: 'Invalid password' };
     }
-    
+
     // Check user status
     if (userData.status === 'suspended') {
       console.error('❌ User account is suspended');
@@ -356,15 +356,15 @@ export async function loginWithSupabase(email, password) {
           p_failure_reason: 'Account suspended',
           p_user_agent: typeof navigator !== 'undefined' ? navigator.userAgent?.slice(0, 500) : null
         });
-      } catch (_) {}
+      } catch (_) { }
       return { success: false, error: 'Account is suspended' };
     }
-    
+
     if (userData.status === 'inactive') {
       console.warn('⚠️ User account is inactive (needs admin approval)');
       return { success: false, error: 'Account is inactive. Please wait for admin approval.' };
     }
-    
+
     // Update last login timestamp
     await updateUserInSupabase(userData.id, {
       last_login: new Date().toISOString(),
@@ -379,7 +379,7 @@ export async function loginWithSupabase(email, password) {
         const ipRes = await fetch('https://api.ipify.org?format=json', { signal: AbortSignal.timeout(3000) });
         const ipData = await ipRes.json();
         ip = ipData?.ip || null;
-      } catch (_) {}
+      } catch (_) { }
       const { data: sessionId } = await supabaseClient.rpc('fn_create_login_session', {
         p_user_id: userData.id,
         p_device: device,
@@ -389,7 +389,7 @@ export async function loginWithSupabase(email, password) {
       if (sessionId) {
         try {
           localStorage.setItem('sakura_session_id', sessionId);
-        } catch (_) {}
+        } catch (_) { }
       }
       const { logActivity } = await import('@/services/userManagementService.js');
       logActivity(userData.id, 'login', null, null, {});
@@ -402,9 +402,9 @@ export async function loginWithSupabase(email, password) {
     } catch (e) {
       console.warn('Login session/activity log:', e);
     }
-    
+
     console.log('✅ Login successful with Supabase');
-    
+
     // Return user data in expected format
     return {
       success: true,
@@ -425,17 +425,17 @@ export async function loginWithSupabase(email, password) {
     };
   } catch (error) {
     console.error('❌ Exception during Supabase login:', error);
-    
+
     // Handle network errors
-    if (error.message?.includes('Failed to fetch') || 
-        error.message?.includes('NetworkError') ||
-        error.name === 'TypeError' && error.message?.includes('fetch')) {
-      return { 
-        success: false, 
-        error: 'Network error: Cannot connect to Supabase. Please check your internet connection and try again.' 
+    if (error.message?.includes('Failed to fetch') ||
+      error.message?.includes('NetworkError') ||
+      error.name === 'TypeError' && error.message?.includes('fetch')) {
+      return {
+        success: false,
+        error: 'Network error: Cannot connect to Supabase. Please check your internet connection and try again.'
       };
     }
-    
+
     return { success: false, error: error.message || 'Login failed. Please try again.' };
   }
 }
@@ -448,19 +448,19 @@ export async function loginWithSupabase(email, password) {
 export async function loadItemsFromSupabase() {
   const ready = await ensureSupabaseReady();
   if (!ready) return getItemsFromLocalStorage();
-  
+
   try {
     const { data, error } = await supabaseClient
       .from('inventory_items')
       .select('*')
       .eq('deleted', false)
       .order('created_at', { ascending: false });
-    
+
     if (error) {
       console.error('❌ Error loading items from Supabase:', error);
       return getItemsFromLocalStorage();
     }
-    
+
     console.log('✅ Items loaded from Supabase:', data?.length || 0);
     return data || [];
   } catch (error) {
@@ -485,25 +485,25 @@ export async function saveItemToSupabase(item) {
   if (!USE_SUPABASE || !supabaseClient) {
     return saveItemToLocalStorage(item);
   }
-  
+
   try {
     const itemData = {
       ...item,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
     };
-    
+
     const { data, error } = await supabaseClient
       .from('inventory_items')
       .insert([itemData])
       .select()
       .single();
-    
+
     if (error) {
       console.error('❌ Error saving item to Supabase:', error);
       return saveItemToLocalStorage(item);
     }
-    
+
     console.log('✅ Item saved to Supabase:', data);
     return { success: true, data };
   } catch (error) {
@@ -537,25 +537,25 @@ export async function updateItemInSupabase(itemId, updates) {
   if (!USE_SUPABASE || !supabaseClient) {
     return updateItemInLocalStorage(itemId, updates);
   }
-  
+
   try {
     const updateData = {
       ...updates,
       updated_at: new Date().toISOString()
     };
-    
+
     const { data, error } = await supabaseClient
       .from('inventory_items')
       .update(updateData)
       .eq('id', itemId)
       .select()
       .single();
-    
+
     if (error) {
       console.error('❌ Error updating item in Supabase:', error);
       return updateItemInLocalStorage(itemId, updates);
     }
-    
+
     console.log('✅ Item updated in Supabase:', data);
     return { success: true, data };
   } catch (error) {
@@ -587,18 +587,18 @@ export async function deleteItemFromSupabase(itemId) {
   if (!USE_SUPABASE || !supabaseClient) {
     return deleteItemFromLocalStorage(itemId);
   }
-  
+
   try {
     const { error } = await supabaseClient
       .from('inventory_items')
       .delete()
       .eq('id', itemId);
-    
+
     if (error) {
       console.error('❌ Error deleting item from Supabase:', error);
       return deleteItemFromLocalStorage(itemId);
     }
-    
+
     console.log('✅ Item deleted from Supabase');
     return { success: true };
   } catch (error) {
@@ -626,11 +626,11 @@ export async function restoreItemFromSupabase(itemId) {
   if (!USE_SUPABASE || !supabaseClient) {
     return restoreItemFromLocalStorage(itemId);
   }
-  
+
   try {
     const { data, error } = await supabaseClient
       .from('inventory_items')
-      .update({ 
+      .update({
         deleted: false,
         deleted_at: null,
         updated_at: new Date().toISOString()
@@ -638,12 +638,12 @@ export async function restoreItemFromSupabase(itemId) {
       .eq('id', itemId)
       .select()
       .single();
-    
+
     if (error) {
       console.error('❌ Error restoring item from Supabase:', error);
       return restoreItemFromLocalStorage(itemId);
     }
-    
+
     console.log('✅ Item restored from Supabase:', data);
     return { success: true, data };
   } catch (error) {
@@ -677,18 +677,18 @@ export async function loadCategoriesFromSupabase() {
   if (!USE_SUPABASE || !supabaseClient) {
     return getCategoriesFromLocalStorage();
   }
-  
+
   try {
     const { data, error } = await supabaseClient
       .from('inventory_categories')
       .select('*')
       .order('created_at', { ascending: false });
-    
+
     if (error) {
       console.error('❌ Error loading categories from Supabase:', error);
       return getCategoriesFromLocalStorage();
     }
-    
+
     console.log('✅ Categories loaded from Supabase:', data?.length || 0);
     return data || [];
   } catch (error) {
@@ -713,25 +713,25 @@ export async function saveCategoryToSupabase(category) {
   if (!USE_SUPABASE || !supabaseClient) {
     return saveCategoryToLocalStorage(category);
   }
-  
+
   try {
     const categoryData = {
       ...category,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
     };
-    
+
     const { data, error } = await supabaseClient
       .from('inventory_categories')
       .insert([categoryData])
       .select()
       .single();
-    
+
     if (error) {
       console.error('❌ Error saving category to Supabase:', error);
       return saveCategoryToLocalStorage(category);
     }
-    
+
     console.log('✅ Category saved to Supabase:', data);
     return { success: true, data };
   } catch (error) {
@@ -765,25 +765,25 @@ export async function updateCategoryInSupabase(categoryId, updates) {
   if (!USE_SUPABASE || !supabaseClient) {
     return updateCategoryInLocalStorage(categoryId, updates);
   }
-  
+
   try {
     const updateData = {
       ...updates,
       updated_at: new Date().toISOString()
     };
-    
+
     const { data, error } = await supabaseClient
       .from('inventory_categories')
       .update(updateData)
       .eq('id', categoryId)
       .select()
       .single();
-    
+
     if (error) {
       console.error('❌ Error updating category in Supabase:', error);
       return updateCategoryInLocalStorage(categoryId, updates);
     }
-    
+
     console.log('✅ Category updated in Supabase:', data);
     return { success: true, data };
   } catch (error) {
@@ -815,22 +815,22 @@ export async function deleteCategoryFromSupabase(categoryId) {
   if (!USE_SUPABASE || !supabaseClient) {
     return deleteCategoryFromLocalStorage(categoryId);
   }
-  
+
   try {
     // Soft delete
     const { error } = await supabaseClient
       .from('inventory_categories')
-      .update({ 
+      .update({
         deleted: true,
         deleted_at: new Date().toISOString()
       })
       .eq('id', categoryId);
-    
+
     if (error) {
       console.error('❌ Error deleting category from Supabase:', error);
       return deleteCategoryFromLocalStorage(categoryId);
     }
-    
+
     console.log('✅ Category deleted from Supabase');
     return { success: true };
   } catch (error) {
@@ -858,21 +858,21 @@ export async function restoreCategoryFromSupabase(categoryId) {
   if (!USE_SUPABASE || !supabaseClient) {
     return restoreCategoryFromLocalStorage(categoryId);
   }
-  
+
   try {
     const { error } = await supabaseClient
       .from('inventory_categories')
-      .update({ 
+      .update({
         deleted: false,
         deleted_at: null
       })
       .eq('id', categoryId);
-    
+
     if (error) {
       console.error('❌ Error restoring category from Supabase:', error);
       return restoreCategoryFromLocalStorage(categoryId);
     }
-    
+
     console.log('✅ Category restored from Supabase');
     return { success: true };
   } catch (error) {
@@ -961,19 +961,19 @@ function getDepartmentsFromLocalStorage() {
 export async function loadSuppliersFromSupabase() {
   const ready = await ensureSupabaseReady();
   if (!ready) return [];
-  
+
   try {
     const { data, error } = await supabaseClient
       .from('suppliers')
       .select('*')
       .eq('deleted', false)
       .order('name', { ascending: true });
-    
+
     if (error) {
       console.error('❌ Error loading suppliers from Supabase:', error);
       return [];
     }
-    
+
     return data || [];
   } catch (error) {
     console.error('❌ Exception loading suppliers from Supabase:', error);
@@ -998,7 +998,7 @@ export async function saveSupplierToSupabase(supplierData) {
   if (!USE_SUPABASE || !supabaseClient) {
     return saveSupplierToLocalStorage(supplierData);
   }
-  
+
   try {
     const insertData = {
       name: supplierData.name,
@@ -1023,18 +1023,18 @@ export async function saveSupplierToSupabase(supplierData) {
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
     };
-    
+
     const { data, error } = await supabaseClient
       .from('suppliers')
       .insert(insertData)
       .select()
       .single();
-    
+
     if (error) {
       console.error('❌ Error saving supplier to Supabase:', error);
       return saveSupplierToLocalStorage(supplierData);
     }
-    
+
     console.log('✅ Supplier saved to Supabase:', data);
     return { success: true, data };
   } catch (error) {
@@ -1070,7 +1070,7 @@ export async function updateSupplierInSupabase(supplierId, supplierData) {
   if (!USE_SUPABASE || !supabaseClient) {
     return updateSupplierInLocalStorage(supplierId, supplierData);
   }
-  
+
   try {
     const updateData = {
       name: supplierData.name,
@@ -1093,19 +1093,19 @@ export async function updateSupplierInSupabase(supplierId, supplierData) {
       notes: supplierData.notes || null,
       updated_at: new Date().toISOString()
     };
-    
+
     const { data, error } = await supabaseClient
       .from('suppliers')
       .update(updateData)
       .eq('id', supplierId)
       .select()
       .single();
-    
+
     if (error) {
       console.error('❌ Error updating supplier in Supabase:', error);
       return updateSupplierInLocalStorage(supplierId, supplierData);
     }
-    
+
     console.log('✅ Supplier updated in Supabase:', data);
     return { success: true, data };
   } catch (error) {
@@ -1142,11 +1142,11 @@ export async function deleteSupplierFromSupabase(supplierId) {
   if (!USE_SUPABASE || !supabaseClient) {
     return deleteSupplierFromLocalStorage(supplierId);
   }
-  
+
   try {
     const { data, error } = await supabaseClient
       .from('suppliers')
-      .update({ 
+      .update({
         deleted: true,
         deleted_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
@@ -1154,12 +1154,12 @@ export async function deleteSupplierFromSupabase(supplierId) {
       .eq('id', supplierId)
       .select()
       .single();
-    
+
     if (error) {
       console.error('❌ Error deleting supplier from Supabase:', error);
       return deleteSupplierFromLocalStorage(supplierId);
     }
-    
+
     console.log('✅ Supplier deleted from Supabase');
     return { success: true, data };
   } catch (error) {
@@ -1197,11 +1197,11 @@ export async function restoreSupplierFromSupabase(supplierId) {
   if (!USE_SUPABASE || !supabaseClient) {
     return restoreSupplierFromLocalStorage(supplierId);
   }
-  
+
   try {
     const { data, error } = await supabaseClient
       .from('suppliers')
-      .update({ 
+      .update({
         deleted: false,
         deleted_at: null,
         updated_at: new Date().toISOString()
@@ -1209,12 +1209,12 @@ export async function restoreSupplierFromSupabase(supplierId) {
       .eq('id', supplierId)
       .select()
       .single();
-    
+
     if (error) {
       console.error('❌ Error restoring supplier from Supabase:', error);
       return restoreSupplierFromLocalStorage(supplierId);
     }
-    
+
     console.log('✅ Supplier restored from Supabase:', data);
     return { success: true, data };
   } catch (error) {
@@ -1256,8 +1256,8 @@ export async function importSuppliersToSupabase(suppliers) {
     const stored = localStorage.getItem('suppliers');
     const existingSuppliers = stored ? JSON.parse(stored) : [];
     suppliers.forEach(supplier => {
-      const exists = existingSuppliers.find(s => 
-        s.name && supplier.name && 
+      const exists = existingSuppliers.find(s =>
+        s.name && supplier.name &&
         s.name.toLowerCase() === supplier.name.toLowerCase() &&
         !s.deleted
       );
@@ -1274,26 +1274,26 @@ export async function importSuppliersToSupabase(suppliers) {
     localStorage.setItem('suppliers', JSON.stringify(existingSuppliers));
     return { success: true, imported: suppliers.length };
   }
-  
+
   try {
     // Import suppliers in batches to avoid timeout
     const batchSize = 50;
     let successCount = 0;
     let errorCount = 0;
     const errors = [];
-    
+
     for (let i = 0; i < suppliers.length; i += batchSize) {
       const batch = suppliers.slice(i, i + batchSize);
-      
+
       // Remove validation metadata before inserting
       const batchToInsert = batch.map(supplier => {
         const { rowNumber, issues, hasIssues, ...supplierData } = supplier;
-        
+
         // Ensure all required fields are present and valid
         if (!supplierData.name || supplierData.name.trim() === '') {
           throw new Error(`Supplier at row ${supplier.rowNumber} missing name`);
         }
-        
+
         // Map to Supabase column names
         const insertData = {
           name: supplierData.name.trim(),
@@ -1318,15 +1318,15 @@ export async function importSuppliersToSupabase(suppliers) {
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString()
         };
-        
+
         return insertData;
       });
-      
+
       const { data, error } = await supabaseClient
         .from('suppliers')
         .insert(batchToInsert)
         .select();
-      
+
       if (error) {
         console.error('Error importing supplier batch:', error);
         console.error('Batch data:', batchToInsert);
@@ -1342,7 +1342,7 @@ export async function importSuppliersToSupabase(suppliers) {
         successCount += data ? data.length : 0;
       }
     }
-    
+
     return {
       success: successCount > 0,
       imported: successCount,
@@ -1377,7 +1377,7 @@ async function generatePONumber() {
         .neq('po_number', '')
         .not('po_number', 'like', 'DRAFT-%') // Exclude draft numbers
         .order('created_at', { ascending: false });
-      
+
       if (!error && data) {
         // Extract all PO numbers and find the maximum
         let maxNumber = 0;
@@ -1390,50 +1390,50 @@ async function generatePONumber() {
             }
           }
         });
-        
+
         // Generate next number and verify it doesn't exist
         let nextNumber = maxNumber + 1;
         let attempts = 0;
         const maxAttempts = 100; // Prevent infinite loop
-        
+
         while (attempts < maxAttempts) {
           const candidatePO = `PO-${String(nextNumber).padStart(6, '0')}`;
-          
+
           // Check if this PO number already exists
           const { data: existing } = await supabaseClient
             .from('purchase_orders')
             .select('id')
             .eq('po_number', candidatePO)
             .limit(1);
-          
+
           if (!existing || existing.length === 0) {
             // PO number is available
             console.log('✅ Generated unique PO number:', candidatePO);
             return candidatePO;
           }
-          
+
           // PO number exists, try next
           nextNumber++;
           attempts++;
         }
-        
+
         // If we exhausted attempts, use timestamp-based fallback
         console.warn('⚠️ Could not generate sequential PO number, using timestamp fallback');
         return `PO-${String(Date.now()).slice(-6).padStart(6, '0')}`;
       }
     }
-    
+
     // Fallback to localStorage
     const stored = localStorage.getItem('purchase_orders');
     const orders = stored ? JSON.parse(stored) : [];
-    
+
     // Filter out orders without PO numbers (drafts)
     const ordersWithPO = orders.filter(o => (o.poNumber || o.po_number) && (o.poNumber || o.po_number) !== '');
-    
+
     if (ordersWithPO.length === 0) {
       return 'PO-000001';
     }
-    
+
     // Get the highest PO number
     let maxNumber = 0;
     ordersWithPO.forEach(order => {
@@ -1445,7 +1445,7 @@ async function generatePONumber() {
         }
       }
     });
-    
+
     const nextNumber = maxNumber + 1;
     return `PO-${String(nextNumber).padStart(6, '0')}`;
   } catch (error) {
@@ -1461,7 +1461,7 @@ async function generatePONumber() {
 export async function loadPurchaseOrdersFromSupabase() {
   const ready = await ensureSupabaseReady();
   if (!ready) return getPurchaseOrdersFromLocalStorage();
-  
+
   try {
     const { data, error } = await supabaseClient
       .from('purchase_orders')
@@ -1470,19 +1470,19 @@ export async function loadPurchaseOrdersFromSupabase() {
         supplier:suppliers(*)
       `)
       .order('created_at', { ascending: false });
-    
+
     if (error) {
       console.error('❌ Error loading purchase orders from Supabase:', error);
       return getPurchaseOrdersFromLocalStorage();
     }
-    
+
     // Load items for each order
     // CRITICAL: Convert order.id to string for UUID comparison
     // FIXED: Handle missing FK relationship by loading items separately if relationship query fails
     const ordersWithItems = await Promise.all(
       data.map(async (order) => {
         const orderId = String(order.id).trim(); // Ensure UUID string format
-        
+
         // First try with relationship (if FK exists)
         let { data: items, error: itemsError } = await supabaseClient
           .from('purchase_order_items')
@@ -1491,34 +1491,34 @@ export async function loadPurchaseOrdersFromSupabase() {
             item:inventory_items(*)
           `)
           .eq('purchase_order_id', orderId);
-        
+
         // If relationship query fails (PGRST200), load items separately
         if (itemsError && itemsError.code === 'PGRST200') {
           console.warn(`⚠️ FK relationship not found for PO ${order.po_number || order.id}, loading items separately...`);
-          
+
           // Load items without relationship
           const { data: itemsWithoutRel, error: itemsErrorWithoutRel } = await supabaseClient
             .from('purchase_order_items')
             .select('*')
             .eq('purchase_order_id', orderId);
-          
+
           if (itemsErrorWithoutRel) {
             console.error(`❌ Error loading items for PO ${order.po_number || order.id}:`, itemsErrorWithoutRel);
             return { ...order, items: [] };
           }
-          
+
           // Load inventory items separately and map them
           if (itemsWithoutRel && itemsWithoutRel.length > 0) {
             const itemIds = itemsWithoutRel
               .map(item => item.item_id)
               .filter(id => id !== null && id !== undefined);
-            
+
             if (itemIds.length > 0) {
               const { data: inventoryItems } = await supabaseClient
                 .from('inventory_items')
                 .select('*')
                 .in('id', itemIds);
-              
+
               // Map inventory items to PO items
               items = itemsWithoutRel.map(poItem => ({
                 ...poItem,
@@ -1535,11 +1535,11 @@ export async function loadPurchaseOrdersFromSupabase() {
           console.error(`   PO ID: ${orderId}, Type: ${typeof orderId}`);
           return { ...order, items: [] };
         }
-        
+
         return { ...order, items: items || [] };
       })
     );
-    
+
     console.log('✅ Purchase orders loaded from Supabase:', ordersWithItems.length);
     return ordersWithItems;
   } catch (error) {
@@ -1565,10 +1565,10 @@ export async function savePurchaseOrderToSupabase(orderData) {
   if (!USE_SUPABASE || !supabaseClient) {
     return savePurchaseOrderToLocalStorage(orderData);
   }
-  
+
   try {
     const { items, supplier, ...orderFields } = orderData;
-    
+
     // Map frontend field names to database column names (snake_case)
     // Note: created_by should be UUID/BIGINT (user ID), not username string
     // For now, we'll set it to null if it's a string (username)
@@ -1583,7 +1583,7 @@ export async function savePurchaseOrderToSupabase(orderData) {
       // If it's a username string, we'll leave it as null
       // You can add a users table lookup here if needed
     }
-    
+
     // Validate and convert supplier_id
     let supplierIdValue = null;
     const supplierId = orderFields.supplierId || orderFields.supplier_id;
@@ -1596,7 +1596,7 @@ export async function savePurchaseOrderToSupabase(orderData) {
         console.warn('⚠️ Invalid supplier_id format:', supplierId);
       }
     }
-    
+
     const insertData = {
       supplier_id: supplierIdValue,
       supplier_name: orderFields.supplierName || orderFields.supplier_name || null,
@@ -1613,7 +1613,7 @@ export async function savePurchaseOrderToSupabase(orderData) {
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
     };
-    
+
     // PO number handling: For drafts, generate a temporary draft number
     // This will be replaced with a proper PO number when submitted
     if (orderFields.poNumber || orderFields.po_number) {
@@ -1628,24 +1628,24 @@ export async function savePurchaseOrderToSupabase(orderData) {
       // Call generatePONumber function (defined in this file)
       insertData.po_number = await generatePONumber();
     }
-    
+
     // Remove any undefined values that might cause issues
     Object.keys(insertData).forEach(key => {
       if (insertData[key] === undefined) {
         delete insertData[key];
       }
     });
-    
+
     // Log the data being inserted for debugging
     console.log('📝 Inserting purchase order data:', JSON.stringify(insertData, null, 2));
-    
+
     // Create order
     const { data: order, error: orderError } = await supabaseClient
       .from('purchase_orders')
       .insert([insertData])
       .select()
       .single();
-    
+
     if (orderError) {
       console.error('❌ Error saving purchase order to Supabase:', orderError);
       console.error('❌ Error details:', {
@@ -1656,24 +1656,24 @@ export async function savePurchaseOrderToSupabase(orderData) {
       });
       console.error('❌ Data that failed to insert:', JSON.stringify(insertData, null, 2));
       // Return error instead of falling back to localStorage
-      return { 
-        success: false, 
+      return {
+        success: false,
         error: orderError.message || 'Failed to save purchase order',
         details: orderError.details,
         hint: orderError.hint
       };
     }
-    
+
     // Create order items
     if (items && items.length > 0) {
       const orderItems = items.map(item => {
         // CRITICAL: Get item_id from multiple possible sources
         const itemId = item.itemId || item.item_id || (item.item && item.item.id) || null;
-        
+
         if (!itemId) {
           console.error('❌ PO Item missing item_id!', item);
         }
-        
+
         return {
           purchase_order_id: order.id,
           item_id: itemId, // CRITICAL: Must be set for foreign key relationship
@@ -1686,19 +1686,19 @@ export async function savePurchaseOrderToSupabase(orderData) {
           expiry_date: item.expiryDate || item.expiry_date || null
         };
       });
-      
+
       console.log('📦 Saving PO items:', orderItems.length, 'items');
       console.log('📦 First PO item sample:', {
         purchase_order_id: orderItems[0]?.purchase_order_id,
         item_id: orderItems[0]?.item_id,
         quantity: orderItems[0]?.quantity
       });
-      
+
       const { data: insertedItems, error: itemsError } = await supabaseClient
         .from('purchase_order_items')
         .insert(orderItems)
         .select();
-      
+
       if (itemsError) {
         console.error('❌ Error saving purchase order items to Supabase:', itemsError);
         console.error('❌ Items error details:', {
@@ -1713,7 +1713,7 @@ export async function savePurchaseOrderToSupabase(orderData) {
         console.log('✅ PO items saved successfully:', insertedItems?.length || orderItems.length, 'items');
       }
     }
-    
+
     // Reload order with items - Try with relationship first, fallback if needed
     // First get the order with supplier relationship
     const { data: orderWithSupplier, error: supplierReloadError } = await supabaseClient
@@ -1724,11 +1724,11 @@ export async function savePurchaseOrderToSupabase(orderData) {
       `)
       .eq('id', order.id)
       .single();
-    
+
     // Then get items separately WITH item relationship (fallback if it fails)
     let orderItems = null;
     let itemsReloadError = null;
-    
+
     // Try with relationship first
     const { data: itemsWithRel, error: itemsErrorWithRel } = await supabaseClient
       .from('purchase_order_items')
@@ -1737,7 +1737,7 @@ export async function savePurchaseOrderToSupabase(orderData) {
         item:inventory_items(*)
       `)
       .eq('purchase_order_id', order.id);
-    
+
     if (itemsErrorWithRel) {
       console.warn('⚠️ Error loading items with relationship, trying without:', itemsErrorWithRel);
       // Fallback: Load without relationship
@@ -1745,7 +1745,7 @@ export async function savePurchaseOrderToSupabase(orderData) {
         .from('purchase_order_items')
         .select('*')
         .eq('purchase_order_id', order.id);
-      
+
       if (itemsErrorWithoutRel) {
         console.error('❌ Error reloading purchase order items:', itemsErrorWithoutRel);
         itemsReloadError = itemsErrorWithoutRel;
@@ -1760,7 +1760,7 @@ export async function savePurchaseOrderToSupabase(orderData) {
               .from('inventory_items')
               .select('*')
               .in('id', itemIds);
-            
+
             if (inventoryItems) {
               orderItems.forEach(poItem => {
                 const invItem = inventoryItems.find(inv => inv.id === poItem.item_id);
@@ -1773,11 +1773,11 @@ export async function savePurchaseOrderToSupabase(orderData) {
     } else {
       orderItems = itemsWithRel || [];
     }
-    
+
     if (supplierReloadError) {
       console.error('❌ Error reloading purchase order with supplier:', supplierReloadError);
     }
-    
+
     // Combine the data
     const fullOrder = orderWithSupplier || order;
     if (orderItems) {
@@ -1793,12 +1793,12 @@ export async function savePurchaseOrderToSupabase(orderData) {
     } else {
       fullOrder.items = [];
     }
-    
+
     // If supplier relationship didn't load, manually add it
     if (!fullOrder.supplier && fullOrder.supplier_id && supplier) {
       fullOrder.supplier = supplier;
     }
-    
+
     console.log('✅ Purchase order saved to Supabase');
     return { success: true, data: fullOrder };
   } catch (error) {
@@ -1811,14 +1811,14 @@ function savePurchaseOrderToLocalStorage(orderData) {
   try {
     const stored = localStorage.getItem('purchase_orders');
     const orders = stored ? JSON.parse(stored) : [];
-    
+
     const newOrder = {
       id: orderData.id || `po-${Date.now()}`,
       ...orderData,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     };
-    
+
     orders.push(newOrder);
     localStorage.setItem('purchase_orders', JSON.stringify(orders));
     return { success: true, data: newOrder };
@@ -1847,10 +1847,10 @@ export async function updatePurchaseOrderInSupabase(orderId, orderData) {
   if (!USE_SUPABASE || !supabaseClient) {
     return updatePurchaseOrderInLocalStorage(orderId, orderData);
   }
-  
+
   try {
     const { items, supplier, ...orderFields } = orderData;
-    
+
     // Map frontend field names to database column names (snake_case)
     const updateData = {
       supplier_id: orderFields.supplierId || orderFields.supplier_id || null,
@@ -1865,7 +1865,7 @@ export async function updatePurchaseOrderInSupabase(orderId, orderData) {
       notes: orderFields.notes || null,
       updated_at: new Date().toISOString()
     };
-    
+
     // PO number handling - replace DRAFT- prefix with proper PO number if needed
     if (orderFields.poNumber || orderFields.po_number) {
       let poNumber = orderFields.poNumber || orderFields.po_number;
@@ -1875,17 +1875,17 @@ export async function updatePurchaseOrderInSupabase(orderId, orderData) {
       }
       updateData.po_number = poNumber;
     }
-    
+
     // Remove undefined values
     Object.keys(updateData).forEach(key => {
       if (updateData[key] === undefined) {
         delete updateData[key];
       }
     });
-    
+
     // Log the data being updated for debugging
     console.log('📝 Updating purchase order data:', JSON.stringify(updateData, null, 2));
-    
+
     // Update order
     const { data: order, error: orderError } = await supabaseClient
       .from('purchase_orders')
@@ -1893,7 +1893,7 @@ export async function updatePurchaseOrderInSupabase(orderId, orderData) {
       .eq('id', orderId)
       .select()
       .single();
-    
+
     if (orderError) {
       console.error('❌ Error updating purchase order in Supabase:', orderError);
       console.error('❌ Error details:', {
@@ -1902,14 +1902,14 @@ export async function updatePurchaseOrderInSupabase(orderId, orderData) {
         hint: orderError.hint,
         code: orderError.code
       });
-      return { 
-        success: false, 
+      return {
+        success: false,
         error: orderError.message || 'Failed to update purchase order',
         details: orderError.details,
         hint: orderError.hint
       };
     }
-    
+
     // Update items (delete old, insert new)
     if (items) {
       // Delete existing items
@@ -1917,19 +1917,19 @@ export async function updatePurchaseOrderInSupabase(orderId, orderData) {
         .from('purchase_order_items')
         .delete()
         .eq('purchase_order_id', orderId);
-      
+
       // Insert new items
       if (items.length > 0) {
         const orderItems = items.map(item => {
           // CRITICAL: Get item_id from multiple possible sources (same logic as savePurchaseOrderToSupabase)
           const itemId = item.itemId || item.item_id || (item.item && item.item.id) || null;
-          
+
           if (!itemId) {
             console.error('❌ PO Item missing item_id during update!', item);
           }
-          
+
           return {
-          purchase_order_id: orderId,
+            purchase_order_id: orderId,
             item_id: itemId, // CRITICAL: Must be set for foreign key relationship
             quantity: item.quantity || 0,
             unit_price: item.unitPrice || item.unit_price || 0,
@@ -1940,19 +1940,19 @@ export async function updatePurchaseOrderInSupabase(orderId, orderData) {
             expiry_date: item.expiryDate || item.expiry_date || null
           };
         });
-        
+
         console.log('📦 Updating PO items:', orderItems.length, 'items');
         console.log('📦 First PO item sample:', {
           purchase_order_id: orderItems[0]?.purchase_order_id,
           item_id: orderItems[0]?.item_id,
           quantity: orderItems[0]?.quantity
         });
-        
+
         const { data: insertedItems, error: itemsError } = await supabaseClient
           .from('purchase_order_items')
           .insert(orderItems)
           .select();
-        
+
         if (itemsError) {
           console.error('❌ Error updating purchase order items in Supabase:', itemsError);
           console.error('❌ Items error details:', {
@@ -1967,7 +1967,7 @@ export async function updatePurchaseOrderInSupabase(orderId, orderData) {
         }
       }
     }
-    
+
     // Reload order with supplier (simplified query)
     const { data: orderWithSupplier, error: supplierReloadError } = await supabaseClient
       .from('purchase_orders')
@@ -1977,7 +1977,7 @@ export async function updatePurchaseOrderInSupabase(orderId, orderData) {
       `)
       .eq('id', orderId)
       .single();
-    
+
     // Load items separately WITH item relationship - CRITICAL for displaying item names/SKUs
     const { data: orderItems, error: itemsReloadError } = await supabaseClient
       .from('purchase_order_items')
@@ -1986,11 +1986,11 @@ export async function updatePurchaseOrderInSupabase(orderId, orderData) {
         item:inventory_items(*)
       `)
       .eq('purchase_order_id', orderId);
-    
+
     if (supplierReloadError) {
       console.error('❌ Error reloading purchase order with supplier:', supplierReloadError);
     }
-    
+
     if (itemsReloadError) {
       console.error('❌ Error reloading purchase order items:', itemsReloadError);
       console.error('❌ Items reload error details:', {
@@ -1999,7 +1999,7 @@ export async function updatePurchaseOrderInSupabase(orderId, orderData) {
         hint: itemsReloadError.hint
       });
     }
-    
+
     // Combine the data
     const fullOrder = orderWithSupplier || order;
     if (orderItems && orderItems.length > 0) {
@@ -2018,7 +2018,7 @@ export async function updatePurchaseOrderInSupabase(orderId, orderData) {
       fullOrder.items = [];
       console.warn('⚠️ No items reloaded for PO:', orderId);
     }
-    
+
     // If supplier relationship didn't load, manually add it
     if (!fullOrder.supplier && fullOrder.supplier_id && supplier) {
       fullOrder.supplier = supplier;
@@ -2029,12 +2029,12 @@ export async function updatePurchaseOrderInSupabase(orderId, orderData) {
         .select('*')
         .eq('id', fullOrder.supplier_id)
         .single();
-      
+
       if (!supplierError && supplierData) {
         fullOrder.supplier = supplierData;
       }
     }
-    
+
     console.log('✅ Purchase order updated in Supabase');
     return { success: true, data: fullOrder };
   } catch (error) {
@@ -2048,7 +2048,7 @@ function updatePurchaseOrderInLocalStorage(orderId, orderData) {
     const stored = localStorage.getItem('purchase_orders');
     const orders = stored ? JSON.parse(stored) : [];
     const index = orders.findIndex(o => o.id === orderId);
-    
+
     if (index !== -1) {
       orders[index] = {
         ...orders[index],
@@ -2072,25 +2072,25 @@ export async function deletePurchaseOrderFromSupabase(orderId) {
   if (!USE_SUPABASE || !supabaseClient) {
     return deletePurchaseOrderFromLocalStorage(orderId);
   }
-  
+
   try {
     // Delete items first (cascade should handle this, but being explicit)
     await supabaseClient
       .from('purchase_order_items')
       .delete()
       .eq('purchase_order_id', orderId);
-    
+
     // Delete order
     const { error } = await supabaseClient
       .from('purchase_orders')
       .delete()
       .eq('id', orderId);
-    
+
     if (error) {
       console.error('❌ Error deleting purchase order from Supabase:', error);
       return deletePurchaseOrderFromLocalStorage(orderId);
     }
-    
+
     console.log('✅ Purchase order deleted from Supabase');
     return { success: true };
   } catch (error) {
@@ -2119,7 +2119,7 @@ export async function getPurchaseOrderById(orderId) {
   if (!USE_SUPABASE || !supabaseClient) {
     return getPurchaseOrderByIdFromLocalStorage(orderId);
   }
-  
+
   try {
     // Load order with supplier (simplified query)
     // CRITICAL: Include total_received_quantity, remaining_quantity, ordered_quantity for PO tracking
@@ -2131,7 +2131,7 @@ export async function getPurchaseOrderById(orderId) {
       `)
       .eq('id', orderId)
       .single();
-    
+
     // If quantities are null or 0, trigger manual calculation
     if (orderData && (!orderData.total_received_quantity && orderData.total_received_quantity !== 0)) {
       console.log('🔄 PO quantities not set, triggering manual calculation...');
@@ -2164,20 +2164,20 @@ export async function getPurchaseOrderById(orderId) {
         console.warn('⚠️ Could not trigger PO quantity calculation:', e);
       }
     }
-    
+
     if (orderError) {
       console.error('❌ Error loading purchase order from Supabase:', orderError);
       return getPurchaseOrderByIdFromLocalStorage(orderId);
     }
-    
+
     if (!orderData) {
       return { success: false, data: null, error: 'Purchase order not found' };
     }
-    
+
     // Load items separately - Try with relationship first, fallback to without if it fails
     let itemsData = null;
     let itemsError = null;
-    
+
     // First try with item relationship
     let { data: itemsWithRel, error: itemsErrorWithRel } = await supabaseClient
       .from('purchase_order_items')
@@ -2186,29 +2186,29 @@ export async function getPurchaseOrderById(orderId) {
         item:inventory_items(*)
       `)
       .eq('purchase_order_id', orderId);
-    
+
     // If relationship query fails (PGRST200), load items separately
     if (itemsErrorWithRel && itemsErrorWithRel.code === 'PGRST200') {
       console.warn(`⚠️ FK relationship not found for PO ${orderId}, loading items separately...`);
-      
+
       // Load items without relationship
       const { data: itemsWithoutRel, error: itemsErrorWithoutRel } = await supabaseClient
         .from('purchase_order_items')
         .select('*')
         .eq('purchase_order_id', orderId);
-      
+
       if (!itemsErrorWithoutRel && itemsWithoutRel) {
         // Load inventory items separately
         const itemIds = itemsWithoutRel
           .map(item => item.item_id)
           .filter(id => id !== null && id !== undefined);
-        
+
         if (itemIds.length > 0) {
           const { data: inventoryItems } = await supabaseClient
             .from('inventory_items')
             .select('*')
             .in('id', itemIds);
-          
+
           // Map inventory items to PO items
           itemsWithRel = itemsWithoutRel.map(poItem => ({
             ...poItem,
@@ -2220,7 +2220,7 @@ export async function getPurchaseOrderById(orderId) {
         itemsErrorWithRel = null; // Clear error since we loaded successfully
       }
     }
-    
+
     if (itemsErrorWithRel) {
       console.warn('⚠️ Error loading PO items with relationship, trying without relationship:', itemsErrorWithRel);
       // Fallback: Load items without relationship
@@ -2228,7 +2228,7 @@ export async function getPurchaseOrderById(orderId) {
         .from('purchase_order_items')
         .select('*')
         .eq('purchase_order_id', orderId);
-      
+
       if (itemsErrorWithoutRel) {
         console.error('❌ Error loading purchase order items from Supabase (without relationship):', itemsErrorWithoutRel);
         console.error('❌ Items error details:', {
@@ -2247,12 +2247,12 @@ export async function getPurchaseOrderById(orderId) {
       itemsData = itemsWithRel || [];
       console.log('✅ Loaded PO items with item relationships:', itemsData.length, 'items');
     }
-    
+
     if (itemsError) {
       orderData.items = [];
     } else {
       orderData.items = itemsData || [];
-      
+
       // If items don't have item relationship loaded, manually load them
       if (itemsData && itemsData.length > 0 && !itemsData[0].item) {
         console.log('🔄 Items missing relationship, loading items manually...');
@@ -2262,7 +2262,7 @@ export async function getPurchaseOrderById(orderId) {
             .from('inventory_items')
             .select('*')
             .in('id', itemIds);
-          
+
           if (!invError && inventoryItems) {
             // Map items to PO items
             itemsData.forEach(poItem => {
@@ -2275,7 +2275,7 @@ export async function getPurchaseOrderById(orderId) {
           }
         }
       }
-      
+
       // Log first item to verify item relationship is loaded
       if (itemsData && itemsData.length > 0) {
         console.log('✅ First PO item sample:', {
@@ -2289,7 +2289,7 @@ export async function getPurchaseOrderById(orderId) {
         });
       }
     }
-    
+
     // If supplier relationship didn't load, try to load it manually
     if (!orderData.supplier && orderData.supplier_id) {
       const { data: supplierData, error: supplierError } = await supabaseClient
@@ -2297,12 +2297,12 @@ export async function getPurchaseOrderById(orderId) {
         .select('*')
         .eq('id', orderData.supplier_id)
         .single();
-      
+
       if (!supplierError && supplierData) {
         orderData.supplier = supplierData;
       }
     }
-    
+
     return { success: true, data: orderData };
   } catch (error) {
     console.error('❌ Exception loading purchase order from Supabase:', error);
@@ -2341,7 +2341,7 @@ async function generateTONumber() {
         .neq('to_number', '')
         .order('created_at', { ascending: false })
         .limit(1);
-      
+
       if (!error && data && data.length > 0) {
         const lastTO = data[0].to_number || data[0].toNumber;
         if (lastTO) {
@@ -2351,18 +2351,18 @@ async function generateTONumber() {
         }
       }
     }
-    
+
     // Fallback to localStorage
     const stored = localStorage.getItem('transfer_orders');
     const orders = stored ? JSON.parse(stored) : [];
-    
+
     // Filter out orders without TO numbers (drafts)
     const ordersWithTO = orders.filter(o => (o.toNumber || o.to_number) && (o.toNumber || o.to_number) !== '');
-    
+
     if (ordersWithTO.length === 0) {
       return 'TO-000001';
     }
-    
+
     // Get the highest TO number
     let maxNumber = 0;
     ordersWithTO.forEach(order => {
@@ -2374,7 +2374,7 @@ async function generateTONumber() {
         }
       }
     });
-    
+
     const nextNumber = maxNumber + 1;
     return `TO-${String(nextNumber).padStart(6, '0')}`;
   } catch (error) {
@@ -2390,7 +2390,7 @@ async function generateTONumber() {
 export async function loadTransferOrdersFromSupabase() {
   const ready = await ensureSupabaseReady();
   if (!ready) return getTransferOrdersFromLocalStorage();
-  
+
   try {
     const { data, error } = await supabaseClient
       .from('transfer_orders')
@@ -2402,19 +2402,19 @@ export async function loadTransferOrdersFromSupabase() {
         )
       `)
       .order('created_at', { ascending: false });
-    
+
     if (error) {
       console.error('❌ Error loading transfer orders from Supabase:', error);
       return getTransferOrdersFromLocalStorage();
     }
-    
+
     console.log('✔ Transfer Orders loaded from Supabase:', data?.length || 0);
-    
+
     // Sync to localStorage as backup
     if (data) {
       localStorage.setItem('transfer_orders', JSON.stringify(data));
     }
-    
+
     return data || [];
   } catch (error) {
     console.error('❌ Error in loadTransferOrdersFromSupabase:', error);
@@ -2442,23 +2442,23 @@ export async function saveTransferOrderToSupabase(orderData) {
   if (!USE_SUPABASE || !supabaseClient) {
     return saveTransferOrderToLocalStorage(orderData);
   }
-  
+
   try {
     // Separate items from order data
     const { items, ...orderFields } = orderData;
-    
+
     // Save order
     const { data, error } = await supabaseClient
       .from('transfer_orders')
       .insert([orderFields])
       .select()
       .single();
-    
+
     if (error) {
       console.error('❌ Error saving transfer order to Supabase:', error);
       return saveTransferOrderToLocalStorage(orderData);
     }
-    
+
     // Save items if provided
     if (items && items.length > 0 && data) {
       const itemsToInsert = items.map(item => ({
@@ -2469,19 +2469,19 @@ export async function saveTransferOrderToSupabase(orderData) {
         ingredient_quantity: item.ingredientQuantity || item.ingredient_quantity || 0,
         available_quantity: item.availableQuantity || item.available_quantity || 0
       }));
-      
+
       const { error: itemsError } = await supabaseClient
         .from('transfer_order_items')
         .insert(itemsToInsert);
-      
+
       if (itemsError) {
         console.error('❌ Error saving transfer order items:', itemsError);
       }
     }
-    
+
     // Reload to get full order with relationships
     const fullOrder = await getTransferOrderById(data.id);
-    
+
     console.log('✔ Transfer Order saved to Supabase');
     return { success: true, data: fullOrder.data || data };
   } catch (error) {
@@ -2497,14 +2497,14 @@ function saveTransferOrderToLocalStorage(orderData) {
   try {
     const stored = localStorage.getItem('transfer_orders');
     const orders = stored ? JSON.parse(stored) : [];
-    
+
     const newOrder = {
       id: orderData.id || `to-${Date.now()}`,
       ...orderData,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     };
-    
+
     orders.push(newOrder);
     localStorage.setItem('transfer_orders', JSON.stringify(orders));
     return { success: true, data: newOrder };
@@ -2521,11 +2521,11 @@ export async function updateTransferOrderInSupabase(orderId, orderData) {
   if (!USE_SUPABASE || !supabaseClient) {
     return updateTransferOrderInLocalStorage(orderId, orderData);
   }
-  
+
   try {
     // Separate items from order data
     const { items, ...orderFields } = orderData;
-    
+
     // Update order
     const { data, error } = await supabaseClient
       .from('transfer_orders')
@@ -2533,12 +2533,12 @@ export async function updateTransferOrderInSupabase(orderId, orderData) {
       .eq('id', orderId)
       .select()
       .single();
-    
+
     if (error) {
       console.error('❌ Error updating transfer order in Supabase:', error);
       return updateTransferOrderInLocalStorage(orderId, orderData);
     }
-    
+
     // Update items if provided
     if (items !== undefined && data) {
       // Delete existing items
@@ -2546,7 +2546,7 @@ export async function updateTransferOrderInSupabase(orderId, orderData) {
         .from('transfer_order_items')
         .delete()
         .eq('transfer_order_id', orderId);
-      
+
       // Insert new items
       if (items.length > 0) {
         const itemsToInsert = items.map(item => ({
@@ -2557,20 +2557,20 @@ export async function updateTransferOrderInSupabase(orderId, orderData) {
           ingredient_quantity: item.ingredientQuantity || item.ingredient_quantity || 0,
           available_quantity: item.availableQuantity || item.available_quantity || 0
         }));
-        
+
         const { error: itemsError } = await supabaseClient
           .from('transfer_order_items')
           .insert(itemsToInsert);
-        
+
         if (itemsError) {
           console.error('❌ Error updating transfer order items:', itemsError);
         }
       }
     }
-    
+
     // Reload to get full order with relationships
     const fullOrder = await getTransferOrderById(orderId);
-    
+
     console.log('✔ Transfer Order updated in Supabase');
     return { success: true, data: fullOrder.data || data };
   } catch (error) {
@@ -2587,17 +2587,17 @@ function updateTransferOrderInLocalStorage(orderId, orderData) {
     const stored = localStorage.getItem('transfer_orders');
     const orders = stored ? JSON.parse(stored) : [];
     const index = orders.findIndex(o => o.id === orderId);
-    
+
     if (index === -1) {
       return { success: false, error: 'Transfer order not found' };
     }
-    
+
     orders[index] = {
       ...orders[index],
       ...orderData,
       updatedAt: new Date().toISOString()
     };
-    
+
     localStorage.setItem('transfer_orders', JSON.stringify(orders));
     return { success: true, data: orders[index] };
   } catch (error) {
@@ -2613,25 +2613,25 @@ export async function deleteTransferOrderFromSupabase(orderId) {
   if (!USE_SUPABASE || !supabaseClient) {
     return deleteTransferOrderFromLocalStorage(orderId);
   }
-  
+
   try {
     // Delete items first
     await supabaseClient
       .from('transfer_order_items')
       .delete()
       .eq('transfer_order_id', orderId);
-    
+
     // Delete order
     const { error } = await supabaseClient
       .from('transfer_orders')
       .delete()
       .eq('id', orderId);
-    
+
     if (error) {
       console.error('❌ Error deleting transfer order from Supabase:', error);
       return deleteTransferOrderFromLocalStorage(orderId);
     }
-    
+
     console.log('✔ Transfer Order deleted from Supabase');
     return { success: true };
   } catch (error) {
@@ -2663,7 +2663,7 @@ export async function getTransferOrderById(orderId) {
   if (!USE_SUPABASE || !supabaseClient) {
     return getTransferOrderByIdFromLocalStorage(orderId);
   }
-  
+
   try {
     const { data, error } = await supabaseClient
       .from('transfer_orders')
@@ -2676,12 +2676,12 @@ export async function getTransferOrderById(orderId) {
       `)
       .eq('id', orderId)
       .single();
-    
+
     if (error) {
       console.error('❌ Error loading transfer order from Supabase:', error);
       return getTransferOrderByIdFromLocalStorage(orderId);
     }
-    
+
     return { success: true, data };
   } catch (error) {
     console.error('❌ Error in getTransferOrderById:', error);
@@ -2727,13 +2727,13 @@ export async function loadGRNsFromSupabase() {
       `)
       .eq('deleted', false)
       .order('created_at', { ascending: false });
-    
+
     // Map database fields to frontend fields for compatibility
     if (grnsData) {
       grnsData = grnsData.map(grn => {
         // CRITICAL: Extract supplier name properly - handle both string and object
         let supplierDisplay = 'N/A';
-        
+
         // Priority 1: supplier_name column (string from database)
         if (grn.supplier_name && typeof grn.supplier_name === 'string' && grn.supplier_name !== 'N/A' && grn.supplier_name !== '') {
           supplierDisplay = grn.supplier_name;
@@ -2744,30 +2744,30 @@ export async function loadGRNsFromSupabase() {
             supplierDisplay = grn.supplier;
           } else if (typeof grn.supplier === 'object' && grn.supplier !== null) {
             // Extract name from supplier object
-            supplierDisplay = grn.supplier.name || 
-                             grn.supplier.nameLocalized || 
-                             grn.supplier.supplier_name || 
-                             grn.supplier.name_localized || 
-                             'N/A';
+            supplierDisplay = grn.supplier.name ||
+              grn.supplier.nameLocalized ||
+              grn.supplier.supplier_name ||
+              grn.supplier.name_localized ||
+              'N/A';
           }
         }
-        
+
         return {
-        ...grn,
-        // Map purchase_order_number to purchase_order_reference for frontend compatibility
-        purchase_order_reference: grn.purchase_order_number || grn.purchase_order_reference,
-        purchaseOrderReference: grn.purchase_order_number || grn.purchase_order_reference,
+          ...grn,
+          // Map purchase_order_number to purchase_order_reference for frontend compatibility
+          purchase_order_reference: grn.purchase_order_number || grn.purchase_order_reference,
+          purchaseOrderReference: grn.purchase_order_number || grn.purchase_order_reference,
           // CRITICAL: Always use extracted supplier name as string, never pass object
           supplier: supplierDisplay,
           supplier_name: supplierDisplay, // Ensure both fields have the string value
-        // Map purchase_order_id to purchaseOrderId for frontend compatibility
-        purchaseOrderId: grn.purchase_order_id,
-        // Map grn_number to grnNumber for frontend compatibility
-        grnNumber: grn.grn_number || grn.grnNumber
+          // Map purchase_order_id to purchaseOrderId for frontend compatibility
+          purchaseOrderId: grn.purchase_order_id,
+          // Map grn_number to grnNumber for frontend compatibility
+          grnNumber: grn.grn_number || grn.grnNumber
         };
       });
     }
-    
+
     // Do NOT fallback to 'grns' - that table does not exist. Use grn_inspections only.
     if (grnsError) {
       console.error('❌ Error loading GRNs from Supabase:', grnsError);
@@ -2779,7 +2779,7 @@ export async function loadGRNsFromSupabase() {
       console.error('⚠️ Make sure you have run CREATE_GRN_TABLES.sql in Supabase SQL Editor');
       return getGRNsFromLocalStorage();
     }
-    
+
     console.log('✅ Loaded', grnsData?.length || 0, 'GRNs from Supabase');
     return grnsData || [];
   } catch (error) {
@@ -2805,10 +2805,10 @@ export async function saveGRNToSupabase(grn) {
   if (!USE_SUPABASE || !supabaseClient) {
     return saveGRNToLocalStorage(grn);
   }
-  
+
   try {
     const { items, ...grnFields } = grn;
-    
+
     // Map frontend field names to database column names (snake_case)
     // For drafts, do NOT generate any number - leave it null
     // GRN number will be generated only when submitting for inspection
@@ -2823,7 +2823,7 @@ export async function saveGRNToSupabase(grn) {
         grnNumber = null;
       }
     }
-    
+
     // Get supplier ID if supplier name is provided
     let supplierIdValue = grnFields.supplierId || grnFields.supplier_id || null;
     if (!supplierIdValue && grnFields.supplier) {
@@ -2835,7 +2835,7 @@ export async function saveGRNToSupabase(grn) {
           .eq('name', grnFields.supplier)
           .eq('deleted', false)
           .limit(1);
-        
+
         if (suppliers && suppliers.length > 0) {
           supplierIdValue = suppliers[0].id;
         }
@@ -2843,7 +2843,7 @@ export async function saveGRNToSupabase(grn) {
         console.warn('⚠️ Could not find supplier by name:', e);
       }
     }
-    
+
     // CRITICAL: grn_inspections.purchase_order_id is BIGINT (FK to purchase_orders.id). Keep numeric PO id.
     let purchaseOrderIdValue = grnFields.purchaseOrderId ?? grnFields.purchase_order_id ?? null;
     if (purchaseOrderIdValue != null && typeof purchaseOrderIdValue === 'string' && /^\d+$/.test(purchaseOrderIdValue)) {
@@ -2853,20 +2853,20 @@ export async function saveGRNToSupabase(grn) {
       const num = Number(purchaseOrderIdValue);
       if (!Number.isNaN(num)) purchaseOrderIdValue = num;
     }
-    
+
     // Get purchase order number - CRITICAL: This is the linking field between GRN and PO
     // Try multiple field names as autoDraftFlow.js sets several
-    let purchaseOrderNumber = 
-      grnFields.purchase_order_number || 
-      grnFields.purchaseOrderNumber || 
-      grnFields.purchaseOrderReference || 
-      grnFields.purchase_order_reference || 
-      grnFields.poNumber || 
-      grnFields.po_number || 
+    let purchaseOrderNumber =
+      grnFields.purchase_order_number ||
+      grnFields.purchaseOrderNumber ||
+      grnFields.purchaseOrderReference ||
+      grnFields.purchase_order_reference ||
+      grnFields.poNumber ||
+      grnFields.po_number ||
       null;
-      
+
     console.log('📝 purchase_order_number extracted:', purchaseOrderNumber);
-    
+
     if (!purchaseOrderNumber && purchaseOrderIdValue) {
       try {
         const { data: po } = await supabaseClient
@@ -2874,7 +2874,7 @@ export async function saveGRNToSupabase(grn) {
           .select('po_number')
           .eq('id', purchaseOrderIdValue)
           .single();
-        
+
         if (po && po.po_number) {
           purchaseOrderNumber = po.po_number;
         }
@@ -2884,7 +2884,7 @@ export async function saveGRNToSupabase(grn) {
         purchaseOrderNumber = grnFields.poNumber || grnFields.po_number || null;
       }
     }
-    
+
     // CRITICAL: Ensure supplier_name is always set if supplier is provided
     let supplierNameValue = grnFields.supplier || grnFields.supplier_name || null;
     if (!supplierNameValue && supplierIdValue) {
@@ -2895,7 +2895,7 @@ export async function saveGRNToSupabase(grn) {
           .select('name, name_localized')
           .eq('id', supplierIdValue)
           .single();
-        
+
         if (supplier) {
           supplierNameValue = supplier.name || supplier.name_localized || null;
         }
@@ -2903,7 +2903,7 @@ export async function saveGRNToSupabase(grn) {
         console.warn('⚠️ Could not find supplier name:', e);
       }
     }
-    
+
     const insertData = {
       purchase_order_id: purchaseOrderIdValue,
       purchase_order_number: purchaseOrderNumber || grnFields.poNumber || grnFields.po_number || null,
@@ -2936,7 +2936,7 @@ export async function saveGRNToSupabase(grn) {
       updated_at: grnFields.updatedAt || grnFields.updated_at || new Date().toISOString(),
       deleted: false
     };
-    
+
     // ERP-GRADE VALIDATION: Validate received quantities against PO before saving
     if (purchaseOrderIdValue && grnFields.items && Array.isArray(grnFields.items) && grnFields.items.length > 0) {
       try {
@@ -2950,7 +2950,7 @@ export async function saveGRNToSupabase(grn) {
           `)
           .eq('id', purchaseOrderIdValue)
           .single();
-        
+
         if (!poError && poData) {
           // Check if PO is closed
           const poStatus = (poData.status || '').toLowerCase();
@@ -2961,7 +2961,7 @@ export async function saveGRNToSupabase(grn) {
               data: null
             };
           }
-          
+
           // Load existing GRNs for this PO
           const { data: existingGRNs } = await supabaseClient
             .from('grn_inspections')
@@ -2972,7 +2972,7 @@ export async function saveGRNToSupabase(grn) {
             `)
             .eq('purchase_order_id', purchaseOrderIdValue)
             .eq('deleted', false);
-          
+
           // Calculate already received quantities per item
           const itemReceivedQty = {};
           if (existingGRNs) {
@@ -2991,23 +2991,23 @@ export async function saveGRNToSupabase(grn) {
               }
             });
           }
-          
+
           // Validate each GRN item against PO
           for (const grnItem of grnFields.items) {
             const itemId = grnItem.itemId || grnItem.item_id;
             if (!itemId) continue;
-            
+
             // Find PO item
-            const poItem = (poData.items || []).find(poi => 
+            const poItem = (poData.items || []).find(poi =>
               (poi.item_id || poi.itemId) === itemId
             );
-            
+
             if (poItem) {
               const orderedQty = parseFloat(poItem.quantity || 0);
               const receivedQty = parseFloat(grnItem.receivedQuantity || grnItem.received_quantity || 0);
               const alreadyReceived = itemReceivedQty[itemId] || 0;
               const totalAfterThisGRN = alreadyReceived + receivedQty;
-              
+
               // Validate: total received must not exceed ordered
               if (totalAfterThisGRN > orderedQty) {
                 return {
@@ -3024,24 +3024,24 @@ export async function saveGRNToSupabase(grn) {
         // Don't block save if validation fails due to error, but log it
       }
     }
-    
+
     // Remove undefined values
     Object.keys(insertData).forEach(key => {
       if (insertData[key] === undefined) {
         delete insertData[key];
       }
     });
-    
+
     // Log the data being inserted for debugging
     console.log('📝 Inserting GRN data:', JSON.stringify(insertData, null, 2));
-    
+
     // Insert GRN into grn_inspections only (table 'grns' does not exist)
     const { data: grnData, error: grnError } = await supabaseClient
       .from('grn_inspections')
       .insert([insertData])
       .select()
       .single();
-    
+
     if (grnError) {
       console.error('❌ Error saving GRN to Supabase:', grnError);
       console.error('❌ Error details:', {
@@ -3053,14 +3053,14 @@ export async function saveGRNToSupabase(grn) {
       const hintMsg = grnError.message?.includes('schema cache') || grnError.message?.includes('not find the table')
         ? 'Ensure table public.grn_inspections exists. Run your GRN migration (e.g. CREATE_GRN_TABLES or grn_inspections / grn_inspection_items) in Supabase SQL Editor.'
         : (grnError.hint || 'Check that grn_inspections and grn_inspection_items tables exist.');
-      return { 
-        success: false, 
+      return {
+        success: false,
         error: grnError.message || 'Failed to save GRN',
         details: grnError.details,
         hint: hintMsg
       };
     }
-    
+
     // CRITICAL: Verify GRN was actually created
     if (!grnData || !grnData.id) {
       console.error('❌ GRN data is missing or has no ID after insert!');
@@ -3070,9 +3070,9 @@ export async function saveGRNToSupabase(grn) {
         error: 'GRN was not created properly - missing ID'
       };
     }
-    
+
     console.log('✅ GRN created successfully with ID:', grnData.id);
-    
+
     // Save GRN items separately - CRITICAL: Must save items after GRN is created
     console.log('🔍 Checking items to save:', {
       hasItems: !!items,
@@ -3080,7 +3080,7 @@ export async function saveGRNToSupabase(grn) {
       hasGrnData: !!grnData,
       grnDataId: grnData?.id
     });
-    
+
     if (items && items.length > 0 && grnData && grnData.id) {
       console.log('📦 Saving GRN items:', items.length, 'items to GRN:', grnData.id);
       const grnItems = items.map((item, index) => {
@@ -3088,17 +3088,17 @@ export async function saveGRNToSupabase(grn) {
         let itemCode = item.itemCode || item.item_code || null;
         let itemName = item.itemName || item.item_name || null;
         let itemDescription = item.itemDescription || item.item_description || null;
-        
+
         // CRITICAL: Get item_id - this is the foreign key to inventory_items
         const itemId = item.itemId || item.item_id;
-        
+
         // If item object is provided, extract details from it
         if (item.item) {
           if (!itemCode) itemCode = item.item.code || item.item.sku || null;
           if (!itemName) itemName = item.item.name || null;
           if (!itemDescription) itemDescription = item.item.description || null;
         }
-        
+
         // Log item being saved for debugging
         console.log(`📦 GRN Item ${index + 1}:`, {
           itemId: itemId,
@@ -3108,11 +3108,11 @@ export async function saveGRNToSupabase(grn) {
           receivedQty: item.receivedQuantity || item.received_quantity,
           hasItemObject: !!item.item
         });
-        
+
         if (!itemId) {
           console.warn(`⚠️ GRN Item ${index + 1} missing itemId!`, item);
         }
-        
+
         return {
           grn_inspection_id: grnData.id,
           purchase_order_id: purchaseOrderIdValue, // Use validated UUID value, not insertData.purchase_order_id
@@ -3149,15 +3149,15 @@ export async function saveGRNToSupabase(grn) {
           test_results: item.testResults || item.test_results || null
         };
       });
-      
+
       console.log('📦 GRN Items to insert:', JSON.stringify(grnItems, null, 2));
-      
+
       // Try grn_inspection_items first, fallback to grn_items if needed
       let { data: insertedItems, error: itemsError } = await supabaseClient
         .from('grn_inspection_items')
         .insert(grnItems)
         .select();
-      
+
       // If table doesn't exist, try alternative table name
       if (itemsError && (itemsError.code === '42P01' || itemsError.message?.includes('does not exist'))) {
         console.warn('⚠️ grn_inspection_items table not found, trying alternative...');
@@ -3165,7 +3165,7 @@ export async function saveGRNToSupabase(grn) {
           .from('grn_items')
           .insert(grnItems)
           .select();
-        
+
         if (!itemsErrorAlt) {
           itemsError = null;
           insertedItems = insertedItemsAlt;
@@ -3174,7 +3174,7 @@ export async function saveGRNToSupabase(grn) {
           itemsError = itemsErrorAlt;
         }
       }
-      
+
       if (itemsError) {
         console.error('❌ Error saving GRN items to Supabase:', itemsError);
         console.error('❌ Items error details:', {
@@ -3185,13 +3185,13 @@ export async function saveGRNToSupabase(grn) {
         });
         console.error('❌ Items that failed to insert:', JSON.stringify(grnItems, null, 2));
         console.error('⚠️ Make sure you have run CREATE_GRN_TABLES.sql and FIX_GRN_CONSTRAINTS.sql in Supabase SQL Editor');
-        
+
         // Check if it's a constraint violation
         if (itemsError.code === '23514' || itemsError.message?.includes('check constraint')) {
           console.error('❌ CHECK CONSTRAINT VIOLATION - This is likely a packaging_condition issue');
           console.error('❌ Run FIX_GRN_CONSTRAINTS.sql in Supabase SQL Editor');
         }
-        
+
         // CRITICAL: Delete the GRN if items failed to save (rollback)
         console.error('🔄 Rolling back GRN creation because items failed to save...');
         try {
@@ -3203,7 +3203,7 @@ export async function saveGRNToSupabase(grn) {
         } catch (rollbackError) {
           console.error('❌ Failed to rollback GRN:', rollbackError);
         }
-        
+
         // CRITICAL: Throw error so user knows items failed to save
         throw new Error(`Failed to save GRN items: ${itemsError.message}. GRN has been rolled back. Please check console for details and run FIX_GRN_CONSTRAINTS.sql.`);
       } else {
@@ -3239,7 +3239,7 @@ export async function saveGRNToSupabase(grn) {
         // But log it clearly
       }
     }
-    
+
     // Reload GRN with items AND item relationships - CRITICAL for displaying item names/SKUs
     // Try with relationship first
     let { data: fullGRN, error: reloadError } = await supabaseClient
@@ -3253,7 +3253,7 @@ export async function saveGRNToSupabase(grn) {
       `)
       .eq('id', grnData.id)
       .single();
-    
+
     // If relationship query fails, try without relationship (fallback)
     if (reloadError && (reloadError.code === '42P01' || reloadError.message?.includes('does not exist') || reloadError.message?.includes('relation') || reloadError.message?.includes('foreign key'))) {
       console.warn('⚠️ Relationship query failed, trying without relationship:', reloadError.message);
@@ -3265,7 +3265,7 @@ export async function saveGRNToSupabase(grn) {
         `)
         .eq('id', grnData.id)
         .single();
-      
+
       if (!reloadErrorAlt && fullGRNAlt) {
         fullGRN = fullGRNAlt;
         reloadError = null;
@@ -3274,7 +3274,7 @@ export async function saveGRNToSupabase(grn) {
         reloadError = reloadErrorAlt || reloadError;
       }
     }
-    
+
     // Do NOT fallback to 'grns' - that table does not exist.
     if (reloadError) {
       console.error('❌ Error reloading GRN:', reloadError);
@@ -3290,7 +3290,7 @@ export async function saveGRNToSupabase(grn) {
       }
       return { success: true, data: grnData };
     }
-    
+
     // Log items count for debugging
     if (fullGRN) {
       console.log('✅ GRN reloaded with', fullGRN.items?.length || 0, 'items');
@@ -3310,7 +3310,7 @@ export async function saveGRNToSupabase(grn) {
         }
       }
     }
-    
+
     console.log('✅ GRN saved to Supabase');
     const status = (grnFields.status || '').toLowerCase();
     if (status && status !== 'draft') {
@@ -3321,14 +3321,14 @@ export async function saveGRNToSupabase(grn) {
           const { logActivity } = await import('@/services/userManagementService.js');
           logActivity(uid, 'grn_submit', 'grn_inspections', grnData?.id, { status, grn_number: grnNumber });
         }
-      } catch (_) {}
+      } catch (_) { }
     }
     return { success: true, data: fullGRN || grnData };
   } catch (error) {
     console.error('❌ Exception saving GRN to Supabase:', error);
-    return { 
-      success: false, 
-      error: error.message || 'Failed to save GRN' 
+    return {
+      success: false,
+      error: error.message || 'Failed to save GRN'
     };
   }
 }
@@ -3358,14 +3358,14 @@ export async function updateGRNInSupabase(grnId, updates) {
   if (!USE_SUPABASE || !supabaseClient) {
     return updateGRNInLocalStorage(grnId, updates);
   }
-  
+
   try {
     const { items, ...grnFields } = updates;
-    
+
     // CRITICAL: Ensure purchase_order_number and supplier_name are always updated if PO/Supplier info is available
     let purchaseOrderNumber = grnFields.purchaseOrderReference || grnFields.purchase_order_reference || grnFields.poNumber || grnFields.po_number || undefined;
     let supplierName = grnFields.supplier || grnFields.supplier_name || undefined;
-    
+
     // If purchase_order_id is provided but purchase_order_number is missing, fetch it
     const purchaseOrderIdValue = grnFields.purchaseOrderId || grnFields.purchase_order_id;
     if (!purchaseOrderNumber && purchaseOrderIdValue) {
@@ -3375,7 +3375,7 @@ export async function updateGRNInSupabase(grnId, updates) {
           .select('po_number')
           .eq('id', purchaseOrderIdValue)
           .single();
-        
+
         if (po && po.po_number) {
           purchaseOrderNumber = po.po_number;
         }
@@ -3383,7 +3383,7 @@ export async function updateGRNInSupabase(grnId, updates) {
         console.warn('⚠️ Could not find PO number for update:', e);
       }
     }
-    
+
     // If supplier_id is provided but supplier_name is missing, fetch it
     const supplierIdValue = grnFields.supplierId || grnFields.supplier_id;
     if (!supplierName && supplierIdValue) {
@@ -3393,7 +3393,7 @@ export async function updateGRNInSupabase(grnId, updates) {
           .select('name, name_localized')
           .eq('id', supplierIdValue)
           .single();
-        
+
         if (supplier) {
           supplierName = supplier.name || supplier.name_localized || undefined;
         }
@@ -3401,7 +3401,7 @@ export async function updateGRNInSupabase(grnId, updates) {
         console.warn('⚠️ Could not find supplier name for update:', e);
       }
     }
-    
+
     // Map frontend field names to database column names (snake_case)
     const updateData = {
       purchase_order_id: grnFields.purchaseOrderId !== undefined ? (grnFields.purchaseOrderId || null) : undefined,
@@ -3439,7 +3439,7 @@ export async function updateGRNInSupabase(grnId, updates) {
       })() : undefined,
       updated_at: new Date().toISOString()
     };
-    
+
     // ERP-GRADE VALIDATION: Validate received quantities against PO before updating
     if (items && Array.isArray(items) && items.length > 0) {
       // Get current GRN to find PO ID
@@ -3448,10 +3448,10 @@ export async function updateGRNInSupabase(grnId, updates) {
         .select('purchase_order_id, status')
         .eq('id', grnId)
         .single();
-      
+
       if (currentGRN && currentGRN.purchase_order_id) {
         const poId = currentGRN.purchase_order_id;
-        
+
         try {
           // Load PO to validate quantities
           const { data: poData, error: poError } = await supabaseClient
@@ -3463,7 +3463,7 @@ export async function updateGRNInSupabase(grnId, updates) {
             `)
             .eq('id', poId)
             .single();
-          
+
           if (!poError && poData) {
             // Check if PO is closed
             const poStatus = (poData.status || '').toLowerCase();
@@ -3474,7 +3474,7 @@ export async function updateGRNInSupabase(grnId, updates) {
                 data: null
               };
             }
-            
+
             // Load existing GRNs for this PO (excluding current GRN)
             const { data: existingGRNs } = await supabaseClient
               .from('grn_inspections')
@@ -3486,7 +3486,7 @@ export async function updateGRNInSupabase(grnId, updates) {
               .eq('purchase_order_id', poId)
               .neq('id', grnId)
               .eq('deleted', false);
-            
+
             // Calculate already received quantities per item (from other GRNs)
             const itemReceivedQty = {};
             if (existingGRNs) {
@@ -3505,23 +3505,23 @@ export async function updateGRNInSupabase(grnId, updates) {
                 }
               });
             }
-            
+
             // Validate each GRN item against PO
             for (const grnItem of items) {
               const itemId = grnItem.itemId || grnItem.item_id;
               if (!itemId) continue;
-              
+
               // Find PO item
-              const poItem = (poData.items || []).find(poi => 
+              const poItem = (poData.items || []).find(poi =>
                 (poi.item_id || poi.itemId) === itemId
               );
-              
+
               if (poItem) {
                 const orderedQty = parseFloat(poItem.quantity || 0);
                 const receivedQty = parseFloat(grnItem.receivedQuantity || grnItem.received_quantity || 0);
                 const alreadyReceived = itemReceivedQty[itemId] || 0;
                 const totalAfterThisGRN = alreadyReceived + receivedQty;
-                
+
                 // Validate: total received must not exceed ordered
                 if (totalAfterThisGRN > orderedQty) {
                   return {
@@ -3539,14 +3539,14 @@ export async function updateGRNInSupabase(grnId, updates) {
         }
       }
     }
-    
+
     // Remove undefined values
     Object.keys(updateData).forEach(key => {
       if (updateData[key] === undefined) {
         delete updateData[key];
       }
     });
-    
+
     // Update GRN
     const { data, error } = await supabaseClient
       .from('grn_inspections')
@@ -3554,7 +3554,7 @@ export async function updateGRNInSupabase(grnId, updates) {
       .eq('id', grnId)
       .select()
       .single();
-    
+
     if (error) {
       console.error('❌ Error updating GRN in Supabase:', error);
       console.error('❌ Error details:', {
@@ -3563,14 +3563,14 @@ export async function updateGRNInSupabase(grnId, updates) {
         hint: error.hint,
         code: error.code
       });
-      return { 
-        success: false, 
+      return {
+        success: false,
         error: error.message || 'Failed to update GRN',
         details: error.details,
         hint: error.hint
       };
     }
-    
+
     // Update items if provided
     if (items && items.length > 0) {
       // Delete existing items
@@ -3578,24 +3578,24 @@ export async function updateGRNInSupabase(grnId, updates) {
         .from('grn_inspection_items')
         .delete()
         .eq('grn_inspection_id', grnId);
-      
+
       // Insert new items with complete field mapping
       const grnItems = items.map((item, index) => {
         // CRITICAL: Get item_id from multiple possible sources (same logic as saveGRNToSupabase)
         const itemId = item.itemId || item.item_id || (item.item && item.item.id) || null;
-        
+
         // Get item details - try item relationship first, then direct fields
         let itemCode = item.itemCode || item.item_code || null;
         let itemName = item.itemName || item.item_name || null;
         let itemDescription = item.itemDescription || item.item_description || null;
-        
+
         // If item relationship exists, extract details from it
         if (item.item) {
           if (!itemCode) itemCode = item.item.code || item.item.sku || null;
           if (!itemName) itemName = item.item.name || null;
           if (!itemDescription) itemDescription = item.item.description || null;
         }
-        
+
         // Validate item_id - if missing, log warning
         if (!itemId) {
           console.warn(`⚠️ GRN Item ${index + 1} missing item_id during update!`, {
@@ -3604,11 +3604,11 @@ export async function updateGRNInSupabase(grnId, updates) {
             hasItemObject: !!item.item
           });
         }
-        
+
         // Get unit of measure - try multiple sources
-        const unitOfMeasure = item.unit || item.unitOfMeasure || item.unit_of_measure || 
-                             (item.item && (item.item.storageUnit || item.item.storage_unit)) || null;
-        
+        const unitOfMeasure = item.unit || item.unitOfMeasure || item.unit_of_measure ||
+          (item.item && (item.item.storageUnit || item.item.storage_unit)) || null;
+
         // Get packaging condition - normalize to valid values
         const packagingCondition = (() => {
           const value = (item.packagingType || item.packaging_type || item.packagingCondition || item.packaging_condition || '').trim();
@@ -3621,10 +3621,10 @@ export async function updateGRNInSupabase(grnId, updates) {
           }
           return 'Good'; // Default to 'Good' for invalid values
         })();
-        
+
         // Get supplier lot number - CRITICAL: This field must be saved
         const supplierLotNumber = (item.supplierLotNumber || item.supplier_lot_number || '').trim() || null;
-        
+
         return {
           grn_inspection_id: grnId,
           purchase_order_id: updateData.purchase_order_id, // Use validated UUID from updateData
@@ -3647,7 +3647,7 @@ export async function updateGRNInSupabase(grnId, updates) {
           test_results: item.testResults || item.test_results || null
         };
       });
-      
+
       // Log items being updated for debugging
       console.log('📦 Updating GRN items:', grnItems.length, 'items');
       console.log('📦 First GRN item sample:', {
@@ -3658,12 +3658,12 @@ export async function updateGRNInSupabase(grnId, updates) {
         packaging_condition: grnItems[0]?.packaging_condition,
         supplier_lot_number: grnItems[0]?.supplier_lot_number
       });
-      
+
       const { data: insertedItems, error: itemsError } = await supabaseClient
         .from('grn_inspection_items')
         .insert(grnItems)
         .select();
-      
+
       if (itemsError) {
         console.error('❌ Error updating GRN items:', itemsError);
         console.error('❌ Items error details:', {
@@ -3673,7 +3673,7 @@ export async function updateGRNInSupabase(grnId, updates) {
           code: itemsError.code
         });
         console.error('❌ Items that failed to insert:', JSON.stringify(grnItems, null, 2));
-        
+
         // CRITICAL: If items fail to insert, we need to rollback or throw error
         // Since we already deleted old items, this is a critical error
         throw new Error(`Failed to save GRN items: ${itemsError.message || 'Unknown error'}. ${itemsError.hint || ''}`);
@@ -3681,7 +3681,7 @@ export async function updateGRNInSupabase(grnId, updates) {
         console.log('✅ GRN items updated successfully:', insertedItems?.length || grnItems.length, 'items');
       }
     }
-    
+
     // Reload GRN with items AND item relationships - CRITICAL for displaying item names/SKUs
     const { data: fullGRN, error: reloadError } = await supabaseClient
       .from('grn_inspections')
@@ -3694,18 +3694,18 @@ export async function updateGRNInSupabase(grnId, updates) {
       `)
       .eq('id', grnId)
       .single();
-    
+
     if (reloadError) {
       console.error('❌ Error reloading GRN:', reloadError);
       return { success: true, data };
     }
-    
+
     return { success: true, data: fullGRN || data };
   } catch (error) {
     console.error('❌ Exception updating GRN in Supabase:', error);
-    return { 
-      success: false, 
-      error: error.message || 'Failed to update GRN' 
+    return {
+      success: false,
+      error: error.message || 'Failed to update GRN'
     };
   }
 }
@@ -3733,7 +3733,7 @@ export async function deleteGRNFromSupabase(grnId) {
   if (!USE_SUPABASE || !supabaseClient) {
     return deleteGRNFromLocalStorage(grnId);
   }
-  
+
   try {
     // Soft delete: Set deleted flag and deleted_at timestamp
     const { error } = await supabaseClient
@@ -3744,12 +3744,12 @@ export async function deleteGRNFromSupabase(grnId) {
         updated_at: new Date().toISOString()
       })
       .eq('id', grnId);
-    
+
     if (error) {
       console.error('❌ Error deleting GRN from Supabase:', error);
       return deleteGRNFromLocalStorage(grnId);
     }
-    
+
     console.log('✅ GRN soft deleted from Supabase');
     return { success: true };
   } catch (error) {
@@ -3777,7 +3777,7 @@ export async function getGRNById(grnId) {
   if (!USE_SUPABASE || !supabaseClient) {
     return getGRNByIdFromLocalStorage(grnId);
   }
-  
+
   try {
     // Load GRN with supplier (simplified query)
     const { data: grnData, error: grnError } = await supabaseClient
@@ -3789,16 +3789,16 @@ export async function getGRNById(grnId) {
       .eq('id', grnId)
       .eq('deleted', false)
       .single();
-    
+
     if (grnError) {
       console.error('❌ Error loading GRN from Supabase:', grnError);
       return getGRNByIdFromLocalStorage(grnId);
     }
-    
+
     if (!grnData) {
       return { success: false, data: null, error: 'GRN not found' };
     }
-    
+
     // Load items separately WITH item relationship - CRITICAL for displaying item names/SKUs
     const { data: itemsData, error: itemsError } = await supabaseClient
       .from('grn_inspection_items')
@@ -3807,7 +3807,7 @@ export async function getGRNById(grnId) {
         item:inventory_items(*)
       `)
       .eq('grn_inspection_id', grnId);
-    
+
     if (itemsError) {
       console.error('❌ Error loading GRN items from Supabase:', itemsError);
       console.error('❌ Items error details:', {
@@ -3829,7 +3829,7 @@ export async function getGRNById(grnId) {
         });
       }
     }
-    
+
     // If supplier relationship didn't load, try to load it manually
     if (!grnData.supplier && grnData.supplier_id) {
       const { data: supplierData, error: supplierError } = await supabaseClient
@@ -3837,12 +3837,12 @@ export async function getGRNById(grnId) {
         .select('*')
         .eq('id', grnData.supplier_id)
         .single();
-      
+
       if (!supplierError && supplierData) {
         grnData.supplier = supplierData;
       }
     }
-    
+
     // Extract deliveryNoteNumber from notes if it exists
     if (grnData.notes && grnData.notes.includes('Delivery Note:')) {
       const deliveryNoteMatch = grnData.notes.match(/Delivery Note:\s*(.+)/);
@@ -3906,7 +3906,7 @@ export async function generateGRNNumber() {
         .neq('status', 'draft') // Exclude draft GRNs
         .order('created_at', { ascending: false })
         .limit(1);
-      
+
       if (!error && data && data.length > 0) {
         const lastNumber = data[0].grn_number || data[0].grnNumber;
         if (lastNumber && lastNumber.startsWith('GRN-')) {
@@ -3916,7 +3916,7 @@ export async function generateGRNNumber() {
         }
       }
     }
-    
+
     // Fallback to localStorage
     // Exclude draft GRNs and DRAFT- numbers - only count GRNs that have been submitted
     const grns = JSON.parse(localStorage.getItem('sakura_grns') || '[]');
@@ -3931,7 +3931,7 @@ export async function generateGRNNumber() {
       .filter(n => n && n.startsWith('GRN-') && !n.startsWith('DRAFT-'))
       .map(n => parseInt(n.replace('GRN-', '')))
       .filter(n => !isNaN(n));
-    
+
     const maxNum = numbers.length > 0 ? Math.max(...numbers) : 0;
     const nextNum = String(maxNum + 1).padStart(6, '0');
     return `GRN-${nextNum}`;
@@ -3999,6 +3999,8 @@ export async function saveBatchToSupabase(batch) {
       const quantity = batch.quantity ?? batch.batchQuantity ?? batch.batch_quantity ?? 0;
       // Map frontend fields to database columns (handle both snake_case and camelCase)
       // IMPORTANT: Do NOT send batch_number or batch_id - DB generates batch_number via trigger
+      // IMPORTANT: Only send columns that exist in grn_batches table with correct types.
+      // created_by is now TEXT type — safe to send username strings.
       const batchData = {
         ...(batch.id ? { id: batch.id } : {}),
         grn_id: batch.grnId || batch.grn_id,
@@ -4007,12 +4009,13 @@ export async function saveBatchToSupabase(batch) {
         batch_number: null, // DB generates via fn_generate_batch_number_from_grn
         expiry_date: batch.expiryDate || batch.expiry_date,
         quantity,
+        storage_location: batch.storageLocation || batch.storage_location || null,
+        vendor_batch_number: batch.vendorBatchNumber || batch.vendor_batch_number || null,
+        qc_status: batch.qcStatus || batch.qc_status || 'pending',
         qc_data: batch.qcData || batch.qc_data || null,
-        qcData: batch.qcData || batch.qc_data || null, // Also include camelCase
         qc_checked_at: batch.qcCheckedAt || batch.qc_checked_at || null,
-        qcCheckedAt: batch.qcCheckedAt || batch.qc_checked_at || null, // Also include camelCase
         created_by: batch.createdBy || batch.created_by || null,
-        createdBy: batch.createdBy || batch.created_by || null, // Also include camelCase
+        grn_number: batch.grnNumber || batch.grn_number || null,
         created_at: batch.createdAt || batch.created_at || new Date().toISOString(),
         updated_at: batch.updatedAt || batch.updated_at || new Date().toISOString()
       };
@@ -4097,24 +4100,50 @@ function saveBatchToLocalStorage(batch) {
 export async function updateBatchInSupabase(batchId, updates) {
   if (USE_SUPABASE && supabaseClient) {
     try {
-      // Map frontend fields to database columns (handle both snake_case and camelCase)
+      // Map frontend fields to database columns — ONLY send valid column names.
+      // created_by is UUID type, do NOT send text usernames.
+      // Remove camelCase aliases that cause PostgREST 400 errors.
       const updateData = {
-        ...updates,
         updated_at: new Date().toISOString()
       };
 
-      // Ensure both snake_case and camelCase versions are included
-      if (updates.qcData !== undefined) {
-        updateData.qc_data = updates.qcData;
-        updateData.qcData = updates.qcData;
+      // Map quantity fields
+      if (updates.batchQuantity !== undefined || updates.batch_quantity !== undefined) {
+        updateData.quantity = updates.batchQuantity ?? updates.batch_quantity;
       }
-      if (updates.qcCheckedAt !== undefined) {
-        updateData.qc_checked_at = updates.qcCheckedAt;
-        updateData.qcCheckedAt = updates.qcCheckedAt;
+      if (updates.quantity !== undefined) {
+        updateData.quantity = updates.quantity;
       }
-      if (updates.createdBy !== undefined) {
-        updateData.created_by = updates.createdBy;
-        updateData.createdBy = updates.createdBy;
+
+      // Map QC fields (only snake_case columns exist in DB)
+      if (updates.qcData !== undefined || updates.qc_data !== undefined) {
+        updateData.qc_data = updates.qcData || updates.qc_data;
+      }
+      if (updates.qcCheckedAt !== undefined || updates.qc_checked_at !== undefined) {
+        updateData.qc_checked_at = updates.qcCheckedAt || updates.qc_checked_at;
+      }
+      if (updates.qcStatus !== undefined || updates.qc_status !== undefined) {
+        updateData.qc_status = updates.qcStatus || updates.qc_status;
+      }
+
+      // Map other safe fields
+      if (updates.expiry_date !== undefined || updates.expiryDate !== undefined) {
+        updateData.expiry_date = updates.expiry_date || updates.expiryDate;
+      }
+      if (updates.batch_number !== undefined) {
+        updateData.batch_number = updates.batch_number;
+      }
+      if (updates.batch_id !== undefined) {
+        updateData.batch_id = updates.batch_id;
+      }
+      if (updates.storageLocation !== undefined || updates.storage_location !== undefined) {
+        updateData.storage_location = updates.storageLocation || updates.storage_location;
+      }
+      if (updates.vendorBatchNumber !== undefined || updates.vendor_batch_number !== undefined) {
+        updateData.vendor_batch_number = updates.vendorBatchNumber || updates.vendor_batch_number;
+      }
+      if (updates.createdBy !== undefined || updates.created_by !== undefined) {
+        updateData.created_by = updates.createdBy || updates.created_by;
       }
 
       const { data, error } = await supabaseClient
@@ -4256,14 +4285,14 @@ export async function loadBatchesForGRN(grnId) {
 export async function loadPurchasingInvoicesFromSupabase() {
   const ready = await ensureSupabaseReady();
   if (!ready) return getPurchasingInvoicesFromLocalStorage();
-  
+
   try {
     const { data, error } = await supabaseClient
       .from('purchasing_invoices')
       .select('*')
       .eq('deleted', false)
       .order('created_at', { ascending: false });
-    
+
     if (error) {
       if (error.code === '42P01' || error.message?.includes('does not exist')) {
         console.warn('⚠️ purchasing_invoices table not found. Run migration script first.');
@@ -4272,7 +4301,7 @@ export async function loadPurchasingInvoicesFromSupabase() {
       console.error('Error loading purchasing invoices:', error);
       return getPurchasingInvoicesFromLocalStorage();
     }
-    
+
     return data || [];
   } catch (error) {
     console.error('Exception loading purchasing invoices:', error);
@@ -4314,19 +4343,19 @@ export async function getPurchasingInvoiceById(invoiceId) {
   if (!USE_SUPABASE || !supabaseClient) {
     return getPurchasingInvoiceByIdFromLocalStorage(invoiceId);
   }
-  
+
   try {
     const { data, error } = await supabaseClient
       .from('purchasing_invoices')
       .select('*')
       .eq('id', invoiceId)
       .single();
-    
+
     if (error) {
       console.error('Error loading purchasing invoice:', error);
       return { success: false, error: error.message };
     }
-    
+
     return { success: true, data };
   } catch (error) {
     console.error('Exception loading purchasing invoice:', error);
@@ -4351,19 +4380,19 @@ export async function savePurchasingInvoiceToSupabase(invoiceData) {
   if (!USE_SUPABASE || !supabaseClient) {
     return savePurchasingInvoiceToLocalStorage(invoiceData);
   }
-  
+
   try {
     const { data, error } = await supabaseClient
       .from('purchasing_invoices')
       .insert(invoiceData)
       .select()
       .single();
-    
+
     if (error) {
       console.error('Error saving purchasing invoice:', error);
       return { success: false, error: error.message };
     }
-    
+
     return { success: true, data };
   } catch (error) {
     console.error('Exception saving purchasing invoice:', error);
@@ -4394,7 +4423,7 @@ export async function updatePurchasingInvoiceInSupabase(invoiceId, updates) {
   if (!USE_SUPABASE || !supabaseClient) {
     return updatePurchasingInvoiceInLocalStorage(invoiceId, updates);
   }
-  
+
   try {
     const { data, error } = await supabaseClient
       .from('purchasing_invoices')
@@ -4405,12 +4434,12 @@ export async function updatePurchasingInvoiceInSupabase(invoiceId, updates) {
       .eq('id', invoiceId)
       .select()
       .single();
-    
+
     if (error) {
       console.error('Error updating purchasing invoice:', error);
       return { success: false, error: error.message };
     }
-    
+
     return { success: true, data };
   } catch (error) {
     console.error('Exception updating purchasing invoice:', error);
@@ -4440,19 +4469,19 @@ export async function loadPurchasingInvoiceItems(invoiceId) {
   if (!USE_SUPABASE || !supabaseClient) {
     return [];
   }
-  
+
   try {
     const { data, error } = await supabaseClient
       .from('purchasing_invoice_items')
       .select('*')
       .eq('purchasing_invoice_id', invoiceId)
       .order('created_at', { ascending: true });
-    
+
     if (error) {
       console.error('Error loading purchasing invoice items:', error);
       return [];
     }
-    
+
     return data || [];
   } catch (error) {
     console.error('Exception loading purchasing invoice items:', error);
@@ -4467,23 +4496,23 @@ export async function savePurchasingInvoiceItems(invoiceId, items) {
   if (!USE_SUPABASE || !supabaseClient) {
     return { success: false, error: 'Supabase not available' };
   }
-  
+
   try {
     const itemsToInsert = items.map(item => ({
       ...item,
       purchasing_invoice_id: invoiceId
     }));
-    
+
     const { data, error } = await supabaseClient
       .from('purchasing_invoice_items')
       .insert(itemsToInsert)
       .select();
-    
+
     if (error) {
       console.error('Error saving purchasing invoice items:', error);
       return { success: false, error: error.message };
     }
-    
+
     return { success: true, data };
   } catch (error) {
     console.error('Exception saving purchasing invoice items:', error);
@@ -4498,7 +4527,7 @@ export async function getPurchasingInvoiceByGRN(grnId) {
   if (!USE_SUPABASE || !supabaseClient) {
     return { success: false, exists: false };
   }
-  
+
   try {
     const { data, error } = await supabaseClient
       .from('purchasing_invoices')
@@ -4506,16 +4535,16 @@ export async function getPurchasingInvoiceByGRN(grnId) {
       .eq('grn_id', grnId)
       .eq('deleted', false)
       .single();
-    
+
     if (error && error.code !== 'PGRST116') { // PGRST116 = no rows returned
       console.error('Error checking purchasing invoice:', error);
       return { success: false, exists: false, error: error.message };
     }
-    
-    return { 
-      success: true, 
-      exists: !!data, 
-      data 
+
+    return {
+      success: true,
+      exists: !!data,
+      data
     };
   } catch (error) {
     console.error('Exception checking purchasing invoice:', error);
