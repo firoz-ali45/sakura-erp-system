@@ -1077,8 +1077,9 @@ async function doGenerateOtp() {
   dispatching.value = true;
   try {
     const result = await generateDeliveryOtp(transfer.value.id);
-    if (result?.ok && result?.otp_code) {
-      generatedOtp.value = result.otp_code;
+    const otpVal = result?.otp_code || result?.otp;
+    if (result?.ok && otpVal) {
+      generatedOtp.value = otpVal;
       showNotification('OTP generated. Share with branch manager.', 'success');
     } else {
       showNotification(result?.error || 'Failed to generate OTP', 'error');
