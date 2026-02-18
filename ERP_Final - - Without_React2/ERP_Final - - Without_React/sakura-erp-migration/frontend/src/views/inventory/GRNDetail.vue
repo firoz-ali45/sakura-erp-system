@@ -637,7 +637,7 @@
                       {{ formatDate(batch.expiryDate || batch.expiry_date) }}
                     </td>
                     <td class="px-4 py-3 border border-gray-200">
-                      {{ batch.batchQuantity || batch.batch_quantity || 0 }}
+                      {{ batch.batchQuantity || batch.batch_quantity || batch.quantity || 0 }}
                     </td>
                     <td class="px-4 py-3 border border-gray-200">
                       {{ batch.storageLocation || batch.storage_location || t('common.notAvailable') }}
@@ -709,7 +709,7 @@
                     <p class="text-sm text-gray-600">
                       Item: {{ getBatchItemName(batch) }} ({{ getBatchItemSKU(batch) }}) | 
                       Expiry: {{ formatDate(batch.expiryDate || batch.expiry_date) }} | 
-                      Quantity: {{ batch.batchQuantity || batch.batch_quantity || 0 }}
+                      Quantity: {{ batch.batchQuantity || batch.batch_quantity || batch.quantity || 0 }}
                     </p>
                     <p v-if="batch.storageLocation || batch.storage_location" class="text-xs text-gray-500 mt-1">
                       Storage: {{ batch.storageLocation || batch.storage_location }}
@@ -2200,7 +2200,7 @@ const getRemainingQuantity = (itemId) => {
   });
   
   const totalBatchQty = batchesForItem.reduce((sum, b) => {
-    const qty = b.batchQuantity || b.batch_quantity || 0;
+    const qty = b.batchQuantity || b.batch_quantity || b.quantity || 0;
     return sum + qty;
   }, 0);
   
@@ -4117,7 +4117,7 @@ const printGRN = async () => {
       const batchItemName = escapeHtml(batchItem?.name || 'N/A');
       const batchItemSKU = escapeHtml(batchItem?.sku || 'N/A');
       const expiryDate = formatDate(batch.expiryDate || batch.expiry_date);
-      const batchQty = batch.batchQuantity || batch.batch_quantity || 0;
+      const batchQty = batch.batchQuantity || batch.batch_quantity || batch.quantity || 0;
       const qcStatus = batch.qcStatus || batch.qc_status || 'pending';
       const qcStatusText = qcStatus.charAt(0).toUpperCase() + qcStatus.slice(1);
       const qcStatusColor = qcStatus === 'approved' ? '#10b981' : qcStatus === 'rejected' ? '#ef4444' : '#f59e0b';
