@@ -4095,6 +4095,41 @@ function saveBatchToLocalStorage(batch) {
 }
 
 /**
+ * Delete batch from Supabase grn_batches table
+ */
+export async function deleteBatchFromSupabase(batchId) {
+  if (USE_SUPABASE && supabaseClient) {
+    try {
+      const { error } = await supabaseClient
+        .from('grn_batches')
+        .delete()
+        .eq('id', batchId);
+
+      if (error) {
+        console.error('❌ Error deleting batch from Supabase:', error);
+        return { success: false, error: error.message };
+      }
+
+      console.log('✅ Batch deleted from Supabase:', batchId);
+      return { success: true };
+    } catch (error) {
+      console.error('❌ Exception deleting batch:', error);
+      return { success: false, error: error.message };
+    }
+  } else {
+    // localStorage fallback
+    try {
+      const batches = JSON.parse(localStorage.getItem('sakura_grn_batches') || '[]');
+      const filtered = batches.filter(b => b.id !== batchId);
+      localStorage.setItem('sakura_grn_batches', JSON.stringify(filtered));
+      return { success: true };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  }
+}
+
+/**
  * Update batch in Supabase or localStorage
  */
 export async function updateBatchInSupabase(batchId, updates) {

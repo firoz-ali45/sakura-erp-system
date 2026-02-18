@@ -662,12 +662,20 @@
                         <i class="fas fa-eye"></i>
                       </button>
                       <button 
-                        v-if="(grnStatus === 'draft' || grnStatus === 'under_inspection') && (batch.qcStatus || batch.qc_status) === 'pending'"
+                        v-if="(grnStatus === 'draft' || grnStatus === 'under_inspection') && (batch.qcStatus || batch.qc_status || 'pending') === 'pending'"
                         @click="editBatch(batch)"
-                        class="text-green-600 hover:text-green-800"
+                        class="text-green-600 hover:text-green-800 mr-2"
                         :title="t('inventory.grn.editBatch')"
                       >
                         <i class="fas fa-edit"></i>
+                      </button>
+                      <button 
+                        v-if="(grnStatus === 'draft' || grnStatus === 'under_inspection') && (batch.qcStatus || batch.qc_status || 'pending') === 'pending'"
+                        @click="deleteBatch(batch)"
+                        class="text-red-600 hover:text-red-800"
+                        title="Delete Batch"
+                      >
+                        <i class="fas fa-trash"></i>
                       </button>
                     </td>
                   </tr>
@@ -1106,6 +1114,7 @@ import {
   deleteGRNFromSupabase,
   saveBatchToSupabase,
   updateBatchInSupabase,
+  deleteBatchFromSupabase,
   generateGRNNumber,
   loadBatchesForGRN,
   loadGRNsFromSupabase
@@ -2262,13 +2271,46 @@ const editBatch = (batch) => {
   batchForm.value = {
     itemId: batch.itemId || batch.item_id || '',
     expiryDate: batch.expiryDate || batch.expiry_date || '',
-    batchQuantity: batch.batchQuantity || batch.batch_quantity || 0,
+    batchQuantity: batch.batchQuantity || batch.batch_quantity || batch.quantity || 0,
     storageLocation: batch.storageLocation || batch.storage_location || '',
     vendorBatchNumber: batch.vendorBatchNumber || batch.vendor_batch_number || '',
     qcStatus: batch.qcStatus || batch.qc_status || 'pending'
   };
   checkExistingBatch();
   showBatchModal.value = true;
+};
+
+const deleteBatch = async (batch) => {
+  const batchLabel = batch.batch_number || batch.batchNumber || 'this batch';
+  const confirmed = await showConfirmDialog({
+    title: 'Delete Batch',
+    message: `Are you sure you want to delete batch ${batchLabel}? This action cannot be undone.`,
+    confirmText: 'Yes, Delete',
+    cancelText: 'Cancel',
+    type: 'warning',
+    icon: 'fas fa-trash'
+  });
+  
+  if (!confirmed) return;
+  
+  try {
+    const result = await deleteBatchFromSupabase(batch.id);
+    if (result.success) {
+      showNotification('Batch deleted successfully', 'success');
+      // Remove from local state
+      if (grn.value && grn.value.batches) {
+        grn.value.batches = grn.value.batches.filter(b => b.id !== batch.id);
+      }
+      // Reload from DB
+      await loadBatchesForGRNLocal(grn.value.id);
+      await loadGRN();
+    } else {
+      showNotification('Error deleting batch: ' + (result.error || 'Unknown error'), 'error');
+    }
+  } catch (error) {
+    console.error('Error deleting batch:', error);
+    showNotification('Error deleting batch: ' + (error.message || 'Unknown error'), 'error');
+  }
 };
 
 const saveBatch = async () => {
@@ -2316,7 +2358,7 @@ const saveBatch = async () => {
     
     if (existing && !editingBatch.value) {
       // ISO Rule: Use existing batch and add quantity
-      const currentQty = existing.batchQuantity || existing.batch_quantity || 0;
+      const currentQty = existing.batchQuantity || existing.batch_quantity || existing.quantity || 0;
       const newQty = batchForm.value.batchQuantity;
       const updatedQty = currentQty + newQty;
       
