@@ -644,10 +644,10 @@
                       {{ (batch.remaining_qty != null ? Number(batch.remaining_qty) : 0) }}
                     </td>
                     <td class="px-4 py-3 border border-gray-200">
-                      {{ (batch.storageLocation || batch.storage_location) || t('common.notAvailable') }}
+                      {{ (batch.storageLocation || batch.storage_location) || notAvailableLabel }}
                     </td>
                     <td class="px-4 py-3 border border-gray-200">
-                      {{ (batch.vendorBatchNumber || batch.vendor_batch_number) || t('common.notAvailable') }}
+                      {{ (batch.vendorBatchNumber || batch.vendor_batch_number) || notAvailableLabel }}
                     </td>
                     <td class="px-4 py-3 border border-gray-200">
                       <span :class="getQCStatusClass(batch.qcStatus || batch.qc_status)">
@@ -666,7 +666,7 @@
                         <i class="fas fa-eye"></i>
                       </button>
                       <button 
-                        v-if="(grnStatus === 'draft' || grnStatus === 'under_inspection') && (batch.qcStatus || batch.qc_status || 'pending') === 'pending'"
+                        v-if="canShowBatchEditDelete(batch)"
                         @click="editBatch(batch)"
                         class="text-green-600 hover:text-green-800 mr-2"
                         :title="t('inventory.grn.editBatch')"
@@ -674,7 +674,7 @@
                         <i class="fas fa-edit"></i>
                       </button>
                       <button 
-                        v-if="(grnStatus === 'draft' || grnStatus === 'under_inspection') && (batch.qcStatus || batch.qc_status || 'pending') === 'pending'"
+                        v-if="canShowBatchEditDelete(batch)"
                         @click="deleteBatch(batch)"
                         class="text-red-600 hover:text-red-800"
                         title="Delete Batch"
@@ -1140,6 +1140,11 @@ const router = useRouter();
 const authStore = useAuthStore();
 const { t, locale, isRTL, direction } = useI18n();
 const currentLang = computed(() => locale.value || 'en');
+// Never show translation key: use real fallback so "common.notAvailable" never appears in UI
+const notAvailableLabel = computed(() => {
+  const v = t('common.notAvailable');
+  return (v && v !== 'common.notAvailable' && !String(v).startsWith('common.')) ? v : 'Not available';
+});
 const grn = ref(null);
 const linkedPrId = ref(null);
 const tracedPoId = ref(null);
@@ -2051,25 +2056,23 @@ const getItemUnit = (item) => {
 };
 
 const getBatchItemName = (batch) => {
-  if (batch.item) {
-    return batch.item.name || t('common.notAvailable');
-  }
-  if (batch.itemId || batch.item_id) {
+  const na = safeNotAvailable();
+  if (batch?.item) return batch.item.name || na;
+  if (batch?.itemId || batch?.item_id) {
     const invItem = inventoryItems.value.find(i => i.id === (batch.itemId || batch.item_id));
-    return invItem?.name || t('common.notAvailable');
+    return invItem?.name || na;
   }
-  return t('common.notAvailable');
+  return na;
 };
 
 const getBatchItemSKU = (batch) => {
-  if (batch.item) {
-    return batch.item.sku || t('common.notAvailable');
-  }
-  if (batch.itemId || batch.item_id) {
+  const na = safeNotAvailable();
+  if (batch?.item) return batch.item.sku || na;
+  if (batch?.itemId || batch?.item_id) {
     const invItem = inventoryItems.value.find(i => i.id === (batch.itemId || batch.item_id));
-    return invItem?.sku || t('common.notAvailable');
+    return invItem?.sku || na;
   }
-  return t('common.notAvailable');
+  return na;
 };
 
 /** Batch quantity: use batches.qty_received (view exposes as quantity). Single source for display/sum. */
@@ -2079,13 +2082,27 @@ const getBatchQuantity = (batch) => {
   return Number(q) || 0;
 };
 
+/** Never show i18n key in UI: return real fallback. */
+const safeNotAvailable = () => {
+  const v = t('common.notAvailable');
+  return (v && v !== 'common.notAvailable' && !String(v).startsWith('common.')) ? v : 'Not available';
+};
+
 /** created_by is UUID from batches; resolve to users.name for display. */
 const getBatchCreatedByDisplay = (batch) => {
-  if (!batch) return t('common.notAvailable');
+  const fallback = safeNotAvailable();
+  if (!batch) return fallback;
   const uid = batch.created_by ?? batch.createdBy;
-  if (!uid) return t('common.notAvailable');
+  if (!uid) return fallback;
   const name = createdByNameMap.value[uid];
-  return name || t('common.notAvailable');
+  return name || fallback;
+};
+
+/** Edit/Delete visible when GRN is draft or under_inspection AND batch QC is pending (case-insensitive). */
+const canShowBatchEditDelete = (batch) => {
+  const status = String(grnStatus.value || '').toLowerCase();
+  const qc = String(batch?.qcStatus ?? batch?.qc_status ?? 'pending').toLowerCase();
+  return (status === 'draft' || status === 'under_inspection') && qc === 'pending';
 };
 
 const saveQCData = async (batch) => {
@@ -4163,8 +4180,8 @@ const printGRN = async () => {
       const batchItemDisplay = batchItemName + ' (' + batchItemSKU + ')';
       const expiryDate = formatDate(batch.expiryDate || batch.expiry_date);
       const batchQty = getBatchQuantity(batch);
-      const storageLocation = escapeHtml((batch.storageLocation || batch.storage_location) || t('common.notAvailable'));
-      const vendorBatchNumber = escapeHtml((batch.vendorBatchNumber || batch.vendor_batch_number) || t('common.notAvailable'));
+      const storageLocation = escapeHtml((batch.storageLocation || batch.storage_location) || safeNotAvailable());
+      const vendorBatchNumber = escapeHtml((batch.vendorBatchNumber || batch.vendor_batch_number) || safeNotAvailable());
       const qcStatus = batch.qcStatus || batch.qc_status || 'pending';
       const qcStatusText = qcStatus.charAt(0).toUpperCase() + qcStatus.slice(1);
       const qcStatusColor = qcStatus === 'approved' ? '#10b981' : qcStatus === 'rejected' ? '#ef4444' : '#f59e0b';

@@ -4307,20 +4307,28 @@ export async function loadBatchesForGRN(grnId) {
 
     const batchIds = data.map((b) => b.id).filter(Boolean);
     if (batchIds.length > 0) {
-      const { data: stockRows } = await supabaseClient
+      const { data: stockRows, error: stockErr } = await supabaseClient
         .from('v_batch_stock')
-        .select('batch_id, remaining_qty, stock_status')
+        .select('batch_id, qty_received, remaining_qty, stock_status')
         .in('batch_id', batchIds);
+      if (stockErr) console.warn('[GRN] v_batch_stock fetch failed:', stockErr.message);
       const byId = (stockRows || []).reduce((acc, r) => {
-        acc[r.batch_id] = { remaining_qty: r.remaining_qty, stock_status: r.stock_status };
+        acc[r.batch_id] = {
+          remaining_qty: r.remaining_qty,
+          stock_status: r.stock_status,
+          qty_received: r.qty_received
+        };
         return acc;
       }, {});
       data = data.map((b) => {
         const stock = byId[b.id];
+        const qtyFromStock = stock != null && stock.qty_received != null ? Number(stock.qty_received) : null;
+        const qty = qtyFromStock ?? b.qty_received ?? b.quantity;
         return {
           ...b,
-          qty_received: b.qty_received ?? b.quantity,
-          remaining_qty: stock ? Number(stock.remaining_qty) : 0,
+          qty_received: qty,
+          quantity: qty,
+          remaining_qty: stock != null ? Number(stock.remaining_qty) : 0,
           stock_status: stock?.stock_status ?? null
         };
       });
