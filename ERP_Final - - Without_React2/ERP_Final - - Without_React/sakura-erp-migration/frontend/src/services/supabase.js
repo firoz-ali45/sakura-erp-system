@@ -3996,7 +3996,7 @@ async function insertInventoryBatchFromGrnBatch(supabase, batch) {
 export async function saveBatchToSupabase(batch) {
   if (USE_SUPABASE && supabaseClient) {
     try {
-      const quantity = batch.quantity ?? batch.batchQuantity ?? batch.batch_quantity ?? 0;
+      const quantity = batch.qty_received ?? batch.quantity ?? batch.batchQuantity ?? batch.batch_quantity ?? 0;
       // Map frontend fields to database columns (handle both snake_case and camelCase)
       // IMPORTANT: Do NOT send batch_number or batch_id - DB generates batch_number via trigger
       // IMPORTANT: Only send columns that exist in grn_batches table with correct types.
@@ -4276,34 +4276,56 @@ export async function generateBatchId(grnId, itemId, expiryDate) {
 
 /**
  * Load batches for a specific GRN — SUPABASE ONLY (no localStorage).
- * Tries grn_batches table first, then optional views. Returns [] if none.
+ * Reads from grn_batches VIEW (batches table); merges remaining_qty from v_batch_stock (ledger-derived).
+ * Batch quantity: use batches.qty_received (exposed as quantity by view). Remaining: v_batch_stock.remaining_qty only.
  */
 export async function loadBatchesForGRN(grnId) {
   if (!USE_SUPABASE || !supabaseClient) return [];
   try {
-    // 1) Base table — Vercel + local same data
     let { data, error } = await supabaseClient
       .from('grn_batches')
       .select('*')
       .eq('grn_id', grnId)
       .order('created_at', { ascending: false });
-    if (!error && data && data.length > 0) return data;
+    if (error || !data || data.length === 0) {
+      const viewResult = await supabaseClient
+        .from('v_grn_all_batches')
+        .select('*')
+        .eq('grn_id', grnId)
+        .order('created_at', { ascending: false });
+      if (!viewResult.error && viewResult.data?.length) data = viewResult.data;
+      else {
+        const view2 = await supabaseClient
+          .from('v_grn_batches_with_batch_number')
+          .select('*')
+          .eq('grn_id', grnId)
+          .order('created_at', { ascending: false });
+        if (!view2.error && view2.data?.length) data = view2.data;
+      }
+    }
+    if (!data || data.length === 0) return [];
 
-    // 2) Optional views
-    const viewResult = await supabaseClient
-      .from('v_grn_all_batches')
-      .select('*')
-      .eq('grn_id', grnId)
-      .order('created_at', { ascending: false });
-    if (!viewResult.error && viewResult.data?.length) return viewResult.data;
-    const view2 = await supabaseClient
-      .from('v_grn_batches_with_batch_number')
-      .select('*')
-      .eq('grn_id', grnId)
-      .order('created_at', { ascending: false });
-    if (!view2.error && view2.data?.length) return view2.data;
-
-    return data || [];
+    const batchIds = data.map((b) => b.id).filter(Boolean);
+    if (batchIds.length > 0) {
+      const { data: stockRows } = await supabaseClient
+        .from('v_batch_stock')
+        .select('batch_id, remaining_qty, stock_status')
+        .in('batch_id', batchIds);
+      const byId = (stockRows || []).reduce((acc, r) => {
+        acc[r.batch_id] = { remaining_qty: r.remaining_qty, stock_status: r.stock_status };
+        return acc;
+      }, {});
+      data = data.map((b) => {
+        const stock = byId[b.id];
+        return {
+          ...b,
+          qty_received: b.qty_received ?? b.quantity,
+          remaining_qty: stock ? Number(stock.remaining_qty) : 0,
+          stock_status: stock?.stock_status ?? null
+        };
+      });
+    }
+    return data;
   } catch (err) {
     console.warn('loadBatchesForGRN:', err);
     return [];

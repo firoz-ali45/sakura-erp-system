@@ -43,7 +43,9 @@
     "unknownError": "خطأ غير معروف",
     "clickToRefresh": "انقر للتحديث",
     "createdAt": "تاريخ الإنشاء",
-    "itemTransactionFlow": "تدفق المستندات حسب البند"
+    "itemTransactionFlow": "تدفق المستندات حسب البند",
+    "notAvailable": "غير متاح",
+    "remaining": "المتبقي"
   },
   "ai": {
     "title": "مساعد ساكورا الذكي",

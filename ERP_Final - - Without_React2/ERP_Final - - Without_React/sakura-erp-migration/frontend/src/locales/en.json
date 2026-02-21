@@ -43,7 +43,9 @@
     "error": "Error",
     "unknownError": "Unknown error",
     "clickToRefresh": "Click to refresh",
-    "itemTransactionFlow": "Item-wise Document Flow"
+    "itemTransactionFlow": "Item-wise Document Flow",
+    "notAvailable": "Not available",
+    "remaining": "Remaining"
   },
   "ai": {
     "title": "Sakura AI Assistant",
