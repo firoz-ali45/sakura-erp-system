@@ -4305,6 +4305,7 @@ export async function loadBatchesForGRN(grnId) {
     }
     if (!data || data.length === 0) return [];
 
+    if (typeof window !== 'undefined') window.__GRN_FRONTEND_ALIGN_LOADED__ = true;
     const batchIds = data.map((b) => b.id).filter(Boolean);
     if (batchIds.length > 0) {
       const { data: stockRows, error: stockErr } = await supabaseClient
