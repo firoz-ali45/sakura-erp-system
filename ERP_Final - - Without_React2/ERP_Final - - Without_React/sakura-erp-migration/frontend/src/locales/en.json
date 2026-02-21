@@ -43,7 +43,9 @@
     "error": "Error",
     "unknownError": "Unknown error",
     "clickToRefresh": "Click to refresh",
-    "itemTransactionFlow": "Item-wise Document Flow"
+    "itemTransactionFlow": "Item-wise Document Flow",
+    "notAvailable": "Not available",
+    "remaining": "Remaining"
   },
   "ai": {
     "title": "Sakura AI Assistant",
@@ -727,8 +729,6 @@
     "activityLogs": "Activity Logs",
     "loginSessions": "Login Sessions",
     "securitySettings": "Security Settings",
-    "createUser": "Create User",
-    "createRole": "Create Role",
     "pendingApproval": "Pending Approval",
     "searchPlaceholder": "Search users by name, email, or role...",
     "allRoles": "All Roles",

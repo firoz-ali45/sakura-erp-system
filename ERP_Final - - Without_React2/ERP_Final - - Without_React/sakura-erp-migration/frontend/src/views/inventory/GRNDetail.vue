@@ -613,6 +613,7 @@
                     <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700 border border-gray-200">{{ t('inventory.grn.item') }}</th>
                     <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700 border border-gray-200">{{ t('inventory.grn.expiryDate') }}</th>
                     <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700 border border-gray-200">{{ t('inventory.grn.batchQuantity') }}</th>
+                    <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700 border border-gray-200">{{ t('common.remaining') }}</th>
                     <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700 border border-gray-200">{{ t('inventory.grn.storageLocation') }}</th>
                     <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700 border border-gray-200">{{ t('inventory.grn.vendorBatch') }}</th>
                     <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700 border border-gray-200">{{ t('inventory.grn.qcStatus') }}</th>
@@ -622,7 +623,7 @@
                 </thead>
                 <tbody>
                   <tr v-if="(grn.batches || []).length === 0">
-                    <td colspan="9" class="px-4 py-8 text-center text-gray-500 border border-gray-200">
+                    <td colspan="10" class="px-4 py-8 text-center text-gray-500 border border-gray-200">
                       {{ t('inventory.grn.noBatchesCreated') }}
                     </td>
                   </tr>
@@ -637,13 +638,16 @@
                       {{ formatDate(batch.expiryDate || batch.expiry_date) }}
                     </td>
                     <td class="px-4 py-3 border border-gray-200">
-                      {{ batch.batchQuantity || batch.batch_quantity || 0 }}
+                      {{ getBatchQuantity(batch) }}
                     </td>
                     <td class="px-4 py-3 border border-gray-200">
-                      {{ batch.storageLocation || batch.storage_location || t('common.notAvailable') }}
+                      {{ (batch.remaining_qty != null ? Number(batch.remaining_qty) : 0) }}
                     </td>
                     <td class="px-4 py-3 border border-gray-200">
-                      {{ batch.vendorBatchNumber || batch.vendor_batch_number || t('common.notAvailable') }}
+                      {{ (batch.storageLocation || batch.storage_location) || notAvailableLabel }}
+                    </td>
+                    <td class="px-4 py-3 border border-gray-200">
+                      {{ (batch.vendorBatchNumber || batch.vendor_batch_number) || notAvailableLabel }}
                     </td>
                     <td class="px-4 py-3 border border-gray-200">
                       <span :class="getQCStatusClass(batch.qcStatus || batch.qc_status)">
@@ -651,7 +655,7 @@
                       </span>
                     </td>
                     <td class="px-4 py-3 border border-gray-200">
-                      {{ batch.createdBy || batch.created_by || t('common.notAvailable') }}
+                      {{ getBatchCreatedByDisplay(batch) }}
                     </td>
                     <td class="px-4 py-3 border border-gray-200 text-center">
                       <button 
@@ -662,12 +666,20 @@
                         <i class="fas fa-eye"></i>
                       </button>
                       <button 
-                        v-if="(grnStatus === 'draft' || grnStatus === 'under_inspection') && (batch.qcStatus || batch.qc_status) === 'pending'"
+                        v-if="canShowBatchEditDelete(batch)"
                         @click="editBatch(batch)"
-                        class="text-green-600 hover:text-green-800"
+                        class="text-green-600 hover:text-green-800 mr-2"
                         :title="t('inventory.grn.editBatch')"
                       >
                         <i class="fas fa-edit"></i>
+                      </button>
+                      <button 
+                        v-if="canShowBatchEditDelete(batch)"
+                        @click="deleteBatch(batch)"
+                        class="text-red-600 hover:text-red-800"
+                        title="Delete Batch"
+                      >
+                        <i class="fas fa-trash"></i>
                       </button>
                     </td>
                   </tr>
@@ -709,7 +721,7 @@
                     <p class="text-sm text-gray-600">
                       Item: {{ getBatchItemName(batch) }} ({{ getBatchItemSKU(batch) }}) | 
                       Expiry: {{ formatDate(batch.expiryDate || batch.expiry_date) }} | 
-                      Quantity: {{ batch.batchQuantity || batch.batch_quantity || 0 }}
+                      Quantity: {{ getBatchQuantity(batch) }}
                     </p>
                     <p v-if="batch.storageLocation || batch.storage_location" class="text-xs text-gray-500 mt-1">
                       Storage: {{ batch.storageLocation || batch.storage_location }}
@@ -1126,6 +1138,10 @@ const router = useRouter();
 const authStore = useAuthStore();
 const { t, locale, isRTL, direction } = useI18n();
 const currentLang = computed(() => locale.value || 'en');
+const notAvailableLabel = computed(() => {
+  const v = t('common.notAvailable');
+  return (v && v !== 'common.notAvailable' && !String(v).startsWith('common.')) ? v : 'Not available';
+});
 const grn = ref(null);
 const linkedPrId = ref(null);
 const tracedPoId = ref(null);
@@ -1168,6 +1184,7 @@ const batchForm = ref({
 
 // Storage locations (batch): ONLY from inventory_locations (same as receiving, no hardcoded)
 const storageLocations = ref([]);
+const createdByNameMap = ref({});
 
 // Computed
 const grnStatus = computed(() => {
@@ -1219,10 +1236,7 @@ const hasBatchQuantityMismatch = computed(() => {
       (b.itemId || b.item_id) === itemId
     );
     
-    const totalBatchQty = batchesForItem.reduce((sum, b) => 
-      sum + (b.batchQuantity || b.batch_quantity || 0), 0
-    );
-    
+    const totalBatchQty = batchesForItem.reduce((sum, b) => sum + getBatchQuantity(b), 0);
     return Math.abs(totalBatchQty - receivedQty) > 0.01; // Allow small floating point differences
   });
 });
@@ -1264,7 +1278,7 @@ const allItemsHaveBatches = computed(() => {
     if (batchesForItem.length === 0) return false; // No batches for this item
     
     const totalBatchQty = batchesForItem.reduce((sum, b) => 
-      sum + (b.batchQuantity || b.batch_quantity || 0), 0
+      sum + getBatchQuantity(b), 0
     );
     
     // Batch quantity should match received quantity (allow small floating point differences)
@@ -1328,7 +1342,7 @@ const batchProgress = computed(() => {
     
     const totalBatchQty = batchesForItem.reduce((sum, b) => {
       if (!b) return sum;
-      return sum + parseFloat(b.batchQuantity || b.batch_quantity || 0);
+      return sum + getBatchQuantity(b);
     }, 0);
     
     const remainingQty = Math.max(0, receivedQty - totalBatchQty);
@@ -1763,12 +1777,29 @@ const loadBatchesForGRNLocal = async (grnId) => {
     const batches = await loadBatchesForGRN(grnId);
     if (grn.value && batches) {
       grn.value.batches = batches;
+      await loadCreatedByNameMap(batches);
     }
   } catch (error) {
     console.error('Error loading batches:', error);
     if (grn.value) {
       grn.value.batches = [];
     }
+  }
+};
+
+const loadCreatedByNameMap = async (batches) => {
+  const ids = [...new Set((batches || []).map(b => b.created_by ?? b.createdBy).filter(Boolean))];
+  if (ids.length === 0) { createdByNameMap.value = {}; return; }
+  try {
+    const { supabaseClient } = await import('@/services/supabase.js');
+    if (!supabaseClient) return;
+    const { data } = await supabaseClient.from('users').select('id, name').in('id', ids);
+    const map = {};
+    (data || []).forEach((r) => { map[r.id] = r.name || null; });
+    createdByNameMap.value = map;
+  } catch (e) {
+    console.warn('loadCreatedByNameMap:', e);
+    createdByNameMap.value = {};
   }
 };
 
@@ -2008,26 +2039,46 @@ const getItemUnit = (item) => {
   return '';
 };
 
+const safeNotAvailable = () => {
+  const v = t('common.notAvailable');
+  return (v && v !== 'common.notAvailable' && !String(v).startsWith('common.')) ? v : 'Not available';
+};
 const getBatchItemName = (batch) => {
-  if (batch.item) {
-    return batch.item.name || t('common.notAvailable');
-  }
-  if (batch.itemId || batch.item_id) {
+  const na = safeNotAvailable();
+  if (batch?.item) return batch.item.name || na;
+  if (batch?.itemId || batch?.item_id) {
     const invItem = inventoryItems.value.find(i => i.id === (batch.itemId || batch.item_id));
-    return invItem?.name || t('common.notAvailable');
+    return invItem?.name || na;
   }
-  return t('common.notAvailable');
+  return na;
 };
 
 const getBatchItemSKU = (batch) => {
-  if (batch.item) {
-    return batch.item.sku || t('common.notAvailable');
-  }
-  if (batch.itemId || batch.item_id) {
+  const na = safeNotAvailable();
+  if (batch?.item) return batch.item.sku || na;
+  if (batch?.itemId || batch?.item_id) {
     const invItem = inventoryItems.value.find(i => i.id === (batch.itemId || batch.item_id));
-    return invItem?.sku || t('common.notAvailable');
+    return invItem?.sku || na;
   }
-  return t('common.notAvailable');
+  return na;
+};
+
+const getBatchQuantity = (batch) => {
+  if (!batch) return 0;
+  const q = batch.qty_received ?? batch.batchQuantity ?? batch.batch_quantity ?? batch.quantity;
+  return Number(q) || 0;
+};
+const getBatchCreatedByDisplay = (batch) => {
+  const fallback = safeNotAvailable();
+  if (!batch) return fallback;
+  const uid = batch.created_by ?? batch.createdBy;
+  if (!uid) return fallback;
+  return createdByNameMap.value[uid] || fallback;
+};
+const canShowBatchEditDelete = (batch) => {
+  const status = String(grnStatus.value || '').toLowerCase();
+  const qc = String(batch?.qcStatus ?? batch?.qc_status ?? 'pending').toLowerCase();
+  return (status === 'draft' || status === 'under_inspection') && qc === 'pending';
 };
 
 const saveQCData = async (batch) => {
@@ -2195,7 +2246,7 @@ const getRemainingQuantity = (itemId) => {
   });
   
   const totalBatchQty = batchesForItem.reduce((sum, b) => {
-    const qty = b.batchQuantity || b.batch_quantity || 0;
+    const qty = getBatchQuantity(b);
     return sum + qty;
   }, 0);
   
@@ -2207,7 +2258,7 @@ const getRemainingQuantity = (itemId) => {
     totalBatchQty,
     batchesForItem: batchesForItem.length,
     remaining,
-    batches: batchesForItem.map(b => ({ id: b.id, qty: b.batchQuantity || b.batch_quantity }))
+    batches: batchesForItem.map(b => ({ id: b.id, qty: getBatchQuantity(b) }))
   });
   
   return Math.max(0, remaining); // Ensure non-negative
@@ -2257,7 +2308,7 @@ const editBatch = (batch) => {
   batchForm.value = {
     itemId: batch.itemId || batch.item_id || '',
     expiryDate: batch.expiryDate || batch.expiry_date || '',
-    batchQuantity: batch.batchQuantity || batch.batch_quantity || 0,
+    batchQuantity: getBatchQuantity(batch),
     storageLocation: batch.storageLocation || batch.storage_location || '',
     vendorBatchNumber: batch.vendorBatchNumber || batch.vendor_batch_number || '',
     qcStatus: batch.qcStatus || batch.qc_status || 'pending'
@@ -2311,7 +2362,7 @@ const saveBatch = async () => {
     
     if (existing && !editingBatch.value) {
       // ISO Rule: Use existing batch and add quantity
-      const currentQty = existing.batchQuantity || existing.batch_quantity || 0;
+      const currentQty = getBatchQuantity(existing);
       const newQty = batchForm.value.batchQuantity;
       const updatedQty = currentQty + newQty;
       
@@ -2406,7 +2457,8 @@ const saveBatch = async () => {
         if (!grn.value.batches) grn.value.batches = [];
         const exists = grn.value.batches.some(b => (b.id || b.batch_id) === (result.data.id || result.data.batch_id));
         if (!exists) {
-          const batchRow = { ...result.data, batch_quantity: result.data.quantity ?? result.data.batch_quantity, batchQuantity: result.data.quantity ?? result.data.batch_quantity };
+          const qty = result.data.qty_received ?? result.data.quantity ?? result.data.batch_quantity;
+          const batchRow = { ...result.data, qty_received: qty, batch_quantity: qty, batchQuantity: qty };
           grn.value.batches = [batchRow, ...grn.value.batches];
         }
       }
@@ -4073,13 +4125,13 @@ const printGRN = async () => {
       const batchItemSKU = escapeHtml(batchItem?.sku || 'N/A');
       const batchItemDisplay = batchItemName + ' (' + batchItemSKU + ')';
       const expiryDate = formatDate(batch.expiryDate || batch.expiry_date);
-      const batchQty = batch.batchQuantity || batch.batch_quantity || 0;
-      const storageLocation = escapeHtml(batch.storageLocation || batch.storage_location || 'N/A');
-      const vendorBatchNumber = escapeHtml(batch.vendorBatchNumber || batch.vendor_batch_number || 'N/A');
+      const batchQty = getBatchQuantity(batch);
+      const storageLocation = escapeHtml((batch.storageLocation || batch.storage_location) || safeNotAvailable());
+      const vendorBatchNumber = escapeHtml((batch.vendorBatchNumber || batch.vendor_batch_number) || safeNotAvailable());
       const qcStatus = batch.qcStatus || batch.qc_status || 'pending';
       const qcStatusText = qcStatus.charAt(0).toUpperCase() + qcStatus.slice(1);
       const qcStatusColor = qcStatus === 'approved' ? '#10b981' : qcStatus === 'rejected' ? '#ef4444' : '#f59e0b';
-      const createdBy = escapeHtml(batch.createdBy || batch.created_by || 'N/A');
+      const createdBy = escapeHtml(getBatchCreatedByDisplay(batch));
       const createdDate = formatDate(batch.createdAt || batch.created_at);
       
       parts.push('<tr>');
@@ -4112,7 +4164,7 @@ const printGRN = async () => {
       const batchItemName = escapeHtml(batchItem?.name || 'N/A');
       const batchItemSKU = escapeHtml(batchItem?.sku || 'N/A');
       const expiryDate = formatDate(batch.expiryDate || batch.expiry_date);
-      const batchQty = batch.batchQuantity || batch.batch_quantity || 0;
+      const batchQty = getBatchQuantity(batch);
       const qcStatus = batch.qcStatus || batch.qc_status || 'pending';
       const qcStatusText = qcStatus.charAt(0).toUpperCase() + qcStatus.slice(1);
       const qcStatusColor = qcStatus === 'approved' ? '#10b981' : qcStatus === 'rejected' ? '#ef4444' : '#f59e0b';
