@@ -4015,7 +4015,6 @@ export async function saveBatchToSupabase(batch) {
         qc_data: batch.qcData || batch.qc_data || null,
         qc_checked_at: batch.qcCheckedAt || batch.qc_checked_at || null,
         created_by: batch.createdBy || batch.created_by || null,
-        grn_number: batch.grnNumber || batch.grn_number || null,
         created_at: batch.createdAt || batch.created_at || new Date().toISOString(),
         updated_at: batch.updatedAt || batch.updated_at || new Date().toISOString()
       };
@@ -4038,6 +4037,7 @@ export async function saveBatchToSupabase(batch) {
           // Remove problematic fields and retry
           delete batchData.batch_id;
           delete batchData.batch_number;
+          delete batchData.grn_number;
           delete batchData.qc_data;
           delete batchData.qc_checked_at;
           const { data: retryData, error: retryError } = await supabaseClient
