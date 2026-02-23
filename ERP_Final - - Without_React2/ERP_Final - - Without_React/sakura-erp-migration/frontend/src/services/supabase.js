@@ -3996,7 +3996,7 @@ async function insertInventoryBatchFromGrnBatch(supabase, batch) {
 export async function saveBatchToSupabase(batch) {
   if (USE_SUPABASE && supabaseClient) {
     try {
-      const quantity = batch.qty_received ?? batch.quantity ?? batch.batchQuantity ?? batch.batch_quantity ?? 0;
+      const quantity = batch.qty_received ?? batch.batchQuantity ?? 0;
       // Map frontend fields to database columns (handle both snake_case and camelCase)
       // IMPORTANT: Do NOT send batch_number or batch_id - DB generates batch_number via trigger
       // IMPORTANT: Only send columns that exist in grn_batches table with correct types.
@@ -4005,8 +4005,6 @@ export async function saveBatchToSupabase(batch) {
         ...(batch.id ? { id: batch.id } : {}),
         grn_id: batch.grnId || batch.grn_id,
         item_id: batch.itemId || batch.item_id,
-        batch_id: null, // Will be set after inventory_batches insert
-        batch_number: null, // DB generates via fn_generate_batch_number_from_grn
         expiry_date: batch.expiryDate || batch.expiry_date,
         quantity,
         storage_location: batch.storageLocation || batch.storage_location || null,
@@ -4015,16 +4013,20 @@ export async function saveBatchToSupabase(batch) {
         qc_data: batch.qcData || batch.qc_data || null,
         qc_checked_at: batch.qcCheckedAt || batch.qc_checked_at || null,
         created_by: batch.createdBy || batch.created_by || null,
-        grn_number: batch.grnNumber || batch.grn_number || null,
         created_at: batch.createdAt || batch.created_at || new Date().toISOString(),
         updated_at: batch.updatedAt || batch.updated_at || new Date().toISOString()
       };
 
-      const { data, error } = await supabaseClient
-        .from('grn_batches')
-        .insert([batchData])
-        .select()
-        .single();
+      const tryInsertGrnBatch = async (payload) => {
+        return await supabaseClient
+          .from('grn_batches')
+          .insert([payload])
+          .select()
+          .single();
+      };
+
+      let insertPayload = { ...batchData };
+      let { data, error } = await tryInsertGrnBatch(insertPayload);
 
       if (error) {
         // If table doesn't exist (404), use localStorage
@@ -4034,16 +4036,31 @@ export async function saveBatchToSupabase(batch) {
         }
         // If column missing (PGRST204), try without that column
         if (error.code === 'PGRST204') {
-          console.warn('⚠️ Column missing in grn_batches, trying without it:', error.message);
-          // Remove problematic fields and retry
-          delete batchData.qcData;
-          delete batchData.qcCheckedAt;
-          delete batchData.createdBy;
-          const { data: retryData, error: retryError } = await supabaseClient
-            .from('grn_batches')
-            .insert([batchData])
-            .select()
-            .single();
+          console.warn('⚠️ Column missing in grn_batches, auto-removing invalid columns:', error.message);
+          let retryData = null;
+          let retryError = error;
+
+          // Handle schema drift across environments by removing missing columns iteratively.
+          for (let attempt = 0; attempt < 5 && retryError?.code === 'PGRST204'; attempt += 1) {
+            const message = `${retryError?.message || ''} ${retryError?.details || ''} ${retryError?.hint || ''}`;
+            const missingColumn = message.match(/'([^']+)' column/i)?.[1];
+
+            if (missingColumn && Object.prototype.hasOwnProperty.call(insertPayload, missingColumn)) {
+              delete insertPayload[missingColumn];
+            } else if (attempt === 0) {
+              // Known problematic keys for older grn_batches views.
+              delete insertPayload.batch_id;
+              delete insertPayload.batch_number;
+              delete insertPayload.grn_number;
+              delete insertPayload.qc_data;
+              delete insertPayload.qc_checked_at;
+            }
+
+            const retryRes = await tryInsertGrnBatch(insertPayload);
+            retryData = retryRes.data;
+            retryError = retryRes.error;
+          }
+
           if (!retryError) {
             const invBatch = await insertInventoryBatchFromGrnBatch(supabaseClient, batch);
             let retryMerged = retryData;
@@ -4062,7 +4079,6 @@ export async function saveBatchToSupabase(batch) {
       let mergedData = { ...data };
       if (invBatch?.batch_number && data?.id) {
         const updatePayload = { batch_number: invBatch.batch_number };
-        if (invBatch.id) updatePayload.batch_id = invBatch.id;
         await supabaseClient.from('grn_batches').update(updatePayload).eq('id', data.id);
         mergedData = { ...data, batch_number: invBatch.batch_number };
       }
