@@ -4006,8 +4006,7 @@ export async function saveBatchToSupabase(batch) {
         ...(batch.id ? { id: batch.id } : {}),
         grn_id: batch.grnId || batch.grn_id,
         item_id: batch.itemId || batch.item_id,
-        batch_id: null, // Will be set after inventory_batches insert
-        batch_number: null, // DB generates via fn_generate_batch_number_from_grn
+        // Keep insert payload aligned with grn_batches VIEW columns available in production.
         expiry_date: batch.expiryDate || batch.expiry_date,
         quantity,
         storage_location: batch.storageLocation || batch.storage_location || null,
@@ -4037,9 +4036,10 @@ export async function saveBatchToSupabase(batch) {
         if (error.code === 'PGRST204') {
           console.warn('⚠️ Column missing in grn_batches, trying without it:', error.message);
           // Remove problematic fields and retry
-          delete batchData.qcData;
-          delete batchData.qcCheckedAt;
-          delete batchData.createdBy;
+          delete batchData.batch_id;
+          delete batchData.batch_number;
+          delete batchData.qc_data;
+          delete batchData.qc_checked_at;
           const { data: retryData, error: retryError } = await supabaseClient
             .from('grn_batches')
             .insert([batchData])
@@ -4063,7 +4063,6 @@ export async function saveBatchToSupabase(batch) {
       let mergedData = { ...data };
       if (invBatch?.batch_number && data?.id) {
         const updatePayload = { batch_number: invBatch.batch_number };
-        if (invBatch.id) updatePayload.batch_id = invBatch.id;
         await supabaseClient.from('grn_batches').update(updatePayload).eq('id', data.id);
         mergedData = { ...data, batch_number: invBatch.batch_number };
       }
