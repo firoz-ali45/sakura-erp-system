@@ -1187,6 +1187,7 @@ const batchForm = ref({
 
 // Storage locations (batch): ONLY from inventory_locations (same as receiving, no hardcoded)
 const storageLocations = ref([]);
+const createdByNameMap = ref({});
 
 // Map batch created_by UUID → user name (from users table) for display
 const createdByNameMap = ref({});
@@ -1241,10 +1242,7 @@ const hasBatchQuantityMismatch = computed(() => {
       (b.itemId || b.item_id) === itemId
     );
     
-    const totalBatchQty = batchesForItem.reduce((sum, b) => 
-      sum + getBatchQuantity(b), 0
-    );
-    
+const totalBatchQty = batchesForItem.reduce((sum, b) => sum + getBatchQuantity(b), 0);
     return Math.abs(totalBatchQty - receivedQty) > 0.01; // Allow small floating point differences
   });
 });
@@ -1284,11 +1282,7 @@ const allItemsHaveBatches = computed(() => {
     );
     
     if (batchesForItem.length === 0) return false; // No batches for this item
-    
-    const totalBatchQty = batchesForItem.reduce((sum, b) => 
-      sum + getBatchQuantity(b), 0
-    );
-    
+    const totalBatchQty = batchesForItem.reduce((sum, b) => sum + getBatchQuantity(b), 0);
     // Batch quantity should match received quantity (allow small floating point differences)
     return Math.abs(totalBatchQty - receivedQty) <= 0.01;
   });
@@ -2055,6 +2049,10 @@ const getItemUnit = (item) => {
   return '';
 };
 
+const safeNotAvailable = () => {
+  const v = t('common.notAvailable');
+  return (v && v !== 'common.notAvailable' && !String(v).startsWith('common.')) ? v : 'Not available';
+};
 const getBatchItemName = (batch) => {
   const na = safeNotAvailable();
   if (batch?.item) return batch.item.name || na;
@@ -2080,12 +2078,6 @@ const getBatchQuantity = (batch) => {
   if (!batch) return 0;
   const q = batch.qty_received ?? batch.batchQuantity ?? batch.batch_quantity ?? batch.quantity;
   return Number(q) || 0;
-};
-
-/** Never show i18n key in UI: return real fallback. */
-const safeNotAvailable = () => {
-  const v = t('common.notAvailable');
-  return (v && v !== 'common.notAvailable' && !String(v).startsWith('common.')) ? v : 'Not available';
 };
 
 /** created_by is UUID from batches; resolve to users.name for display. */
@@ -2270,9 +2262,7 @@ const getRemainingQuantity = (itemId) => {
   });
   
   const totalBatchQty = batchesForItem.reduce((sum, b) => sum + getBatchQuantity(b), 0);
-  
   const remaining = receivedQty - totalBatchQty;
-  
   console.log('Remaining quantity calculation:', {
     itemId,
     receivedQty,
@@ -2281,7 +2271,6 @@ const getRemainingQuantity = (itemId) => {
     remaining,
     batches: batchesForItem.map(b => ({ id: b.id, qty: getBatchQuantity(b) }))
   });
-  
   return Math.max(0, remaining); // Ensure non-negative
 };
 
