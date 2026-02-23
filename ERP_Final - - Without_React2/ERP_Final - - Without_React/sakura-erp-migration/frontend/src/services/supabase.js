@@ -3996,7 +3996,8 @@ async function insertInventoryBatchFromGrnBatch(supabase, batch) {
 export async function saveBatchToSupabase(batch) {
   if (USE_SUPABASE && supabaseClient) {
     try {
-      const quantity = batch.qty_received ?? batch.quantity ?? batch.batchQuantity ?? batch.batch_quantity ?? 0;
+      // Always map from qty_received (or current form quantity) to DB qty_received via VIEW quantity.
+      const quantity = batch.qty_received ?? batch.batchQuantity ?? 0;
       // Map frontend fields to database columns (handle both snake_case and camelCase)
       // IMPORTANT: Do NOT send batch_number or batch_id - DB generates batch_number via trigger
       // IMPORTANT: Only send columns that exist in grn_batches table with correct types.
@@ -4282,11 +4283,22 @@ export async function generateBatchId(grnId, itemId, expiryDate) {
 export async function loadBatchesForGRN(grnId) {
   if (!USE_SUPABASE || !supabaseClient) return [];
   try {
+    // Left-join style user embed: users.name as created_by_name.
     let { data, error } = await supabaseClient
       .from('grn_batches')
-      .select('*')
+      .select('*, users:created_by(name)')
       .eq('grn_id', grnId)
       .order('created_at', { ascending: false });
+    // Fallback if relation embed is unavailable on this environment.
+    if (error) {
+      const retry = await supabaseClient
+        .from('grn_batches')
+        .select('*')
+        .eq('grn_id', grnId)
+        .order('created_at', { ascending: false });
+      data = retry.data;
+      error = retry.error;
+    }
     if (error || !data || data.length === 0) {
       const viewResult = await supabaseClient
         .from('v_grn_all_batches')
@@ -4305,7 +4317,6 @@ export async function loadBatchesForGRN(grnId) {
     }
     if (!data || data.length === 0) return [];
 
-    if (typeof window !== 'undefined') window.__GRN_FRONTEND_ALIGN_LOADED__ = true;
     const batchIds = data.map((b) => b.id).filter(Boolean);
     if (batchIds.length > 0) {
       const { data: stockRows, error: stockErr } = await supabaseClient
@@ -4324,15 +4335,31 @@ export async function loadBatchesForGRN(grnId) {
       data = data.map((b) => {
         const stock = byId[b.id];
         const qtyFromStock = stock != null && stock.qty_received != null ? Number(stock.qty_received) : null;
-        const qty = qtyFromStock ?? b.qty_received ?? b.quantity;
+        const qty = qtyFromStock ?? b.qty_received ?? 0;
         return {
           ...b,
+          created_by_name: b?.users?.name ?? b?.created_by_name ?? null,
           qty_received: qty,
           quantity: qty,
           remaining_qty: stock != null ? Number(stock.remaining_qty) : 0,
           stock_status: stock?.stock_status ?? null
         };
       });
+    }
+    // If relation embed was not available, emulate left join via secondary users lookup.
+    if ((data || []).some((b) => b.created_by_name == null && (b.created_by || b.createdBy))) {
+      const userIds = [...new Set((data || []).map((b) => b.created_by ?? b.createdBy).filter(Boolean))];
+      if (userIds.length > 0) {
+        const { data: userRows } = await supabaseClient
+          .from('users')
+          .select('id, name')
+          .in('id', userIds);
+        const userMap = Object.fromEntries((userRows || []).map((u) => [u.id, u.name || null]));
+        data = (data || []).map((b) => ({
+          ...b,
+          created_by_name: b?.created_by_name ?? userMap[b.created_by ?? b.createdBy] ?? null
+        }));
+      }
     }
     return data;
   } catch (err) {

@@ -326,13 +326,26 @@ export async function deleteStockTransfer(transferId) {
 export async function fetchStockTransferAudit(transferId) {
   const ready = await ensureSupabaseReady();
   if (!ready || !transferId) return [];
-  const { data, error } = await supabaseClient
+  let { data, error } = await supabaseClient
     .from('stock_transfer_audit')
-    .select('*')
+    .select('*, users:performed_by(name)')
     .eq('transfer_id', transferId)
     .order('performed_at', { ascending: true });
+  if (error) {
+    // Fallback when relation embed is unavailable.
+    const retry = await supabaseClient
+      .from('stock_transfer_audit')
+      .select('*')
+      .eq('transfer_id', transferId)
+      .order('performed_at', { ascending: true });
+    data = retry.data;
+    error = retry.error;
+  }
   if (error) return [];
-  return data || [];
+  return (data || []).map((row) => ({
+    ...row,
+    performed_by_name: row?.users?.name ?? row?.performed_by_name ?? null
+  }));
 }
 
 // --- Views ---

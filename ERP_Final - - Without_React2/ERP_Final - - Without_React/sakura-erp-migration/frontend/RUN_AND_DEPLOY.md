@@ -20,7 +20,7 @@ C:\Users\shahf\.cursor\worktrees\sakura-erp-system-3\kmw\ERP_Final - - Without_R
 4. Browser me `http://localhost:5173` kholo.
 5. GRN → koi GRN open karo → Batches tab.
 
-**Verify:** F12 → Console. Jab Batches load hon to `window.__GRN_FRONTEND_ALIGN_LOADED__` check karo — `true` hona chahiye. Agar nahi hai to purana bundle chal raha hai (galat folder se run).
+**Verify:** GRN batch table me quantity, remaining, created by name, aur edit/delete controls sahi dikhne chahiye.
 
 ---
 
@@ -38,7 +38,7 @@ C:\Users\shahf\.cursor\worktrees\sakura-erp-system-3\kmw\ERP_Final - - Without_R
 
 **Root Directory:** Repo root pe `vercel.json` hai jo frontend folder se build karta hai. Root Directory **khali** rakhna chahiye (default). Agar koi custom root set hai to hata do taaki root `vercel.json` use ho.
 
-**Verify:** Deploy ke baad app kholo → GRN → Batches → F12 Console → `window.__GRN_FRONTEND_ALIGN_LOADED__ === true` (Batches load hone ke baad).
+**Verify:** Deploy ke baad app kholo → GRN → Batches. Quantity/remaining/name mapping aur translations production me clean render hone chahiye.
 
 ---
 

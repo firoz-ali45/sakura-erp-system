@@ -200,7 +200,7 @@
             </div>
             <div class="pb-4 border-b border-gray-200">
               <label class="block text-sm font-medium text-gray-600 mb-1">{{ t('inventory.purchaseOrders.reference') }}</label>
-              <p class="text-gray-900 font-medium">{{ purchaseOrderNumber || t('common.notAvailable') }}</p>
+              <p class="text-gray-900 font-medium">{{ purchaseOrderNumber || notAvailableLabel }}</p>
             </div>
             <div class="pb-4 border-b border-gray-200">
               <label class="block text-sm font-medium text-gray-600 mb-1">{{ t('inventory.suppliers.title') }}</label>
@@ -208,23 +208,23 @@
             </div>
             <div class="pb-4 border-b border-gray-200">
               <label class="block text-sm font-medium text-gray-600 mb-1">{{ t('inventory.grn.receivingLocation') }}</label>
-              <p class="text-gray-900 font-medium">{{ grn.receivingLocation || grn.receiving_location || t('common.notAvailable') }}</p>
+              <p class="text-gray-900 font-medium">{{ grn.receivingLocation || grn.receiving_location || notAvailableLabel }}</p>
             </div>
             <div>
               <label class="block text-sm font-medium text-gray-600 mb-1">{{ t('inventory.grn.receivedBy') }}</label>
               <p class="text-gray-900 font-medium">
-                {{ grn.receivedBy || grn.received_by || getCurrentUserName() || t('common.notAvailable') }}
+                {{ grn.receivedBy || grn.received_by || getCurrentUserName() || notAvailableLabel }}
               </p>
             </div>
           </div>
           <div class="space-y-4">
             <div class="pb-4 border-b border-gray-200">
               <label class="block text-sm font-medium text-gray-600 mb-1">{{ t('inventory.grn.supplierInvoiceNumber') }}</label>
-              <p class="text-gray-900 font-medium">{{ grn.supplierInvoiceNumber || grn.supplier_invoice_number || t('common.notAvailable') }}</p>
+              <p class="text-gray-900 font-medium">{{ grn.supplierInvoiceNumber || grn.supplier_invoice_number || notAvailableLabel }}</p>
             </div>
             <div class="pb-4 border-b border-gray-200">
               <label class="block text-sm font-medium text-gray-600 mb-1">{{ t('inventory.grn.deliveryNoteNumber') }}</label>
-              <p class="text-gray-900 font-medium">{{ grn.deliveryNoteNumber || grn.delivery_note_number || t('common.notAvailable') }}</p>
+              <p class="text-gray-900 font-medium">{{ grn.deliveryNoteNumber || grn.delivery_note_number || notAvailableLabel }}</p>
             </div>
             <div class="pb-4 border-b border-gray-200">
               <label class="block text-sm font-medium text-gray-600 mb-1">{{ t('inventory.grn.qcCheckedBy') }}</label>
@@ -243,7 +243,7 @@
             </div>
             <div class="pb-4 border-b border-gray-200">
               <label class="block text-sm font-medium text-gray-600 mb-1">{{ t('inventory.grn.externalReferenceId') }}</label>
-              <p class="text-gray-900 font-medium">{{ grn.externalReferenceId || grn.external_reference_id || t('common.notAvailable') }}</p>
+              <p class="text-gray-900 font-medium">{{ grn.externalReferenceId || grn.external_reference_id || notAvailableLabel }}</p>
             </div>
             <div>
               <label class="block text-sm font-medium text-gray-600 mb-1">{{ t('common.createdAt') }}</label>
@@ -341,7 +341,7 @@
                       {{ getItemSKU(item) }}
                     </td>
                     <td class="px-4 py-3 border border-gray-200 text-center">
-                      {{ getItemUnit(item) || item.unit || t('common.notAvailable') }}
+                      {{ getItemUnit(item) || item.unit || notAvailableLabel }}
                     </td>
                     <td class="px-4 py-3 border border-gray-200 text-center">
                       {{ item.orderedQuantity || item.ordered_quantity || 0 }}
@@ -380,7 +380,7 @@
                     </td>
                     <td class="px-4 py-3 border border-gray-200 text-center">
                       <div v-if="!editingItems[index]">
-                        <span>{{ item.packagingType || item.packaging_type || item.packagingCondition || item.packaging_condition || t('common.notAvailable') }}</span>
+                        <span>{{ item.packagingType || item.packaging_type || item.packagingCondition || item.packaging_condition || notAvailableLabel }}</span>
                       </div>
                       <div v-else class="flex justify-center">
                         <select
@@ -398,7 +398,7 @@
                     </td>
                     <td class="px-4 py-3 border border-gray-200 text-center">
                       <div v-if="!editingItems[index]" class="flex items-center justify-center gap-2">
-                        <span>{{ item.supplierLotNumber || item.supplier_lot_number || t('common.notAvailable') }}</span>
+                        <span>{{ item.supplierLotNumber || item.supplier_lot_number || notAvailableLabel }}</span>
                         <button
                           v-if="grnStatus === 'draft' || grnStatus === 'under_inspection'"
                           @click="startEditItem(index)"
@@ -1187,10 +1187,8 @@ const batchForm = ref({
 
 // Storage locations (batch): ONLY from inventory_locations (same as receiving, no hardcoded)
 const storageLocations = ref([]);
-const createdByNameMap = ref({});
-
 // Map batch created_by UUID → user name (from users table) for display
-const createdByNameMap = ref({});
+const createdByUsersMap = ref({});
 
 // Computed
 const grnStatus = computed(() => {
@@ -1353,7 +1351,7 @@ const batchProgress = computed(() => {
     return {
       itemId,
       itemName: getItemName(item) || t('inventory.grn.unknownItem'),
-      itemSKU: getItemSKU(item) || t('common.notAvailable'),
+      itemSKU: getItemSKU(item) || safeNotAvailable(),
       receivedQty,
       totalBatchQty,
       remainingQty,
@@ -1797,7 +1795,7 @@ const loadBatchesForGRNLocal = async (grnId) => {
 const loadCreatedByNameMap = async (batches) => {
   const ids = [...new Set((batches || []).map(b => b.created_by ?? b.createdBy).filter(Boolean))];
   if (ids.length === 0) {
-    createdByNameMap.value = {};
+    createdByUsersMap.value = {};
     return;
   }
   try {
@@ -1806,10 +1804,10 @@ const loadCreatedByNameMap = async (batches) => {
     const { data } = await supabaseClient.from('users').select('id, name').in('id', ids);
     const map = {};
     (data || []).forEach((r) => { map[r.id] = r.name || null; });
-    createdByNameMap.value = map;
+    createdByUsersMap.value = map;
   } catch (e) {
     console.warn('loadCreatedByNameMap:', e);
-    createdByNameMap.value = {};
+    createdByUsersMap.value = {};
   }
 };
 
@@ -1957,7 +1955,7 @@ const getStatusClass = (status) => {
 };
 
 const getItemName = (item) => {
-  if (!item || typeof item !== 'object') return t('common.notAvailable');
+  if (!item || typeof item !== 'object') return safeNotAvailable();
   
   // Priority 1: Item relationship from database
   if (item.item && item.item.name) {
@@ -1987,7 +1985,7 @@ const getItemName = (item) => {
 };
 
 const getItemSKU = (item) => {
-  if (!item || typeof item !== 'object') return t('common.notAvailable');
+  if (!item || typeof item !== 'object') return safeNotAvailable();
   
   // Priority 1: Item relationship from database
   if (item.item && item.item.sku) {
@@ -2076,7 +2074,7 @@ const getBatchItemSKU = (batch) => {
 /** Batch quantity: use batches.qty_received (view exposes as quantity). Single source for display/sum. */
 const getBatchQuantity = (batch) => {
   if (!batch) return 0;
-  const q = batch.qty_received ?? batch.batchQuantity ?? batch.batch_quantity ?? batch.quantity;
+  const q = batch.qty_received ?? batch.batchQuantity ?? 0;
   return Number(q) || 0;
 };
 
@@ -2084,17 +2082,30 @@ const getBatchQuantity = (batch) => {
 const getBatchCreatedByDisplay = (batch) => {
   const fallback = safeNotAvailable();
   if (!batch) return fallback;
+  if (batch.created_by_name) return batch.created_by_name;
   const uid = batch.created_by ?? batch.createdBy;
   if (!uid) return fallback;
-  const name = createdByNameMap.value[uid];
-  return name || fallback;
+  return createdByUsersMap.value[uid] || fallback;
 };
 
-/** Edit/Delete visible when GRN is draft or under_inspection AND batch QC is pending (case-insensitive). */
+/** Edit/Delete visibility: editable GRN states + role-aware checks. */
 const canShowBatchEditDelete = (batch) => {
   const status = String(grnStatus.value || '').toLowerCase();
+  const editableState = status === 'draft' || status === 'under_inspection';
+  if (!editableState) return false;
+
+  const role = String(
+    authStore?.user?.role ||
+    authStore?.user?.role_name ||
+    authStore?.user?.role_code ||
+    authStore?.user?.user_role ||
+    ''
+  ).toLowerCase();
+  const isPrivileged = role.includes('admin') || role.includes('manager');
+  if (isPrivileged) return true;
+
   const qc = String(batch?.qcStatus ?? batch?.qc_status ?? 'pending').toLowerCase();
-  return (status === 'draft' || status === 'under_inspection') && qc === 'pending';
+  return qc === 'pending';
 };
 
 const saveQCData = async (batch) => {

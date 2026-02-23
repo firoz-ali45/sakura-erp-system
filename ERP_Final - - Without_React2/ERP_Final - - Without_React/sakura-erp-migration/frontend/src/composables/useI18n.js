@@ -34,10 +34,17 @@
 import { computed } from 'vue';
 import { useI18n as useVueI18n } from 'vue-i18n';
 import { useLanguageStore } from '@/stores/language';
+import i18n from '@/i18n';
 
 export function useI18n() {
   const { t: vueT, locale: vueLocale } = useVueI18n();
   const languageStore = useLanguageStore();
+
+  const getNested = (obj, path) => {
+    return String(path || '')
+      .split('.')
+      .reduce((acc, part) => (acc != null ? acc[part] : undefined), obj);
+  };
   
   /**
    * Enhanced translation function
@@ -45,10 +52,22 @@ export function useI18n() {
    */
   const t = (key, params = {}) => {
     try {
-      return vueT(key, params);
+      const translated = vueT(key, params);
+      if (translated !== key) return translated;
+
+      // Fallback to English namespace when current locale misses a key.
+      const enMessage = getNested(i18n?.global?.messages?.value?.en, key);
+      if (typeof enMessage === 'string' && enMessage.length > 0) return enMessage;
+
+      // Safety fallback for critical common keys.
+      if (key === 'common.notAvailable') return 'Not available';
+      if (key === 'common.createdAt') return 'Created At';
+      return key;
     } catch (error) {
       console.warn(`Translation key not found: ${key}`, error);
-      return key; // Fallback to key itself
+      if (key === 'common.notAvailable') return 'Not available';
+      if (key === 'common.createdAt') return 'Created At';
+      return key;
     }
   };
   
@@ -63,7 +82,7 @@ export function useI18n() {
   /**
    * Get current locale from store (single source of truth)
    */
-  const locale = computed(() => languageStore.language);
+  const locale = computed(() => vueLocale.value || languageStore.language);
   
   /**
    * Computed property for RTL check

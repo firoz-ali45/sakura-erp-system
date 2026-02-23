@@ -13,7 +13,7 @@ Commands:
   npm run dev
 
 Browser: http://localhost:5173 → GRN → Batches tab
-Verify: F12 Console → window.__GRN_FRONTEND_ALIGN_LOADED__ === true
+Verify: GRN batches me quantity, remaining, created by, edit/delete sahi render ho.
 
 VERCEL: Is repo (main branch) se deploy karo; Redeploy without cache.
 
