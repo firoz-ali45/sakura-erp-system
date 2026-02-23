@@ -4010,8 +4010,6 @@ export async function saveBatchToSupabase(batch) {
         storage_location: batch.storageLocation || batch.storage_location || null,
         vendor_batch_number: batch.vendorBatchNumber || batch.vendor_batch_number || null,
         qc_status: batch.qcStatus || batch.qc_status || 'pending',
-        qc_data: batch.qcData || batch.qc_data || null,
-        qc_checked_at: batch.qcCheckedAt || batch.qc_checked_at || null,
         created_by: batch.createdBy || batch.created_by || null,
         created_at: batch.createdAt || batch.created_at || new Date().toISOString(),
         updated_at: batch.updatedAt || batch.updated_at || new Date().toISOString()
