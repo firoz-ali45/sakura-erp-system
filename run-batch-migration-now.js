@@ -16,8 +16,8 @@ if (fs.existsSync(envPath)) {
   });
 }
 
-// Use simplified migration for production schema (_deprecated_* tables)
-let sql = fs.readFileSync(path.join(__dirname, 'migrations', '20260224000001_unified_batch_id_grn_only.sql'), 'utf8');
+// Run batches table trigger migration (fix batch_number NOT NULL)
+let sql = fs.readFileSync(path.join(__dirname, 'migrations', '20260224000002_batches_auto_batch_number.sql'), 'utf8');
 
 async function run() {
   const postgres = (await import('postgres')).default;
