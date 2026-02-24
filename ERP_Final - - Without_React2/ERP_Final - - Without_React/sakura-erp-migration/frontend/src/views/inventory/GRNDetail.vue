@@ -635,7 +635,7 @@
                   </tr>
                   <tr v-for="batch in grn.batches" :key="batch.id" class="hover:bg-gray-50">
                     <td class="px-4 py-3 border border-gray-200 font-mono text-sm">
-                      {{ batch.batch_number || batch.batchNumber || '—' }}
+                      {{ getBatchIdDisplay(batch) }}
                     </td>
                     <td class="px-4 py-3 border border-gray-200">
                       {{ getBatchItemName(batch) }}
@@ -722,7 +722,7 @@
                 <div class="flex justify-between items-start mb-4">
                   <div>
                     <h4 class="font-semibold text-gray-800">
-                      Batch: {{ batch.batch_number || batch.batchNumber || '—' }}
+                      Batch: {{ getBatchIdDisplay(batch) }}
                     </h4>
                     <p class="text-sm text-gray-600">
                       Item: {{ getBatchItemName(batch) }} ({{ getBatchItemSKU(batch) }}) | 
@@ -1125,6 +1125,7 @@ import {
   saveBatchToSupabase,
   updateBatchInSupabase,
   deleteBatchFromSupabase,
+  getRemainingAllocatableForItem,
   generateGRNNumber,
   loadBatchesForGRN,
   loadGRNsFromSupabase,
@@ -2265,6 +2266,11 @@ const getQCStatusClass = (status) => {
   return classMap[status] || classMap['pending'];
 };
 
+/** Batch ID display: ALWAYS use batch_number, NEVER row.id */
+const getBatchIdDisplay = (batch) => {
+  return batch?.batch_number || batch?.batchNumber || '—';
+};
+
 const getReceivedQuantityForItem = (itemId) => {
   if (!itemId || !grn.value) return 0;
   const item = grn.value.items.find(i => {
@@ -2471,11 +2477,12 @@ const saveBatch = async () => {
       return;
     }
     
-    // Validate quantity doesn't exceed remaining quantity
-    const remaining = getRemainingQuantity(batchForm.value.itemId);
-    
+    // Over-batching check: fetch remaining from DB, block if new_qty > remaining
+    const item = grn.value.items.find(i => (i.itemId || i.item_id) === batchForm.value.itemId);
+    const receivedQty = item?.receivedQuantity ?? item?.received_quantity ?? 0;
+    const remaining = await getRemainingAllocatableForItem(grn.value.id, batchForm.value.itemId, receivedQty);
     if (batchForm.value.batchQuantity > remaining) {
-      showNotification(`Batch quantity (${batchForm.value.batchQuantity}) cannot exceed remaining quantity (${remaining}). Received quantity: ${grn.value.items.find(i => (i.itemId || i.item_id) === batchForm.value.itemId)?.receivedQuantity || 0}`, 'error');
+      showNotification(`Batch quantity (${batchForm.value.batchQuantity}) cannot exceed remaining quantity (${remaining}). Received quantity: ${receivedQty}`, 'error');
       return;
     }
     

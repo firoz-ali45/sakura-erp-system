@@ -4094,11 +4094,17 @@ function saveBatchToLocalStorage(batch) {
   }
 }
 
+/** UUID regex: must use .eq('id', batch.id) NOT batch.batch_number */
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const isValidUUID = (v) => typeof v === 'string' && UUID_REGEX.test(v);
+
 /**
- * Delete batch from Supabase grn_batches table
+ * Delete batch from Supabase grn_batches table.
+ * CRITICAL: Must use .eq('id', batch.id) — batch.id is UUID. Never use batch.batch_number.
+ * If batchId is not a valid UUID (e.g. localStorage "batch_xxx"), skip Supabase and only do localStorage.
  */
 export async function deleteBatchFromSupabase(batchId) {
-  if (USE_SUPABASE && supabaseClient) {
+  if (USE_SUPABASE && supabaseClient && isValidUUID(batchId)) {
     try {
       const { error } = await supabaseClient
         .from('grn_batches')
@@ -4116,16 +4122,15 @@ export async function deleteBatchFromSupabase(batchId) {
       console.error('❌ Exception deleting batch:', error);
       return { success: false, error: error.message };
     }
-  } else {
-    // localStorage fallback
-    try {
-      const batches = JSON.parse(localStorage.getItem('sakura_grn_batches') || '[]');
-      const filtered = batches.filter(b => b.id !== batchId);
-      localStorage.setItem('sakura_grn_batches', JSON.stringify(filtered));
-      return { success: true };
-    } catch (error) {
-      return { success: false, error: error.message };
-    }
+  }
+  // Non-UUID (e.g. localStorage batch_xxx) or no Supabase: localStorage only
+  try {
+    const batches = JSON.parse(localStorage.getItem('sakura_grn_batches') || '[]');
+    const filtered = batches.filter(b => b.id !== batchId);
+    localStorage.setItem('sakura_grn_batches', JSON.stringify(filtered));
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: error.message };
   }
 }
 
@@ -4272,6 +4277,29 @@ export async function generateBatchId(grnId, itemId, expiryDate) {
   const itemNum = itemId.toString().slice(-6);
   const expiryNum = expiryDate.replace(/-/g, '').slice(-8);
   return `BATCH-${grnNum}-${itemNum}-${expiryNum}`;
+}
+
+/**
+ * Get remaining allocatable quantity for an item in a GRN (for over-batching check).
+ * Fetches from grn_batches + v_batch_stock. Returns receivedQty - sum(batch quantities).
+ * Block insert if new_qty > this value.
+ */
+export async function getRemainingAllocatableForItem(grnId, itemId, receivedQty) {
+  if (!USE_SUPABASE || !supabaseClient || !grnId || !itemId) return receivedQty ?? 0;
+  try {
+    const { data: batches, error } = await supabaseClient
+      .from('grn_batches')
+      .select('id, quantity, qty_received')
+      .eq('grn_id', grnId)
+      .eq('item_id', itemId);
+    if (error || !batches?.length) return receivedQty ?? 0;
+    const totalAllocated = batches.reduce((sum, b) => sum + (Number(b.quantity ?? b.qty_received ?? 0)), 0);
+    const received = Number(receivedQty ?? 0);
+    return Math.max(0, received - totalAllocated);
+  } catch (e) {
+    console.warn('[GRN] getRemainingAllocatableForItem:', e);
+    return receivedQty ?? 0;
+  }
 }
 
 /**
