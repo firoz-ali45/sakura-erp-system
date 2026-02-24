@@ -4304,31 +4304,32 @@ export async function getRemainingAllocatableForItem(grnId, itemId, receivedQty)
 
 /**
  * Load batches for a specific GRN — SUPABASE ONLY (no localStorage).
- * Reads from grn_batches VIEW (batches table); merges remaining_qty from v_batch_stock (ledger-derived).
- * Batch quantity: use batches.qty_received (exposed as quantity by view). Remaining: v_batch_stock.remaining_qty only.
+ * Prefer v_grn_batches_with_batch_number so Batch ID matches Stock Overview (inventory_batches.batch_number).
+ * Merges remaining_qty from v_batch_stock (ledger-derived).
  */
 export async function loadBatchesForGRN(grnId) {
   if (!USE_SUPABASE || !supabaseClient) return [];
   try {
+    // Prefer view with batch_number (BATCH-GRN-xxx-YYYYMMDD-001) — same as Stock Overview
     let { data, error } = await supabaseClient
-      .from('grn_batches')
+      .from('v_grn_batches_with_batch_number')
       .select('*')
       .eq('grn_id', grnId)
       .order('created_at', { ascending: false });
     if (error || !data || data.length === 0) {
-      const viewResult = await supabaseClient
-        .from('v_grn_all_batches')
+      const tbl = await supabaseClient
+        .from('grn_batches')
         .select('*')
         .eq('grn_id', grnId)
         .order('created_at', { ascending: false });
-      if (!viewResult.error && viewResult.data?.length) data = viewResult.data;
+      if (!tbl.error && tbl.data?.length) data = tbl.data;
       else {
-        const view2 = await supabaseClient
-          .from('v_grn_batches_with_batch_number')
+        const viewResult = await supabaseClient
+          .from('v_grn_all_batches')
           .select('*')
           .eq('grn_id', grnId)
           .order('created_at', { ascending: false });
-        if (!view2.error && view2.data?.length) data = view2.data;
+        if (!viewResult.error && viewResult.data?.length) data = viewResult.data;
       }
     }
     if (!data || data.length === 0) {

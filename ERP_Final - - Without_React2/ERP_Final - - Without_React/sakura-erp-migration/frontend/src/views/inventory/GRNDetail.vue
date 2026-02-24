@@ -2266,9 +2266,11 @@ const getQCStatusClass = (status) => {
   return classMap[status] || classMap['pending'];
 };
 
-/** Batch ID display: use batch_number; fallback to vendor_batch when empty. NEVER row.id */
+/** Batch ID display: ONLY batch_number (BATCH-GRN-{GRN}-{YYYYMMDD}-{SEQ}). NEVER vendor_batch or row.id */
 const getBatchIdDisplay = (batch) => {
-  return batch?.batch_number || batch?.batchNumber || batch?.vendor_batch_number || batch?.vendorBatchNumber || '—';
+  const bn = batch?.batch_number || batch?.batchNumber;
+  if (bn && String(bn).trim()) return String(bn).trim();
+  return '—'; // Pending DB sync — same format as Stock Overview
 };
 
 const getReceivedQuantityForItem = (itemId) => {
