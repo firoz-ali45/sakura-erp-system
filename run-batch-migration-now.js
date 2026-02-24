@@ -16,8 +16,10 @@ if (fs.existsSync(envPath)) {
   });
 }
 
-// Run batches table trigger migration (fix batch_number NOT NULL)
-let sql = fs.readFileSync(path.join(__dirname, 'migrations', '20260224000002_batches_auto_batch_number.sql'), 'utf8');
+const migrations = [
+  '20260224000002_batches_auto_batch_number.sql',
+  '20260224000003_batches_qc_status.sql'
+];
 
 async function run() {
   const postgres = (await import('postgres')).default;
@@ -26,11 +28,14 @@ async function run() {
     console.error('❌ DATABASE_URL not found');
     process.exit(1);
   }
-  console.log('🚀 Running Unified Batch ID migration...');
   const sqlClient = postgres(url, { max: 1 });
-  await sqlClient.unsafe(sql);
+  for (const name of migrations) {
+    const sql = fs.readFileSync(path.join(__dirname, 'migrations', name), 'utf8');
+    console.log('🚀 Running', name, '...');
+    await sqlClient.unsafe(sql);
+  }
   await sqlClient.end();
-  console.log('✅ Migration completed successfully!');
+  console.log('✅ Migrations completed successfully!');
 }
 
 run().catch(err => { console.error('❌', err.message); process.exit(1); });

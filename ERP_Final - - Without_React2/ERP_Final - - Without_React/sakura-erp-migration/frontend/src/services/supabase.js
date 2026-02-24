@@ -4140,11 +4140,12 @@ export async function deleteBatchFromSupabase(batchId) {
 
 /**
  * Update batch in Supabase or localStorage
+ * NOTE: grn_batches/batches view may not have qc_data, qc_checked_at, updated_at — strip to avoid PGRST204/PGRST1284
  */
 export async function updateBatchInSupabase(batchId, updates) {
   if (USE_SUPABASE && supabaseClient) {
     try {
-      // Map frontend fields to database columns — grn_batches view has no updated_at
+      // Map frontend fields to database columns
       const updateData = {};
 
       // Map quantity fields
@@ -4155,20 +4156,16 @@ export async function updateBatchInSupabase(batchId, updates) {
         updateData.quantity = updates.quantity;
       }
 
-      // Map QC fields (only snake_case columns exist in DB)
-      if (updates.qcData !== undefined || updates.qc_data !== undefined) {
-        updateData.qc_data = updates.qcData || updates.qc_data;
-      }
-      if (updates.qcCheckedAt !== undefined || updates.qc_checked_at !== undefined) {
-        updateData.qc_checked_at = updates.qcCheckedAt || updates.qc_checked_at;
-      }
+      // QC status — batches/grn_batches may have qc_status
       if (updates.qcStatus !== undefined || updates.qc_status !== undefined) {
-        updateData.qc_status = updates.qcStatus || updates.qc_status;
+        updateData.qc_status = updates.qcStatus ?? updates.qc_status;
       }
+      // Skip qc_data, qc_checked_at — not in batches schema, causes PGRST204/PGRST1284
+      // QC data stays in frontend state; only qc_status persists
 
       // Map other safe fields
       if (updates.expiry_date !== undefined || updates.expiryDate !== undefined) {
-        updateData.expiry_date = updates.expiry_date || updates.expiryDate;
+        updateData.expiry_date = updates.expiry_date ?? updates.expiryDate;
       }
       if (updates.batch_number !== undefined) {
         updateData.batch_number = updates.batch_number;
@@ -4177,21 +4174,33 @@ export async function updateBatchInSupabase(batchId, updates) {
         updateData.batch_id = updates.batch_id;
       }
       if (updates.storageLocation !== undefined || updates.storage_location !== undefined) {
-        updateData.storage_location = updates.storageLocation || updates.storage_location;
+        updateData.storage_location = updates.storageLocation ?? updates.storage_location;
       }
       if (updates.vendorBatchNumber !== undefined || updates.vendor_batch_number !== undefined) {
-        updateData.vendor_batch_number = updates.vendorBatchNumber || updates.vendor_batch_number;
+        updateData.vendor_batch_number = updates.vendorBatchNumber ?? updates.vendor_batch_number;
       }
       if (updates.createdBy !== undefined || updates.created_by !== undefined) {
-        updateData.created_by = updates.createdBy || updates.created_by;
+        updateData.created_by = updates.createdBy ?? updates.created_by;
       }
 
-      const { data, error } = await supabaseClient
-        .from('grn_batches')
-        .update(updateData)
-        .eq('id', batchId)
-        .select()
-        .single();
+      // Columns known to be missing in batches/grn_batches — never send
+      const STRIP_COLUMNS = ['updated_at', 'qc_data', 'qc_checked_at', 'qc_checked_by'];
+      STRIP_COLUMNS.forEach(k => delete updateData[k]);
+
+      if (Object.keys(updateData).length === 0) {
+        return { success: true, data: null };
+      }
+
+      const tryUpdate = async (payload) => {
+        return await supabaseClient
+          .from('grn_batches')
+          .update(payload)
+          .eq('id', batchId)
+          .select()
+          .single();
+      };
+
+      let { data, error } = await tryUpdate(updateData);
 
       if (error) {
         // If table doesn't exist (404), use localStorage
@@ -4199,35 +4208,29 @@ export async function updateBatchInSupabase(batchId, updates) {
           console.warn('⚠️ grn_batches table not found, using localStorage');
           return updateBatchInLocalStorage(batchId, updates);
         }
-        // If column missing (PGRST204), try without that column
-        if (error.code === 'PGRST204' || error.message?.includes('schema cache')) {
-          console.warn('⚠️ Column missing in grn_batches, trying without it:', error.message);
-          delete updateData.updated_at;
-          delete updateData.qcData;
-          delete updateData.qcCheckedAt;
-          delete updateData.createdBy;
-          const { data: retryData, error: retryError } = await supabaseClient
-            .from('grn_batches')
-            .update(updateData)
-            .eq('id', batchId)
-            .select()
-            .single();
-          if (!retryError) {
-            return { success: true, data: retryData };
+        // Schema cache / column missing — retry without problematic columns
+        if (error.code === 'PGRST204' || error.code === 'PGRST1284' || error.message?.includes('schema cache')) {
+          let retryPayload = { ...updateData };
+          STRIP_COLUMNS.forEach(k => delete retryPayload[k]);
+          for (let attempt = 0; attempt < 5; attempt++) {
+            const res = await tryUpdate(retryPayload);
+            if (!res.error) return { success: true, data: res.data };
+            const missingCol = res.error.message?.match(/'([^']+)' column/i)?.[1];
+            if (missingCol) delete retryPayload[missingCol];
           }
         }
         console.error('❌ Error updating batch in Supabase:', error);
-        return updateBatchInLocalStorage(batchId, updates);
+        // Do NOT fall back to localStorage — batch is in Supabase; return error
+        return { success: false, error: error.message || 'Failed to update batch' };
       }
 
       return { success: true, data };
-    } catch (error) {
-      console.error('❌ Exception updating batch in Supabase:', error);
-      return updateBatchInLocalStorage(batchId, updates);
+    } catch (err) {
+      console.error('❌ Exception updating batch in Supabase:', err);
+      return { success: false, error: err?.message || 'Failed to update batch' };
     }
-  } else {
-    return updateBatchInLocalStorage(batchId, updates);
   }
+  return updateBatchInLocalStorage(batchId, updates);
 }
 
 function updateBatchInLocalStorage(batchId, updates) {
