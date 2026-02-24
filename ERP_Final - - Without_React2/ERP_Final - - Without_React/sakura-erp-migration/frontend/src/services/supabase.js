@@ -3998,14 +3998,13 @@ export async function saveBatchToSupabase(batch) {
     try {
       const quantity = batch.qty_received ?? batch.batchQuantity ?? 0;
       const now = new Date().toISOString();
-      // MINIMAL payload first — production grn_batches may have fewer columns. Add only what exists.
+      // MINIMAL payload — grn_batches view has no updated_at; avoid schema cache error
       const minimalPayload = {
         grn_id: batch.grnId || batch.grn_id,
         item_id: batch.itemId || batch.item_id,
         expiry_date: batch.expiryDate || batch.expiry_date,
         quantity,
-        created_at: batch.createdAt || batch.created_at || now,
-        updated_at: batch.updatedAt || batch.updated_at || now
+        created_at: batch.createdAt || batch.created_at || now
       };
       // Optional columns — add only if we have values; PGRST204 retry will strip missing ones
       const optional = {
@@ -4025,6 +4024,7 @@ export async function saveBatchToSupabase(batch) {
       };
 
       let insertPayload = { ...minimalPayload, ...optional };
+      delete insertPayload.updated_at; // grn_batches view has no updated_at — schema cache error
       let { data, error } = await tryInsertGrnBatch(insertPayload);
 
       if (error) {
@@ -4032,16 +4032,16 @@ export async function saveBatchToSupabase(batch) {
           console.warn('⚠️ grn_batches table not found');
           return { success: false, error: error.message };
         }
-        if (error.code === 'PGRST204') {
+        if (error.code === 'PGRST204' || error.code === 'PGRST1284' || error.message?.includes('schema cache')) {
           let retryData = null;
           let retryError = error;
-          for (let attempt = 0; attempt < 8 && retryError?.code === 'PGRST204'; attempt += 1) {
+          for (let attempt = 0; attempt < 8 && (retryError?.code === 'PGRST204' || retryError?.code === 'PGRST1284'); attempt += 1) {
             const msg = `${retryError?.message || ''} ${retryError?.details || ''}`;
             const missingCol = msg.match(/'([^']+)' column/i)?.[1];
             if (missingCol && Object.prototype.hasOwnProperty.call(insertPayload, missingCol)) {
               delete insertPayload[missingCol];
             } else if (attempt === 0) {
-              ['batch_id', 'batch_number', 'grn_number', 'qc_data', 'qc_checked_at'].forEach(k => delete insertPayload[k]);
+              ['batch_id', 'batch_number', 'grn_number', 'qc_data', 'qc_checked_at', 'updated_at'].forEach(k => delete insertPayload[k]);
             }
             const res = await tryInsertGrnBatch(insertPayload);
             retryData = res.data;
@@ -4050,9 +4050,11 @@ export async function saveBatchToSupabase(batch) {
           if (!retryError) {
             const invBatch = await insertInventoryBatchFromGrnBatch(supabaseClient, batch);
             let merged = retryData;
-            if (invBatch?.batch_number && retryData?.id) {
-              await supabaseClient.from('grn_batches').update({ batch_number: invBatch.batch_number }).eq('id', retryData.id);
-              merged = { ...retryData, batch_number: invBatch.batch_number };
+            if (invBatch && retryData?.id) {
+              const upd = { batch_number: invBatch.batch_number };
+              if (invBatch.id) upd.batch_id = invBatch.id;
+              await supabaseClient.from('grn_batches').update(upd).eq('id', retryData.id);
+              merged = { ...retryData, batch_number: invBatch.batch_number, batch_id: invBatch.id };
             }
             return { success: true, data: merged };
           }
@@ -4063,9 +4065,11 @@ export async function saveBatchToSupabase(batch) {
 
       const invBatch = await insertInventoryBatchFromGrnBatch(supabaseClient, batch);
       let mergedData = { ...data };
-      if (invBatch?.batch_number && data?.id) {
-        await supabaseClient.from('grn_batches').update({ batch_number: invBatch.batch_number }).eq('id', data.id);
-        mergedData = { ...data, batch_number: invBatch.batch_number };
+      if (invBatch && data?.id) {
+        const upd = { batch_number: invBatch.batch_number };
+        if (invBatch.id) upd.batch_id = invBatch.id;
+        await supabaseClient.from('grn_batches').update(upd).eq('id', data.id);
+        mergedData = { ...data, batch_number: invBatch.batch_number, batch_id: invBatch.id };
       }
       return { success: true, data: mergedData };
     } catch (err) {
@@ -4140,12 +4144,8 @@ export async function deleteBatchFromSupabase(batchId) {
 export async function updateBatchInSupabase(batchId, updates) {
   if (USE_SUPABASE && supabaseClient) {
     try {
-      // Map frontend fields to database columns — ONLY send valid column names.
-      // created_by is UUID type, do NOT send text usernames.
-      // Remove camelCase aliases that cause PostgREST 400 errors.
-      const updateData = {
-        updated_at: new Date().toISOString()
-      };
+      // Map frontend fields to database columns — grn_batches view has no updated_at
+      const updateData = {};
 
       // Map quantity fields
       if (updates.batchQuantity !== undefined || updates.batch_quantity !== undefined) {
@@ -4200,9 +4200,9 @@ export async function updateBatchInSupabase(batchId, updates) {
           return updateBatchInLocalStorage(batchId, updates);
         }
         // If column missing (PGRST204), try without that column
-        if (error.code === 'PGRST204') {
+        if (error.code === 'PGRST204' || error.message?.includes('schema cache')) {
           console.warn('⚠️ Column missing in grn_batches, trying without it:', error.message);
-          // Remove problematic fields and retry
+          delete updateData.updated_at;
           delete updateData.qcData;
           delete updateData.qcCheckedAt;
           delete updateData.createdBy;

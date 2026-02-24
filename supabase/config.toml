@@ -1,8 +1,10 @@
 # Sakura ERP — Supabase CLI configuration
-# Run from project root: supabase link --project-ref <ref>, supabase db push, supabase functions deploy
+# Run: supabase link --project-ref kexwnurwavszvmlpifsf, supabase db push
 
-[project]
-id = "kexwnurwavszvmlpifsf"
+project_id = "sakura-erp"
+
+[remotes.prod]
+project_id = "kexwnurwavszvmlpifsf"
 
 [api]
 enabled = true
