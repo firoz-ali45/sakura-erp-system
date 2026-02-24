@@ -2266,9 +2266,9 @@ const getQCStatusClass = (status) => {
   return classMap[status] || classMap['pending'];
 };
 
-/** Batch ID display: ALWAYS use batch_number, NEVER row.id */
+/** Batch ID display: use batch_number; fallback to vendor_batch when empty. NEVER row.id */
 const getBatchIdDisplay = (batch) => {
-  return batch?.batch_number || batch?.batchNumber || '—';
+  return batch?.batch_number || batch?.batchNumber || batch?.vendor_batch_number || batch?.vendorBatchNumber || '—';
 };
 
 const getReceivedQuantityForItem = (itemId) => {

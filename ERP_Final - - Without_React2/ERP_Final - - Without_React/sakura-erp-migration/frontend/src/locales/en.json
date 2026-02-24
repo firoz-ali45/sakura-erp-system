@@ -448,6 +448,13 @@
       "chooseItem": "Choose Item...",
       "vendorBatchNumber": "Vendor Batch Number",
       "unknownItem": "Unknown Item",
+      "supplierInvoiceNumber": "Supplier Invoice Number",
+      "deliveryNoteNumber": "Delivery Note Number",
+      "qcCheckedBy": "QC Checked By",
+      "externalReferenceId": "External Reference ID",
+      "numberOfItems": "Number of Items",
+      "numberOfBatches": "Number of Batches",
+      "approvedBy": "Approved By",
       "filter": {
         "title": "Advanced Filter",
         "grnNumber": "GRN Number",
