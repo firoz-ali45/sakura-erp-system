@@ -15,7 +15,10 @@ if (-not $status) {
   exit 0
 }
 Write-Host "Committing..." -ForegroundColor Cyan
-git commit -m $msg
+# Vercel requires commit author to have team access - use authorized email
+$author = if ($env:GIT_AUTHOR_EMAIL) { $env:GIT_AUTHOR_EMAIL } else { "Shahfiroz3344@gmail.com" }
+$authorName = if ($env:GIT_AUTHOR_NAME) { $env:GIT_AUTHOR_NAME } else { "firoz-ali45" }
+git -c user.email=$author -c user.name=$authorName commit -m $msg
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 Write-Host "Pushing to origin main..." -ForegroundColor Cyan
 # Worktree-safe: push current branch to main (no need to checkout main)

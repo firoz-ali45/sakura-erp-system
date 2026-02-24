@@ -1,5 +1,5 @@
-# Vercel CLI se deploy - Deploy Hook agar kaam na kare to use karo
-# Pehli baar: npx vercel login, phir npx vercel link (sakura-erp-system-miuq choose karo)
+# Vercel CLI se deploy - sakura-erp-system-miuq project par deploy
+# Pehli baar: npx vercel login
 
 $frontendPath = Join-Path $PSScriptRoot "ERP_Final - - Without_React2\ERP_Final - - Without_React\sakura-erp-migration\frontend"
 $frontendPath = [System.IO.Path]::GetFullPath($frontendPath)
@@ -9,8 +9,9 @@ if (-not (Test-Path -LiteralPath $frontendPath)) {
 }
 Push-Location -LiteralPath $frontendPath
 try {
-  Write-Host "Deploying from: $frontendPath" -ForegroundColor Cyan
-  Write-Host "Vercel login agar nahi kiya to pehle vercel login karo." -ForegroundColor Yellow
+  Write-Host "Deploying to sakura-erp-system-miuq..." -ForegroundColor Cyan
+  # Link to correct project (frontend was wrong)
+  npx vercel link --yes --project sakura-erp-system-miuq 2>$null
   npx vercel --prod --yes
 } finally {
   Pop-Location
