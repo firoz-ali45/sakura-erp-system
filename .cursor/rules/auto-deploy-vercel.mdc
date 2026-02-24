@@ -5,7 +5,15 @@ alwaysApply: true
 
 # Auto-Deploy to Vercel (sakura-erp-system-miuq)
 
-## CRITICAL: Post-Operation Workflow
+## CRITICAL: "Commit & Push" = Zero User Action
+
+**Jab user bole "Commit & Push" / "Commit & Push kardo"** — bas ye do commands chalao, koi extra setting nahi:
+
+1. `.\sync-to-git.ps1` — add, commit, push to main (worktree-safe)
+2. `.\deploy-vercel-cli.ps1` — Vercel prod deploy
+3. User ko batao: "Done. Live: https://sakura-erp-system-miuq.vercel.app/"
+
+## Post-Operation Workflow
 
 **Jab bhi koi prompt/operation pura ho jaye**, automatically ye steps follow karo:
 

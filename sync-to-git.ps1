@@ -18,7 +18,8 @@ Write-Host "Committing..." -ForegroundColor Cyan
 git commit -m $msg
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 Write-Host "Pushing to origin main..." -ForegroundColor Cyan
-git push origin main
+# Worktree-safe: push current branch to main (no need to checkout main)
+git push origin HEAD:main
 if ($LASTEXITCODE -eq 0) {
   Write-Host "Done. Repo updated." -ForegroundColor Green
 } else {
