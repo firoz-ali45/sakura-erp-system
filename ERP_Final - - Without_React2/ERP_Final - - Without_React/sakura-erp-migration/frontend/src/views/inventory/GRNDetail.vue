@@ -172,6 +172,12 @@
       </div>
     </div>
 
+    <DebugPanel
+      v-if="showDebugPanel"
+      title="GRN Page"
+      :loaders="debugLoaders"
+    />
+
     <!-- Loading State -->
     <div v-if="loading" class="bg-white rounded-lg shadow-md p-12 text-center">
       <div class="loading-spinner w-12 h-12 border-4 border-gray-200 border-t-[#284b44] rounded-full animate-spin mx-auto mb-4"></div>
@@ -1121,7 +1127,8 @@ import {
   deleteBatchFromSupabase,
   generateGRNNumber,
   loadBatchesForGRN,
-  loadGRNsFromSupabase
+  loadGRNsFromSupabase,
+  getUsers
 } from '@/services/supabase';
 // Lazy-load to avoid "Cannot access before initialization" (circular/order dependency)
 const DocumentFlow = defineAsyncComponent(() => import('@/components/common/DocumentFlow.vue'));
@@ -1133,10 +1140,12 @@ import { showNotification } from '@/utils/notifications';
 import { useAuthStore } from '@/stores/auth';
 import { useI18n } from '@/composables/useI18n';
 import { useInventoryLocations } from '@/composables/useInventoryLocations';
+import DebugPanel from '@/components/debug/DebugPanel.vue';
 
 const route = useRoute();
 const { loadLocationsForGRN } = useInventoryLocations();
 const router = useRouter();
+const showDebugPanel = import.meta.env.DEV;
 const authStore = useAuthStore();
 const { t, locale, isRTL, direction } = useI18n();
 const currentLang = computed(() => locale.value || 'en');
@@ -1190,6 +1199,24 @@ const storageLocations = ref([]);
 
 // Map batch created_by UUID → user name (from users table) for display
 const createdByNameMap = ref({});
+
+// Temporary dev-only loaders for raw JSON inspection.
+const loadGRNBatches = async () => {
+  const grnId = route.params.id || grn.value?.id;
+  if (!grnId) return { error: 'Missing GRN id' };
+  return await loadBatchesForGRN(grnId);
+};
+const loadTransferTimeline = async () => {
+  return { note: 'Transfer timeline is available on Transfer page debug panel.' };
+};
+const loadUsers = async () => {
+  return await getUsers();
+};
+const debugLoaders = {
+  loadGRNBatches,
+  loadTransferTimeline,
+  loadUsers
+};
 
 // Computed
 const grnStatus = computed(() => {
@@ -2273,14 +2300,9 @@ const getRemainingQuantity = (itemId) => {
   
   const remaining = receivedQty - totalBatchQty;
   
-  console.log('Remaining quantity calculation:', {
-    itemId,
-    receivedQty,
-    totalBatchQty,
-    batchesForItem: batchesForItem.length,
-    remaining,
-    batches: batchesForItem.map(b => ({ id: b.id, qty: getBatchQuantity(b) }))
-  });
+  if (import.meta.env.DEV && receivedQty > 0 && batchesForItem.length === 0) {
+    console.warn('[GRN] No batches for item:', itemId, 'receivedQty:', receivedQty, '- create a batch to allocate quantity');
+  }
   
   return Math.max(0, remaining); // Ensure non-negative
 };
@@ -2451,11 +2473,6 @@ const saveBatch = async () => {
     
     // Validate quantity doesn't exceed remaining quantity
     const remaining = getRemainingQuantity(batchForm.value.itemId);
-    console.log('Batch quantity validation:', {
-      batchQuantity: batchForm.value.batchQuantity,
-      remaining,
-      itemId: batchForm.value.itemId
-    });
     
     if (batchForm.value.batchQuantity > remaining) {
       showNotification(`Batch quantity (${batchForm.value.batchQuantity}) cannot exceed remaining quantity (${remaining}). Received quantity: ${grn.value.items.find(i => (i.itemId || i.item_id) === batchForm.value.itemId)?.receivedQuantity || 0}`, 'error');
