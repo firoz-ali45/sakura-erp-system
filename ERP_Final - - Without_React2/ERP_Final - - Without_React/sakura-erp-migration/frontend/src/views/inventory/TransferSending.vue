@@ -177,7 +177,7 @@
           </div>
           <div>
             <label class="block text-sm text-gray-500 mb-1">Created by</label>
-            <p class="font-medium">{{ transfer.created_by || '—' }}</p>
+            <p class="font-medium">{{ getActorDisplayName(transfer?.created_by_name || transfer?.created_by) }}</p>
           </div>
           <div>
             <label class="block text-sm text-gray-500 mb-1">Created date</label>
@@ -224,7 +224,7 @@
         <div class="space-y-3">
           <div v-for="a in audit" :key="a.id" class="flex items-center gap-3">
             <span :class="['w-2 h-2 rounded-full', auditDotClass(a.action)]"></span>
-            <span class="text-sm text-gray-600">{{ formatAuditAction(a.action) }} by {{ a.performed_by }} — {{ formatDateTime(a.performed_at) }}</span>
+            <span class="text-sm text-gray-600">{{ formatAuditAction(a.action) }} by {{ getActorDisplayName(a.performed_by_name || a.performed_by) }} — {{ formatDateTime(a.performed_at) }}</span>
           </div>
           <div v-if="!audit.length" class="text-sm text-gray-500">No timeline entries yet.</div>
         </div>
@@ -763,6 +763,14 @@ function isExpired(it) {
   const d = it.batch_expiry || it.expiry_date;
   if (!d) return false;
   return new Date(d) < new Date();
+}
+
+function getActorDisplayName(value) {
+  const raw = String(value || '').trim();
+  if (!raw) return 'Not available';
+  // Hide raw UUIDs from UI and prefer human-readable names.
+  const looksLikeUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(raw);
+  return looksLikeUuid ? 'Not available' : raw;
 }
 
 function getCurrentUserName() {

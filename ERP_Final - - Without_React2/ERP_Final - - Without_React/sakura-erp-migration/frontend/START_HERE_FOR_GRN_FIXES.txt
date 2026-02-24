@@ -1,0 +1,20 @@
+========================================
+GRN FIXES — RUN FROM THIS FOLDER
+========================================
+
+Batch quantity 0 / common.notAvailable / Edit–Delete fix apply ho chuka hai.
+Localhost: isi folder se run karo.
+
+FULL PATH:
+  C:\Users\shahf\Downloads\ERP_CLOUD\sakura-erp-system\ERP_Final - - Without_React2\ERP_Final - - Without_React\sakura-erp-migration\frontend
+
+Commands:
+  cd "C:\Users\shahf\Downloads\ERP_CLOUD\sakura-erp-system\ERP_Final - - Without_React2\ERP_Final - - Without_React\sakura-erp-migration\frontend"
+  npm run dev
+
+Browser: http://localhost:5173 → GRN → Batches tab
+Verify: GRN batches me quantity, remaining, created by, edit/delete sahi render ho.
+
+VERCEL: Is repo (main branch) se deploy karo; Redeploy without cache.
+
+========================================
