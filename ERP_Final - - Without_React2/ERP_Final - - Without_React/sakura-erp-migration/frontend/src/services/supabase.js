@@ -4159,8 +4159,8 @@ export async function updateBatchInSupabase(batchId, updates) {
       // QC status — batches table CHECK expects: pending, passed, failed, on_hold, expired
       // Map frontend (approved/rejected) to DB values to avoid batches_qc_status_check violation
       if (updates.qcStatus !== undefined || updates.qc_status !== undefined) {
-        const raw = (updates.qcStatus ?? updates.qc_status || '').toLowerCase();
-        updateData.qc_status = raw === 'approved' ? 'passed' : raw === 'rejected' ? 'failed' : raw || 'pending';
+        const raw = ((updates.qcStatus ?? updates.qc_status) || '').toLowerCase();
+        updateData.qc_status = raw === 'approved' ? 'passed' : raw === 'rejected' ? 'failed' : (raw || 'pending');
       }
       // Skip qc_data, qc_checked_at — not in batches schema, causes PGRST204/PGRST1284
       // QC data stays in frontend state; only qc_status persists
