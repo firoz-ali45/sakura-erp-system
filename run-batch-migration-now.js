@@ -18,7 +18,8 @@ if (fs.existsSync(envPath)) {
 
 const migrations = [
   '20260224000002_batches_auto_batch_number.sql',
-  '20260224000003_batches_qc_status.sql'
+  '20260224000003_batches_qc_status.sql',
+  '20260224000004_batches_qc_status_constraint.sql'
 ];
 
 async function run() {

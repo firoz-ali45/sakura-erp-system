@@ -4156,9 +4156,11 @@ export async function updateBatchInSupabase(batchId, updates) {
         updateData.quantity = updates.quantity;
       }
 
-      // QC status — batches/grn_batches may have qc_status
+      // QC status — batches table CHECK expects: pending, passed, failed, on_hold, expired
+      // Map frontend (approved/rejected) to DB values to avoid batches_qc_status_check violation
       if (updates.qcStatus !== undefined || updates.qc_status !== undefined) {
-        updateData.qc_status = updates.qcStatus ?? updates.qc_status;
+        const raw = (updates.qcStatus ?? updates.qc_status || '').toLowerCase();
+        updateData.qc_status = raw === 'approved' ? 'passed' : raw === 'rejected' ? 'failed' : raw || 'pending';
       }
       // Skip qc_data, qc_checked_at — not in batches schema, causes PGRST204/PGRST1284
       // QC data stays in frontend state; only qc_status persists
@@ -4362,13 +4364,23 @@ export async function loadBatchesForGRN(grnId) {
         const stock = byId[b.id];
         const qtyFromStock = stock != null && stock.qty_received != null ? Number(stock.qty_received) : null;
         const qty = qtyFromStock ?? b.qty_received ?? b.quantity;
+        const qc = (b.qc_status ?? b.qcStatus ?? 'pending').toLowerCase();
+        const qcForUI = qc === 'passed' ? 'approved' : qc === 'failed' ? 'rejected' : qc;
         return {
           ...b,
           qty_received: qty,
           quantity: qty,
           remaining_qty: stock != null ? Number(stock.remaining_qty) : 0,
-          stock_status: stock?.stock_status ?? null
+          stock_status: stock?.stock_status ?? null,
+          qc_status: qcForUI,
+          qcStatus: qcForUI
         };
+      });
+    } else {
+      data = data.map((b) => {
+        const qc = (b.qc_status ?? b.qcStatus ?? 'pending').toLowerCase();
+        const qcForUI = qc === 'passed' ? 'approved' : qc === 'failed' ? 'rejected' : qc;
+        return { ...b, qc_status: qcForUI, qcStatus: qcForUI };
       });
     }
     return data;
