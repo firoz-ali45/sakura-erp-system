@@ -2,7 +2,6 @@
 const fs = require('fs');
 const path = require('path');
 
-// Load DATABASE_URL from backend .env
 const envPath = path.join(__dirname, 'ERP_Final - - Without_React2', 'ERP_Final - - Without_React', 'sakura-erp-migration', 'backend', '.env');
 if (fs.existsSync(envPath)) {
   fs.readFileSync(envPath, 'utf8').split('\n').forEach(line => {
@@ -16,28 +15,21 @@ if (fs.existsSync(envPath)) {
   });
 }
 
-const migrations = [
-  '20260224000002_batches_auto_batch_number.sql',
-  '20260224000003_batches_qc_status.sql',
-  '20260224000004_batches_qc_status_constraint.sql',
-  '20260226000001_add_batch_id_grn_batches.sql'
-];
+const sql = `ALTER TABLE public.batches DROP CONSTRAINT IF EXISTS batches_qc_status_check;
+ALTER TABLE public.batches ADD CONSTRAINT batches_qc_status_check
+  CHECK (qc_status IN ('pending', 'passed', 'failed', 'on_hold', 'expired', 'approved', 'rejected', 'PASS', 'HOLD', 'FAIL', 'REJECT'));`;
 
 async function run() {
   const postgres = (await import('postgres')).default;
   const url = process.env.DATABASE_URL;
   if (!url) {
-    console.error('❌ DATABASE_URL not found');
+    console.error('DATABASE_URL not found in backend .env');
     process.exit(1);
   }
-  const sqlClient = postgres(url, { max: 1 });
-  for (const name of migrations) {
-    const sql = fs.readFileSync(path.join(__dirname, 'migrations', name), 'utf8');
-    console.log('🚀 Running', name, '...');
-    await sqlClient.unsafe(sql);
-  }
-  await sqlClient.end();
-  console.log('✅ Migrations completed successfully!');
+  const db = postgres(url, { max: 1 });
+  await db.unsafe(sql);
+  await db.end();
+  console.log('Done: batches_qc_status_check updated');
 }
 
-run().catch(err => { console.error('❌', err.message); process.exit(1); });
+run().catch(e => { console.error(e.message); process.exit(1); });
