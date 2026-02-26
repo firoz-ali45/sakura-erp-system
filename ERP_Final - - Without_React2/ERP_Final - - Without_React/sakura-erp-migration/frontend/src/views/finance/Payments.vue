@@ -166,6 +166,7 @@
 import { ref, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
+import { getCurrentUserUUID } from '@/utils/uuidUtils';
 import { useSubmitGuard } from '@/composables/useSubmitGuard';
 import { useAuditLog } from '@/composables/useAuditLog';
 
@@ -319,7 +320,7 @@ const submitPayment = async () => {
         reference: newPayment.value.reference_number || null,
         payment_date: newPayment.value.payment_date,
         status: 'completed',
-        created_by: authStore.user?.name || 'System'
+        created_by: getCurrentUserUUID()
       };
       const { data } = await supabaseClient.from('finance_payments').insert(payload).select('id, payment_number').single();
       await logAction('INSERT', 'finance_payments', data?.id, null, payload);

@@ -920,6 +920,7 @@
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
+import { getCurrentUserUUID } from '@/utils/uuidUtils';
 import { useAuthStore } from '@/stores/auth';
 import { 
   loadPurchaseOrdersFromSupabase, 
@@ -1687,8 +1688,8 @@ const savePurchaseOrder = async () => {
       notes: newOrder.value.notes || null,
       totalAmount: totalAmount.value,
       vatAmount: totalVAT.value,
-      creator: currentUserName, // Save creator name
-      createdBy: currentUserName, // Also save as createdBy for database
+      creator: currentUserName, // Save creator name (display)
+      createdBy: getCurrentUserUUID(),
       items: newOrder.value.items.map(item => ({
         itemId: item.itemId,
         quantity: item.quantity,

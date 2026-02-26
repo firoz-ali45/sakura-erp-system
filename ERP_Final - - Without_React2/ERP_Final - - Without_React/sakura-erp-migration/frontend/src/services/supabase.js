@@ -1,5 +1,6 @@
 // Supabase Configuration - Same as index.html
 import { cachedFetch, cacheKeys, invalidateCache } from '@/utils/dataCache';
+import { getCurrentUserUUID, safeUUID } from '@/utils/uuidUtils';
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || 'https://kexwnurwavszvmlpifsf.supabase.co';
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtleHdudXJ3YXZzenZtbHBpZnNmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjUyNzk5OTksImV4cCI6MjA4MDg1NTk5OX0.w7RlFdXVFdKtqJJ99L0Q1ofzUiwillyy-g1ASEj1q-U';
@@ -2915,6 +2916,7 @@ export async function saveGRNToSupabase(grn) {
       grn_number: grnNumber || null, // For drafts, set to null (no number until submitted)
       grn_date: grnFields.grnDate || grnFields.grn_date ? new Date(grnFields.grnDate || grnFields.grn_date).toISOString() : new Date().toISOString(),
       inspection_date: grnFields.inspectionDate || grnFields.inspection_date || new Date().toISOString(),
+      received_by: (grnFields.receivedBy !== undefined || grnFields.received_by !== undefined) ? (safeUUID(grnFields.received_by) || getCurrentUserUUID()) : null,
       received_by_name: grnFields.receivedBy || grnFields.received_by || null,
       quality_checked_by_name: grnFields.qcCheckedBy || grnFields.qc_checked_by || null,
       invoice_number: grnFields.supplierInvoiceNumber || grnFields.supplier_invoice_number || null,
@@ -3414,6 +3416,7 @@ export async function updateGRNInSupabase(grnId, updates) {
       grn_number: grnFields.grnNumber !== undefined ? (grnFields.grnNumber || grnFields.grn_number || null) : undefined,
       grn_date: grnFields.grnDate !== undefined ? (grnFields.grnDate ? new Date(grnFields.grnDate).toISOString() : null) : undefined,
       inspection_date: grnFields.inspectionDate !== undefined ? (grnFields.inspectionDate ? new Date(grnFields.inspectionDate).toISOString() : null) : undefined,
+      received_by: (grnFields.receivedBy !== undefined || grnFields.received_by !== undefined) ? (safeUUID(grnFields.received_by) || getCurrentUserUUID()) : undefined,
       received_by_name: grnFields.receivedBy !== undefined ? (grnFields.receivedBy || grnFields.received_by || null) : undefined,
       quality_checked_by_name: grnFields.qcCheckedBy !== undefined ? (grnFields.qcCheckedBy || grnFields.qc_checked_by || null) : undefined,
       invoice_number: grnFields.supplierInvoiceNumber !== undefined ? (grnFields.supplierInvoiceNumber || grnFields.supplier_invoice_number || null) : undefined,
@@ -3425,9 +3428,9 @@ export async function updateGRNInSupabase(grnId, updates) {
       // Approval workflow fields
       submitted_for_approval: grnFields.submittedForApproval !== undefined ? grnFields.submittedForApproval : (grnFields.submitted_for_approval !== undefined ? grnFields.submitted_for_approval : undefined),
       submitted_for_approval_at: grnFields.submittedForApprovalAt !== undefined ? (grnFields.submittedForApprovalAt ? new Date(grnFields.submittedForApprovalAt).toISOString() : null) : (grnFields.submitted_for_approval_at !== undefined ? (grnFields.submitted_for_approval_at ? new Date(grnFields.submitted_for_approval_at).toISOString() : null) : undefined),
-      submitted_for_approval_by: grnFields.submittedForApprovalBy !== undefined ? (grnFields.submittedForApprovalBy || grnFields.submitted_for_approval_by || null) : undefined,
+      submitted_for_approval_by: (grnFields.submittedForApprovalBy !== undefined || grnFields.submitted_for_approval_by !== undefined) ? (safeUUID(grnFields.submitted_for_approval_by) || getCurrentUserUUID()) : undefined,
       approved_by_name: grnFields.approvedBy !== undefined ? (grnFields.approvedBy || grnFields.approved_by || null) : undefined,
-      approved_by: (grnFields.approved_by && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(grnFields.approved_by)) ? grnFields.approved_by : undefined,
+      approved_by: (grnFields.approvedBy !== undefined || grnFields.approved_by !== undefined) ? (safeUUID(grnFields.approved_by) || getCurrentUserUUID()) : undefined,
       approval_date: grnFields.approvedAt !== undefined ? (grnFields.approvedAt ? new Date(grnFields.approvedAt).toISOString() : null) : (grnFields.approved_at !== undefined ? (grnFields.approved_at ? new Date(grnFields.approved_at).toISOString() : null) : undefined),
       // Combine notes and deliveryNoteNumber
       notes: grnFields.notes !== undefined || grnFields.deliveryNoteNumber !== undefined ? (() => {

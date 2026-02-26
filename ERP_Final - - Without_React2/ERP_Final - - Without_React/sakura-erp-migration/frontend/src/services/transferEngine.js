@@ -5,6 +5,11 @@
 
 import { ensureSupabaseReady, supabaseClient } from '@/services/supabase.js';
 
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+function asUuidOrNull(v) {
+  return (v && UUID_REGEX.test(String(v))) ? v : null;
+}
+
 // --- Stock Transfers (TRS-000001, separate from TO) ---
 
 export async function removeItemFromStockTransfer(transferId, itemId) {
@@ -37,7 +42,7 @@ export async function createDirectTransfer(fromLocationId, toLocationId, busines
     p_from_location_id: fromLocationId,
     p_to_location_id: toLocationId,
     p_business_date: businessDate ? String(businessDate).slice(0, 10) : null,
-    p_created_by: createdBy || 'user'
+    p_created_by: asUuidOrNull(createdBy)
   });
   if (error) return { ok: false, error: error.message };
   return data || { ok: false };
@@ -91,7 +96,7 @@ export async function startPickingStockTransfer(transferId, userId) {
   if (!ready || !transferId) return { ok: false, error: 'Not ready' };
   const { data, error } = await supabaseClient.rpc('fn_start_picking_stock_transfer', {
     p_transfer_id: transferId,
-    p_user_id: userId || 'user'
+    p_user_id: asUuidOrNull(userId)
   });
   if (error) return { ok: false, error: error.message };
   return data || { ok: false };
@@ -117,7 +122,7 @@ export async function confirmPickingStockTransfer(transferId, userId) {
   if (!ready || !transferId) return { ok: false, error: 'Not ready' };
   const { data, error } = await supabaseClient.rpc('fn_confirm_picking_stock_transfer', {
     p_transfer_id: transferId,
-    p_user_id: userId || 'user'
+    p_user_id: asUuidOrNull(userId)
   });
   if (error) return { ok: false, error: error.message };
   return data || { ok: false };
@@ -141,7 +146,7 @@ export async function dispatchToDriver(transferId, driverId, vehicleNo, sealNumb
     p_seal_number: sealNumber || null,
     p_expected_delivery_time: expectedDeliveryTime || null,
     p_notes: notes || null,
-    p_user_id: userId || 'user'
+    p_user_id: asUuidOrNull(userId)
   });
   if (error) return { ok: false, error: error.message };
   if (userId) {
@@ -156,7 +161,7 @@ export async function warehouseMarkInTransit(transferId, userId) {
   if (!ready || !transferId) return { ok: false, error: 'Not ready' };
   const { data, error } = await supabaseClient.rpc('fn_warehouse_mark_in_transit', {
     p_transfer_id: transferId,
-    p_user_id: userId || 'user'
+    p_user_id: asUuidOrNull(userId)
   });
   if (error) return { ok: false, error: error.message };
   return data || { ok: false };
@@ -189,7 +194,7 @@ export async function warehouseMarkArrived(transferId, userId) {
   if (!ready || !transferId) return { ok: false, error: 'Not ready' };
   const { data, error } = await supabaseClient.rpc('fn_warehouse_mark_arrived', {
     p_transfer_id: transferId,
-    p_user_id: userId || 'user'
+    p_user_id: asUuidOrNull(userId)
   });
   if (error) return { ok: false, error: error.message };
   return data || { ok: false };
@@ -205,7 +210,7 @@ export async function qualityCheckTransfer(transferId, conditionStatus, temperat
     p_damage_flag: !!damageFlag,
     p_expired_items_flag: !!expiredItemsFlag,
     p_notes: notes || null,
-    p_user_id: userId || 'user'
+    p_user_id: asUuidOrNull(userId)
   });
   if (error) return { ok: false, error: error.message };
   return data || { ok: false };
@@ -225,7 +230,7 @@ export async function verifyDeliveryOtp(transferId, otp, userId) {
   const { data, error } = await supabaseClient.rpc('fn_verify_delivery_otp', {
     p_transfer_id: transferId,
     p_otp: String(otp).trim(),
-    p_user_id: userId || 'user'
+    p_user_id: asUuidOrNull(userId)
   });
   if (error) return { ok: false, error: error.message };
   return data || { ok: false };
@@ -267,7 +272,7 @@ export async function insertTransferLogisticsEvent(transferId, payload, createdB
     p_temp_check: payload?.temp_check || null,
     p_damage_check: payload?.damage_check || null,
     p_notes: payload?.notes || null,
-    p_created_by: createdBy || 'user'
+    p_created_by: asUuidOrNull(createdBy)
   });
   if (error) return { ok: false, error: error.message };
   return data || { ok: false };
@@ -278,7 +283,7 @@ export async function dispatchStockTransfer(transferId, userId) {
   if (!ready || !transferId) return { ok: false, error: 'Not ready' };
   const { data, error } = await supabaseClient.rpc('fn_dispatch_stock_transfer', {
     p_transfer_id: transferId,
-    p_user_id: userId || 'user'
+    p_user_id: asUuidOrNull(userId)
   });
   if (error) return { ok: false, error: error.message };
   return data || { ok: false };
@@ -293,7 +298,7 @@ export async function insertTransferDamageReport(transferId, itemId, damagedQty,
     p_damaged_qty: Number(damagedQty) || 0,
     p_responsibility: responsibility,
     p_notes: notes || null,
-    p_user_id: userId || 'user'
+    p_user_id: asUuidOrNull(userId)
   });
   if (error) return { ok: false, error: error.message };
   return data || { ok: false };
@@ -309,7 +314,7 @@ export async function receiveStockTransferItem(transferId, itemId, batchId, rece
     p_received_qty: Number(receivedQty) || 0,
     p_damaged_qty: Number(damagedQty) || 0,
     p_rejected_qty: Number(rejectedQty) || 0,
-    p_user_id: userId || 'user'
+    p_user_id: asUuidOrNull(userId)
   });
   if (error) return { ok: false, error: error.message };
   return data || { ok: false };
@@ -426,7 +431,7 @@ export async function approveTransferLevel(transferId, level, approvedBy) {
   const { data, error } = await supabaseClient.rpc('fn_approve_transfer_level', {
     p_transfer_id: transferId,
     p_level: level,
-    p_approved_by: approvedBy
+    p_approved_by: asUuidOrNull(approvedBy)
   });
   if (error) return { ok: false, error: error.message };
   return data || { ok: false };
@@ -437,7 +442,7 @@ export async function rejectTransfer(transferId, rejectedBy) {
   if (!ready || !transferId) return { ok: false, error: 'Not ready' };
   const { data, error } = await supabaseClient.rpc('fn_reject_transfer', {
     p_transfer_id: transferId,
-    p_rejected_by: rejectedBy
+    p_rejected_by: asUuidOrNull(rejectedBy)
   });
   if (error) return { ok: false, error: error.message };
   return data || { ok: false };
@@ -448,7 +453,7 @@ export async function dispatchTransfer(transferId, userId) {
   if (!ready || !transferId) return { ok: false, error: 'Not ready' };
   const { data, error } = await supabaseClient.rpc('fn_dispatch_transfer', {
     p_transfer_id: transferId,
-    p_user_id: userId || 'user'
+    p_user_id: asUuidOrNull(userId)
   });
   if (error) return { ok: false, error: error.message };
   if (userId) {
@@ -463,7 +468,7 @@ export async function receiveTransfer(transferId, userId) {
   if (!ready || !transferId) return { ok: false, error: 'Not ready' };
   const { data, error } = await supabaseClient.rpc('fn_receive_transfer', {
     p_transfer_id: transferId,
-    p_user_id: userId || 'user'
+    p_user_id: asUuidOrNull(userId)
   });
   if (error) return { ok: false, error: error.message };
   if (userId) {
@@ -480,7 +485,7 @@ export async function receiveTransferItem(transferId, itemId, qty, userId) {
     p_transfer_id: transferId,
     p_item_id: itemId,
     p_received_qty: Number(qty),
-    p_user_id: userId || 'user'
+    p_user_id: asUuidOrNull(userId)
   });
   if (error) return { ok: false, error: error.message };
   return data || { ok: false };
@@ -501,7 +506,7 @@ export async function createTransferDraft(payload) {
       from_location_id,
       to_location_id,
       status: 'draft',
-      requested_by: requested_by || null,
+      requested_by: asUuidOrNull(requested_by),
       transfer_number: null, // TO number generated ONLY on submit
       business_date: new Date().toISOString().slice(0, 10) // auto today
     };

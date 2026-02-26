@@ -3,6 +3,7 @@
  * Uses universalPrintService for locked format. Batch+expiry table for transfers.
  */
 import { buildItemsTableWithBatch } from '@/services/universalPrintService.js';
+import { getUserDisplayName, loadUserMap } from '@/composables/useUserMap.js';
 
 const LOGO_URL = window.location.origin + '/Sakura_Pink_Logo.png';
 const PRINT_FRAME_ID = 'print-frame-sakura';
@@ -174,7 +175,7 @@ export function buildStockTransferPrintHtml(transfer, items) {
   parts.push(buildFieldRow('Source', transfer?.from_name || transfer?.from_code || '—'));
   parts.push(buildFieldRow('Destination', transfer?.to_name || transfer?.to_code || '—'));
   parts.push(buildFieldRow('Date', transfer?.business_date ? formatDate(transfer.business_date) : '—'));
-  parts.push(buildFieldRow('Creator', transfer?.created_by || '—'));
+  parts.push(buildFieldRow('Creator', getUserDisplayName(transfer?.created_by) || transfer?.created_by_name || '—'));
   parts.push(buildFieldRow('Items', (items || []).length));
   parts.push(buildFieldRow('Total Qty', (items || []).reduce((s, it) => s + (Number(it.picked_qty ?? it.requested_qty ?? it.quantity ?? it.qty) || 0), 0)));
   parts.push('</div>');
@@ -197,7 +198,8 @@ export function buildStockTransferPrintHtml(transfer, items) {
 /**
  * Open print dialog for Stock Transfer Document.
  */
-export function printStockTransfer(transfer, items) {
+export async function printStockTransfer(transfer, items) {
+  await loadUserMap();
   const html = buildStockTransferPrintHtml(transfer, items);
   return printDocument(html, 'Stock Transfer - ' + (transfer?.transfer_number || 'Draft'));
 }

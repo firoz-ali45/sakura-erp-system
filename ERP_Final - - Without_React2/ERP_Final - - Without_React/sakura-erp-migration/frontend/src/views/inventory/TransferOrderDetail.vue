@@ -100,12 +100,6 @@
       </div>
     </div>
 
-    <DebugPanel
-      v-if="showDebugPanel"
-      title="Transfer Page"
-      :loaders="debugLoaders"
-    />
-
     <div v-if="loading" class="bg-white rounded-xl shadow-md p-12 text-center">
       <div class="loading-spinner w-12 h-12 border-4 border-gray-200 border-t-[#284b44] rounded-full animate-spin mx-auto mb-4"></div>
       <p class="text-gray-600">Loading...</p>
@@ -326,6 +320,7 @@ import {
   importTransferItemsFromRows
 } from '@/services/transferEngine.js';
 import { getUsers } from '@/services/supabase.js';
+import { getCurrentUserUUID } from '@/utils/uuidUtils';
 import { showNotification } from '@/utils/notifications';
 import { forceInventoryViewsRefresh } from '@/services/erpViews.js';
 import { loadTransferSourceLocations, loadTransferDestLocations } from '@/composables/useInventoryLocations.js';
@@ -334,11 +329,9 @@ import AddItemModal from '@/components/transfer/AddItemModal.vue';
 import EditItemModal from '@/components/transfer/EditItemModal.vue';
 import ImportItemsModal from '@/components/transfer/ImportItemsModal.vue';
 import DocumentFlow from '@/components/common/DocumentFlow.vue';
-import DebugPanel from '@/components/debug/DebugPanel.vue';
 
 const route = useRoute();
 const router = useRouter();
-const showDebugPanel = import.meta.env.DEV;
 const order = ref(null);
 const items = ref([]);
 const stockMap = ref({});
@@ -361,28 +354,6 @@ const destLocations = ref([]);
 const editItem = ref(null);
 const canDispatch = ref(false);
 
-// Temporary dev-only loaders for raw JSON inspection.
-async function loadGRNBatches() {
-  return { note: 'GRN batches are available on GRN page debug panel.' };
-}
-async function loadTransferTimeline() {
-  const transferId = route.params.id || order.value?.id;
-  if (!transferId) return { error: 'Missing transfer id' };
-  const [dispatches, receipts, approvals] = await Promise.all([
-    fetchTransferDispatches(transferId),
-    fetchTransferReceipts(transferId),
-    fetchTransferApprovals(transferId)
-  ]);
-  return { transferId, dispatches, receipts, approvals };
-}
-async function loadUsers() {
-  return await getUsers();
-}
-const debugLoaders = {
-  loadGRNBatches,
-  loadTransferTimeline,
-  loadUsers
-};
 
 const today = new Date().toISOString().slice(0, 10);
 const totalRequested = computed(() => items.value.reduce((s, it) => s + (Number(it.requested_qty) || 0), 0));
@@ -554,7 +525,7 @@ async function doAccept() {
   try {
     const nextStep = await getNextTransferApprovalStep(order.value.id);
     const step = nextStep?.next_level ?? 1;
-    const result = await approveTransferLevel(order.value.id, step, getCurrentUserName());
+    const result = await approveTransferLevel(order.value.id, step, getCurrentUserUUID());
     if (result.ok) {
       showNotification('Transfer approved', 'success');
       await load();
@@ -575,7 +546,7 @@ async function doDecline() {
   if (!ok) return;
   declining.value = true;
   try {
-    const result = await rejectTransfer(order.value.id, getCurrentUserName());
+    const result = await rejectTransfer(order.value.id, getCurrentUserUUID());
     if (result.ok) {
       showNotification('Transfer declined', 'success');
       await load();

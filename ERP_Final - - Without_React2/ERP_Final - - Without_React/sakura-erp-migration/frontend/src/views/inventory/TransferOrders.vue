@@ -190,6 +190,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
+import { getCurrentUserUUID } from '@/utils/uuidUtils';
 import { fetchTransferOrdersFull, createTransferDraft } from '@/services/transferEngine.js';
 import { loadTransferSourceLocations, loadTransferDestLocations, loadInventoryLocations } from '@/composables/useInventoryLocations.js';
 import { showNotification } from '@/utils/notifications';
@@ -364,13 +365,12 @@ async function saveDraft() {
     showNotification('Source and Destination must be different', 'warning');
     return;
   }
-  const userName = getCurrentUserName();
   saving.value = true;
   try {
     const result = await createTransferDraft({
       from_location_id: form.value.from_location_id,
       to_location_id: form.value.to_location_id,
-      requested_by: userName,
+      requested_by: getCurrentUserUUID(),
       items: []
     });
     if (result.success && result.data) {
