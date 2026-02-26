@@ -949,7 +949,7 @@ const recordPayment = async () => {
       payment_amount: newPayment.value.payment_amount,
       payment_channel: newPayment.value.payment_channel,
       reference_number: newPayment.value.reference_number,
-      created_by: authStore.user?.name || 'System'
+      created_by: authStore.user?.id || null
     };
     
     const { error } = await supabaseClient
@@ -1015,7 +1015,7 @@ const approveInvoice = async () => {
       .from('purchasing_invoices')
       .update({ 
         status: 'approved',
-        approved_by: authStore.user?.name || 'System',
+        approved_by: authStore.user?.id || null,
         approved_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       })
@@ -1059,7 +1059,7 @@ const postToGL = async () => {
       .from('purchasing_invoices')
       .update({ 
         status: 'posted',
-        posted_by: authStore.user?.name || 'System',
+        posted_by: authStore.user?.id || null,
         posted_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       })

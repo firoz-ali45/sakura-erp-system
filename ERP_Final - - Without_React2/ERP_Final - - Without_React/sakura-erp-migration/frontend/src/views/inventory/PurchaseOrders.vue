@@ -1687,8 +1687,8 @@ const savePurchaseOrder = async () => {
       notes: newOrder.value.notes || null,
       totalAmount: totalAmount.value,
       vatAmount: totalVAT.value,
-      creator: currentUserName, // Save creator name
-      createdBy: currentUserName, // Also save as createdBy for database
+      creator: currentUserName, // Save creator name (display)
+      createdBy: authStore.user?.id || null, // UUID required for purchase_orders.created_by
       items: newOrder.value.items.map(item => ({
         itemId: item.itemId,
         quantity: item.quantity,

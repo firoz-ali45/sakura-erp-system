@@ -3316,7 +3316,7 @@ const createPurchasing = async () => {
       grand_total: totalAmount * 1.15,
       payment_method: 'CASH_ON_HAND', // Required: must be one of CASH_ON_HAND, ATM_MARKET_PURCHASE, FREE_SAMPLE, ONLINE_GATEWAY
       status: 'draft',
-      created_by: authStore.user?.name || 'System',
+      created_by: authStore.user?.id || null, // UUID required for purchasing_invoices.created_by
       created_at: new Date().toISOString()
     };
     

@@ -319,7 +319,7 @@ const submitPayment = async () => {
         reference: newPayment.value.reference_number || null,
         payment_date: newPayment.value.payment_date,
         status: 'completed',
-        created_by: authStore.user?.name || 'System'
+        created_by: authStore.user?.id || null
       };
       const { data } = await supabaseClient.from('finance_payments').insert(payload).select('id, payment_number').single();
       await logAction('INSERT', 'finance_payments', data?.id, null, payload);

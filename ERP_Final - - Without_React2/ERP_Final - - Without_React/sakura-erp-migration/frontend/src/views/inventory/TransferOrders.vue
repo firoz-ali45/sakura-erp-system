@@ -190,6 +190,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
+import { useAuthStore } from '@/stores/auth';
 import { fetchTransferOrdersFull, createTransferDraft } from '@/services/transferEngine.js';
 import { loadTransferSourceLocations, loadTransferDestLocations, loadInventoryLocations } from '@/composables/useInventoryLocations.js';
 import { showNotification } from '@/utils/notifications';
@@ -197,6 +198,7 @@ import { useReportExport } from '@/composables/useReportExport.js';
 import { ensureSupabaseReady, supabaseClient } from '@/services/supabase.js';
 
 const router = useRouter();
+const authStore = useAuthStore();
 const loading = ref(false);
 const rows = ref([]);
 const activeTab = ref('all');
@@ -364,13 +366,12 @@ async function saveDraft() {
     showNotification('Source and Destination must be different', 'warning');
     return;
   }
-  const userName = getCurrentUserName();
   saving.value = true;
   try {
     const result = await createTransferDraft({
       from_location_id: form.value.from_location_id,
       to_location_id: form.value.to_location_id,
-      requested_by: userName,
+      requested_by: authStore.user?.id || null,
       items: []
     });
     if (result.success && result.data) {

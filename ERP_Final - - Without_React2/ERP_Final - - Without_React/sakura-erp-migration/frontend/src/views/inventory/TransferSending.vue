@@ -585,9 +585,11 @@ import {
 } from '@/services/transferEngine.js';
 import { showNotification } from '@/utils/notifications';
 import { printStockTransfer } from '@/services/pdfPrintService.js';
+import { useAuthStore } from '@/stores/auth';
 
 const route = useRoute();
 const router = useRouter();
+const authStore = useAuthStore();
 const transfer = ref(null);
 const items = ref([]);
 const stockMap = ref({});
@@ -773,14 +775,6 @@ function getActorDisplayName(value) {
   return looksLikeUuid ? 'Not available' : raw;
 }
 
-function getCurrentUserName() {
-  try {
-    const u = localStorage.getItem('sakura_current_user');
-    if (u) { const d = JSON.parse(u); return d.name || d.email?.split('@')[0] || 'user'; }
-  } catch (_) {}
-  return 'user';
-}
-
 async function load() {
   const id = transferId.value;
   if (!id) { error.value = 'No transfer ID'; loading.value = false; return; }
@@ -833,7 +827,7 @@ async function doStartPicking() {
   if (!transfer.value?.id) return;
   picking.value = true;
   try {
-    const result = await startPickingStockTransfer(transfer.value.id, getCurrentUserName());
+    const result = await startPickingStockTransfer(transfer.value.id, authStore.user?.id || null);
     if (result?.ok) {
       showNotification('Picking started. Click each row to select batch.', 'success');
       await load();
@@ -859,7 +853,7 @@ async function confirmMarkPicked() {
   if (!transfer.value?.id) return;
   picking.value = true;
   try {
-    const result = await confirmPickingStockTransfer(transfer.value.id, getCurrentUserName());
+    const result = await confirmPickingStockTransfer(transfer.value.id, authStore.user?.id || null);
     if (result?.ok) {
       showNotification('Marked as Picked', 'success');
       showMarkPickedConfirm.value = false;
@@ -999,7 +993,7 @@ async function confirmDispatchToDriver() {
       logisticsForm.value.seal_number?.trim() || null,
       expTime,
       logisticsForm.value.notes?.trim() || null,
-      getCurrentUserName()
+      authStore.user?.id || null
     );
     if (result?.ok) {
       showNotification('Handed to driver', 'success');
@@ -1020,7 +1014,7 @@ async function doMarkInTransit() {
   if (!transfer.value?.id) return;
   dispatching.value = true;
   try {
-    const result = await warehouseMarkInTransit(transfer.value.id, getCurrentUserName());
+    const result = await warehouseMarkInTransit(transfer.value.id, authStore.user?.id || null);
     if (result?.ok) {
       showNotification('Marked in transit', 'success');
       await load();
@@ -1038,7 +1032,7 @@ async function doMarkArrived() {
   if (!transfer.value?.id) return;
   dispatching.value = true;
   try {
-    const result = await warehouseMarkArrived(transfer.value.id, getCurrentUserName());
+    const result = await warehouseMarkArrived(transfer.value.id, authStore.user?.id || null);
     if (result?.ok) {
       showNotification('Marked as arrived', 'success');
       await load();
@@ -1063,7 +1057,7 @@ async function confirmQualityCheck() {
       qualityForm.value.damage_flag,
       qualityForm.value.expired_items_flag,
       qualityForm.value.notes?.trim() || null,
-      getCurrentUserName()
+      authStore.user?.id || null
     );
     if (result?.ok) {
       showNotification('Quality inspection submitted', 'success');
@@ -1103,7 +1097,7 @@ async function doVerifyOtp() {
   if (!transfer.value?.id || !otpInput.value) return;
   dispatching.value = true;
   try {
-    const result = await verifyDeliveryOtp(transfer.value.id, otpInput.value, getCurrentUserName());
+    const result = await verifyDeliveryOtp(transfer.value.id, otpInput.value, authStore.user?.id || null);
     if (result?.ok) {
       otpVerified.value = true;
       showNotification('OTP verified', 'success');
@@ -1142,7 +1136,7 @@ async function confirmReceive() {
         recv,
         dam,
         rej,
-        getCurrentUserName()
+        authStore.user?.id || null
       );
       if (!result?.ok) {
         showNotification(result?.error || 'Receive failed', 'error');
@@ -1158,7 +1152,7 @@ async function confirmReceive() {
             dam,
             resp,
             null,
-            getCurrentUserName()
+            authStore.user?.id || null
           );
           if (!drResult?.ok) {
             showNotification(drResult?.error || 'Damage report failed', 'warning');

@@ -326,6 +326,7 @@ import {
   importTransferItemsFromRows
 } from '@/services/transferEngine.js';
 import { getUsers } from '@/services/supabase.js';
+import { useAuthStore } from '@/stores/auth';
 import { showNotification } from '@/utils/notifications';
 import { forceInventoryViewsRefresh } from '@/services/erpViews.js';
 import { loadTransferSourceLocations, loadTransferDestLocations } from '@/composables/useInventoryLocations.js';
@@ -338,6 +339,7 @@ import DebugPanel from '@/components/debug/DebugPanel.vue';
 
 const route = useRoute();
 const router = useRouter();
+const authStore = useAuthStore();
 const showDebugPanel = import.meta.env.DEV;
 const order = ref(null);
 const items = ref([]);
@@ -554,7 +556,7 @@ async function doAccept() {
   try {
     const nextStep = await getNextTransferApprovalStep(order.value.id);
     const step = nextStep?.next_level ?? 1;
-    const result = await approveTransferLevel(order.value.id, step, getCurrentUserName());
+    const result = await approveTransferLevel(order.value.id, step, authStore.user?.id || null);
     if (result.ok) {
       showNotification('Transfer approved', 'success');
       await load();
@@ -575,7 +577,7 @@ async function doDecline() {
   if (!ok) return;
   declining.value = true;
   try {
-    const result = await rejectTransfer(order.value.id, getCurrentUserName());
+    const result = await rejectTransfer(order.value.id, authStore.user?.id || null);
     if (result.ok) {
       showNotification('Transfer declined', 'success');
       await load();
