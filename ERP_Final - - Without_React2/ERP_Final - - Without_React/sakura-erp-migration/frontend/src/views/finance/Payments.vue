@@ -168,6 +168,7 @@ import { useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import { useSubmitGuard } from '@/composables/useSubmitGuard';
 import { useAuditLog } from '@/composables/useAuditLog';
+import { asUuidOrNull } from '@/utils/uuidUtils';
 
 const { t } = useI18n();
 const router = useRouter();
@@ -319,7 +320,7 @@ const submitPayment = async () => {
         reference: newPayment.value.reference_number || null,
         payment_date: newPayment.value.payment_date,
         status: 'completed',
-        created_by: authStore.user?.id || null
+        created_by: asUuidOrNull(authStore.user?.id)
       };
       const { data } = await supabaseClient.from('finance_payments').insert(payload).select('id, payment_number').single();
       await logAction('INSERT', 'finance_payments', data?.id, null, payload);

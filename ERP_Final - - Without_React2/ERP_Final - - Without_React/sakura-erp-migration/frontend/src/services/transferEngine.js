@@ -5,10 +5,7 @@
 
 import { ensureSupabaseReady, supabaseClient } from '@/services/supabase.js';
 
-const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-function asUuidOrNull(v) {
-  return (v && UUID_REGEX.test(String(v))) ? v : null;
-}
+import { asUuidOrNull } from '@/utils/uuidUtils';
 
 // --- Stock Transfers (TRS-000001, separate from TO) ---
 

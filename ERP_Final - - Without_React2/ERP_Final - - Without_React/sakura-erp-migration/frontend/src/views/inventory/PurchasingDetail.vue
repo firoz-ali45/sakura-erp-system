@@ -610,6 +610,7 @@ import { ref, computed, watch, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import { useAuthStore } from '@/stores/auth';
+import { asUuidOrNull } from '@/utils/uuidUtils';
 import DocumentFlow from '@/components/common/DocumentFlow.vue';
 import ItemFlow from '@/components/common/ItemFlow.vue';
 
@@ -949,7 +950,7 @@ const recordPayment = async () => {
       payment_amount: newPayment.value.payment_amount,
       payment_channel: newPayment.value.payment_channel,
       reference_number: newPayment.value.reference_number,
-      created_by: authStore.user?.id || null
+      created_by: asUuidOrNull(authStore.user?.id)
     };
     
     const { error } = await supabaseClient
@@ -1015,7 +1016,7 @@ const approveInvoice = async () => {
       .from('purchasing_invoices')
       .update({ 
         status: 'approved',
-        approved_by: authStore.user?.id || null,
+        approved_by: asUuidOrNull(authStore.user?.id),
         approved_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       })
@@ -1059,7 +1060,7 @@ const postToGL = async () => {
       .from('purchasing_invoices')
       .update({ 
         status: 'posted',
-        posted_by: authStore.user?.id || null,
+        posted_by: asUuidOrNull(authStore.user?.id),
         posted_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       })

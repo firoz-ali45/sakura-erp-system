@@ -921,6 +921,7 @@
 import { ref, computed, onMounted, watch } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { useAuthStore } from '@/stores/auth';
+import { asUuidOrNull } from '@/utils/uuidUtils';
 import { 
   loadPurchaseOrdersFromSupabase, 
   savePurchaseOrderToSupabase, 
@@ -1688,7 +1689,7 @@ const savePurchaseOrder = async () => {
       totalAmount: totalAmount.value,
       vatAmount: totalVAT.value,
       creator: currentUserName, // Save creator name (display)
-      createdBy: authStore.user?.id || null, // UUID required for purchase_orders.created_by
+      createdBy: asUuidOrNull(authStore.user?.id), // UUID required for purchase_orders.created_by
       items: newOrder.value.items.map(item => ({
         itemId: item.itemId,
         quantity: item.quantity,

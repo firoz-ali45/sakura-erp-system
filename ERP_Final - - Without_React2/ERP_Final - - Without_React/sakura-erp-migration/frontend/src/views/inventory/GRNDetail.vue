@@ -1138,6 +1138,7 @@ import { loadItemsFromSupabase } from '@/services/supabase';
 import { loadPurchaseOrdersFromSupabase } from '@/services/supabase';
 import { showConfirmDialog } from '@/utils/confirmDialog';
 import { showNotification } from '@/utils/notifications';
+import { asUuidOrNull } from '@/utils/uuidUtils';
 import { useAuthStore } from '@/stores/auth';
 import { useI18n } from '@/composables/useI18n';
 import { useInventoryLocations } from '@/composables/useInventoryLocations';
@@ -2518,7 +2519,7 @@ const saveBatch = async () => {
         remarks: ''
       },
       createdBy: currentUser,
-      created_by: authStore.user?.id || null, // UUID for batches.created_by
+      created_by: asUuidOrNull(authStore.user?.id), // UUID for batches.created_by
       createdAt: new Date().toISOString(),
       created_at: new Date().toISOString()
     };
@@ -2849,7 +2850,7 @@ const approveGRN = async () => {
       qcCheckedBy: currentUser,
       qc_checked_by: currentUser,
       approvedBy: currentUser,
-      approved_by: authStore.user?.id || null, // UUID required for grn_inspections.approved_by
+      approved_by: asUuidOrNull(authStore.user?.id), // UUID required for grn_inspections.approved_by
       approvedAt: new Date().toISOString(),
       approved_at: new Date().toISOString()
     });
@@ -3316,7 +3317,7 @@ const createPurchasing = async () => {
       grand_total: totalAmount * 1.15,
       payment_method: 'CASH_ON_HAND', // Required: must be one of CASH_ON_HAND, ATM_MARKET_PURCHASE, FREE_SAMPLE, ONLINE_GATEWAY
       status: 'draft',
-      created_by: authStore.user?.id || null, // UUID required for purchasing_invoices.created_by
+      created_by: asUuidOrNull(authStore.user?.id), // NEVER send name - UUID only
       created_at: new Date().toISOString()
     };
     
