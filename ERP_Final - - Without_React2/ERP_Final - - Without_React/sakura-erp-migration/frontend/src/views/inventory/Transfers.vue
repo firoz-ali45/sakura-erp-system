@@ -99,13 +99,12 @@
 <script setup>
 import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
-import { useAuthStore } from '@/stores/auth';
+import { getCurrentUserUUID } from '@/utils/uuidUtils';
 import { fetchStockTransfersList, createDirectTransfer as createDirectTransferApi } from '@/services/transferEngine.js';
 import { loadTransferSourceLocations, loadTransferDestLocations } from '@/composables/useInventoryLocations.js';
 import { showNotification } from '@/utils/notifications';
 
 const router = useRouter();
-const authStore = useAuthStore();
 const transfers = ref([]);
 const loading = ref(true);
 const showNewTransferModal = ref(false);
@@ -174,7 +173,7 @@ async function createDirectTransfer() {
   if (!f.from_location_id || !f.to_location_id || f.from_location_id === f.to_location_id) return;
   creating.value = true;
   try {
-    const result = await createDirectTransferApi(f.from_location_id, f.to_location_id, f.business_date, authStore.user?.id || null);
+    const result = await createDirectTransferApi(f.from_location_id, f.to_location_id, f.business_date, getCurrentUserUUID());
     if (result?.ok && result.transfer_id) {
       showNotification('Transfer created: ' + (result.transfer_number || ''), 'success');
       showNewTransferModal.value = false;

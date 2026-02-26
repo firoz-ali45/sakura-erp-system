@@ -585,11 +585,10 @@ import {
 } from '@/services/transferEngine.js';
 import { showNotification } from '@/utils/notifications';
 import { printStockTransfer } from '@/services/pdfPrintService.js';
-import { useAuthStore } from '@/stores/auth';
+import { getCurrentUserUUID } from '@/utils/uuidUtils';
 
 const route = useRoute();
 const router = useRouter();
-const authStore = useAuthStore();
 const transfer = ref(null);
 const items = ref([]);
 const stockMap = ref({});
@@ -827,7 +826,7 @@ async function doStartPicking() {
   if (!transfer.value?.id) return;
   picking.value = true;
   try {
-    const result = await startPickingStockTransfer(transfer.value.id, authStore.user?.id || null);
+    const result = await startPickingStockTransfer(transfer.value.id, getCurrentUserUUID());
     if (result?.ok) {
       showNotification('Picking started. Click each row to select batch.', 'success');
       await load();
@@ -853,7 +852,7 @@ async function confirmMarkPicked() {
   if (!transfer.value?.id) return;
   picking.value = true;
   try {
-    const result = await confirmPickingStockTransfer(transfer.value.id, authStore.user?.id || null);
+    const result = await confirmPickingStockTransfer(transfer.value.id, getCurrentUserUUID());
     if (result?.ok) {
       showNotification('Marked as Picked', 'success');
       showMarkPickedConfirm.value = false;
@@ -993,7 +992,7 @@ async function confirmDispatchToDriver() {
       logisticsForm.value.seal_number?.trim() || null,
       expTime,
       logisticsForm.value.notes?.trim() || null,
-      authStore.user?.id || null
+      getCurrentUserUUID()
     );
     if (result?.ok) {
       showNotification('Handed to driver', 'success');
@@ -1014,7 +1013,7 @@ async function doMarkInTransit() {
   if (!transfer.value?.id) return;
   dispatching.value = true;
   try {
-    const result = await warehouseMarkInTransit(transfer.value.id, authStore.user?.id || null);
+    const result = await warehouseMarkInTransit(transfer.value.id, getCurrentUserUUID());
     if (result?.ok) {
       showNotification('Marked in transit', 'success');
       await load();
@@ -1032,7 +1031,7 @@ async function doMarkArrived() {
   if (!transfer.value?.id) return;
   dispatching.value = true;
   try {
-    const result = await warehouseMarkArrived(transfer.value.id, authStore.user?.id || null);
+    const result = await warehouseMarkArrived(transfer.value.id, getCurrentUserUUID());
     if (result?.ok) {
       showNotification('Marked as arrived', 'success');
       await load();
@@ -1057,7 +1056,7 @@ async function confirmQualityCheck() {
       qualityForm.value.damage_flag,
       qualityForm.value.expired_items_flag,
       qualityForm.value.notes?.trim() || null,
-      authStore.user?.id || null
+      getCurrentUserUUID()
     );
     if (result?.ok) {
       showNotification('Quality inspection submitted', 'success');
@@ -1097,7 +1096,7 @@ async function doVerifyOtp() {
   if (!transfer.value?.id || !otpInput.value) return;
   dispatching.value = true;
   try {
-    const result = await verifyDeliveryOtp(transfer.value.id, otpInput.value, authStore.user?.id || null);
+    const result = await verifyDeliveryOtp(transfer.value.id, otpInput.value, getCurrentUserUUID());
     if (result?.ok) {
       otpVerified.value = true;
       showNotification('OTP verified', 'success');
@@ -1136,7 +1135,7 @@ async function confirmReceive() {
         recv,
         dam,
         rej,
-        authStore.user?.id || null
+        getCurrentUserUUID()
       );
       if (!result?.ok) {
         showNotification(result?.error || 'Receive failed', 'error');
@@ -1152,7 +1151,7 @@ async function confirmReceive() {
             dam,
             resp,
             null,
-            authStore.user?.id || null
+            getCurrentUserUUID()
           );
           if (!drResult?.ok) {
             showNotification(drResult?.error || 'Damage report failed', 'warning');

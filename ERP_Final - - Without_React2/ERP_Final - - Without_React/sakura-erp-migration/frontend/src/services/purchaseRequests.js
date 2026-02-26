@@ -5,7 +5,6 @@
 
 import { supabaseClient, ensureSupabaseReady, USE_SUPABASE } from './supabase';
 import { cachedFetch, cacheKeys, invalidateCache } from '@/utils/dataCache';
-import { asUuidOrNull } from '@/utils/uuidUtils';
 
 // Cache key for purchase requests
 const PR_CACHE_KEY = 'sakura_purchase_requests';
@@ -634,7 +633,7 @@ export async function approvePurchaseRequest(prId, notes = null) {
       .update({
         status: 'approved',
         approved_at: new Date().toISOString(),
-        approved_by: asUuidOrNull(user?.id),
+        approved_by: user?.id || null,
         internal_memo: notes ? `Approval Notes: ${notes}` : null,
         updated_at: new Date().toISOString()
       })
@@ -657,7 +656,7 @@ export async function approvePurchaseRequest(prId, notes = null) {
           pr_id: prId,
           previous_status: 'submitted',
           new_status: 'approved',
-          changed_by: asUuidOrNull(user?.id),
+          changed_by: user?.id || null,
           changed_by_name: user?.email || 'System',
           change_reason: notes || 'PR approved',
           change_date: new Date().toISOString()
@@ -746,7 +745,7 @@ export async function rejectPurchaseRequest(prId, reason) {
           pr_id: prId,
           previous_status: updateData.status || 'submitted',
           new_status: 'rejected',
-          changed_by: asUuidOrNull(user?.id),
+          changed_by: user?.id || null,
           changed_by_name: user?.email || 'System',
           change_reason: reason,
           change_date: new Date().toISOString()

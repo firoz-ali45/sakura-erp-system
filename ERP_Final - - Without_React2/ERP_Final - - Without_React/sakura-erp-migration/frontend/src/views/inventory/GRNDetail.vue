@@ -172,12 +172,6 @@
       </div>
     </div>
 
-    <DebugPanel
-      v-if="showDebugPanel"
-      title="GRN Page"
-      :loaders="debugLoaders"
-    />
-
     <!-- Loading State -->
     <div v-if="loading" class="bg-white rounded-lg shadow-md p-12 text-center">
       <div class="loading-spinner w-12 h-12 border-4 border-gray-200 border-t-[#284b44] rounded-full animate-spin mx-auto mb-4"></div>
@@ -219,7 +213,7 @@
             <div>
               <label class="block text-sm font-medium text-gray-600 mb-1">{{ t('inventory.grn.receivedBy') }}</label>
               <p class="text-gray-900 font-medium">
-                {{ grn.receivedBy || grn.received_by || getCurrentUserName() || t('common.notAvailable') }}
+                {{ grn.received_by_name || getUuidDisplayName(grn.received_by) || getUuidDisplayName(grn.receivedBy) }}
               </p>
             </div>
           </div>
@@ -241,7 +235,7 @@
             <div v-if="grnStatus === 'approved' && (grn.approvedBy || grn.approved_by)" class="pb-4 border-b border-gray-200">
               <label class="block text-sm font-medium text-gray-600 mb-1">{{ t('inventory.grn.grnApprovedBy') }}</label>
               <p class="text-gray-900 font-medium" style="color: #059669; font-weight: 600;">
-                {{ grn.approvedBy || grn.approved_by }}
+                {{ grn.approved_by_name || getUuidDisplayName(grn.approved_by) || getUuidDisplayName(grn.approvedBy) }}
                 <span v-if="grn.approvedAt || grn.approved_at" class="text-gray-500 text-sm font-normal ml-2">
                   ({{ formatDateTime(grn.approvedAt || grn.approved_at) }})
                 </span>
@@ -916,7 +910,7 @@
                   <span class="text-xs text-gray-500 ml-1">(Auto-filled with current user)</span>
                 </label>
                 <input 
-                  :value="editForm.receivedBy || getCurrentUserName()"
+                  :value="editForm.receivedBy || grn?.received_by_name || getUuidDisplayName(grn?.received_by)"
                   type="text"
                   readonly
                   @click.stop
@@ -1138,16 +1132,14 @@ import { loadItemsFromSupabase } from '@/services/supabase';
 import { loadPurchaseOrdersFromSupabase } from '@/services/supabase';
 import { showConfirmDialog } from '@/utils/confirmDialog';
 import { showNotification } from '@/utils/notifications';
-import { asUuidOrNull } from '@/utils/uuidUtils';
+import { getCurrentUserUUID, safeUUID } from '@/utils/uuidUtils';
 import { useAuthStore } from '@/stores/auth';
 import { useI18n } from '@/composables/useI18n';
 import { useInventoryLocations } from '@/composables/useInventoryLocations';
-import DebugPanel from '@/components/debug/DebugPanel.vue';
 
 const route = useRoute();
 const { loadLocationsForGRN } = useInventoryLocations();
 const router = useRouter();
-const showDebugPanel = import.meta.env.DEV;
 const authStore = useAuthStore();
 const { t, locale, isRTL, direction } = useI18n();
 const currentLang = computed(() => locale.value || 'en');
@@ -1201,24 +1193,6 @@ const storageLocations = ref([]);
 
 // Map batch created_by UUID → user name (from users table) for display
 const createdByNameMap = ref({});
-
-// Temporary dev-only loaders for raw JSON inspection.
-const loadGRNBatches = async () => {
-  const grnId = route.params.id || grn.value?.id;
-  if (!grnId) return { error: 'Missing GRN id' };
-  return await loadBatchesForGRN(grnId);
-};
-const loadTransferTimeline = async () => {
-  return { note: 'Transfer timeline is available on Transfer page debug panel.' };
-};
-const loadUsers = async () => {
-  return await getUsers();
-};
-const debugLoaders = {
-  loadGRNBatches,
-  loadTransferTimeline,
-  loadUsers
-};
 
 // Computed
 const grnStatus = computed(() => {
@@ -1726,8 +1700,8 @@ const proceedToBatches = async () => {
     // Save all items to Supabase to ensure data persistence
     const result = await updateGRNInSupabase(grn.value.id, {
       items: grn.value.items,
-      receivedBy: grn.value.receivedBy || grn.value.received_by || getCurrentUserName(),
-      received_by: grn.value.receivedBy || grn.value.received_by || getCurrentUserName()
+      receivedBy: grn.value.receivedBy || grn.value.received_by,
+      received_by: safeUUID(grn.value.received_by) || getCurrentUserUUID()
     });
     
     if (!result.success) {
@@ -1818,7 +1792,7 @@ const loadBatchesForGRNLocal = async (grnId) => {
     const batches = await loadBatchesForGRN(grnId);
     if (grn.value && batches) {
       grn.value.batches = batches;
-      await loadCreatedByNameMap(batches);
+      await loadCreatedByNameMap(batches, grn.value);
     }
   } catch (error) {
     console.error('Error loading batches:', error);
@@ -1828,9 +1802,15 @@ const loadBatchesForGRNLocal = async (grnId) => {
   }
 };
 
-// Map created_by UUID → users.name for batch table (DB has UUID; display name)
-const loadCreatedByNameMap = async (batches) => {
-  const ids = [...new Set((batches || []).map(b => b.created_by ?? b.createdBy).filter(Boolean))];
+// Map UUID → users.name for display (batches.created_by, grn.received_by, grn.approved_by)
+const loadCreatedByNameMap = async (batches, grnData) => {
+  const batchIds = (batches || []).map(b => b.created_by ?? b.createdBy).filter(Boolean);
+  const grnIds = grnData ? [
+    grnData.received_by,
+    grnData.approved_by,
+    grnData.submitted_for_approval_by
+  ].filter(Boolean) : [];
+  const ids = [...new Set([...batchIds, ...grnIds])];
   if (ids.length === 0) {
     createdByNameMap.value = {};
     return;
@@ -2117,6 +2097,15 @@ const safeNotAvailable = () => {
   return (v && v !== 'common.notAvailable' && !String(v).startsWith('common.')) ? v : 'Not available';
 };
 
+/** Resolve UUID to name for display (uses createdByNameMap). */
+const getUuidDisplayName = (uuidOrName) => {
+  if (!uuidOrName) return t('common.notAvailable');
+  const map = createdByNameMap.value;
+  const name = map[uuidOrName];
+  if (name) return name;
+  return safeUUID(uuidOrName) ? t('common.notAvailable') : uuidOrName;
+};
+
 /** created_by is UUID from batches; resolve to users.name for display. */
 const getBatchCreatedByDisplay = (batch) => {
   const fallback = safeNotAvailable();
@@ -2383,12 +2372,17 @@ const deleteBatch = async (batch) => {
   if (!confirmed) return;
   
   try {
-    const result = await deleteBatchFromSupabase(batch.id);
+    const batchId = batch.id || batch.batch_id;
+    if (!batchId || !safeUUID(batchId)) {
+      showNotification('Invalid batch: cannot delete. Batch ID must be a valid UUID.', 'error');
+      return;
+    }
+    const result = await deleteBatchFromSupabase(batchId);
     if (result.success) {
       showNotification('Batch deleted successfully', 'success');
       // Remove from local state
       if (grn.value && grn.value.batches) {
-        grn.value.batches = grn.value.batches.filter(b => b.id !== batch.id);
+        grn.value.batches = grn.value.batches.filter(b => (b.id || b.batch_id) !== batchId);
       }
       // Reload from DB
       await loadBatchesForGRNLocal(grn.value.id);
@@ -2480,10 +2474,14 @@ const saveBatch = async () => {
       return;
     }
     
-    // Over-batching check: fetch remaining from DB, block if new_qty > remaining
+    // Over-batching / duplicate prevention: block if already fully allocated
     const item = grn.value.items.find(i => (i.itemId || i.item_id) === batchForm.value.itemId);
-    const receivedQty = item?.receivedQuantity ?? item?.received_quantity ?? 0;
+    const receivedQty = parseFloat(item?.receivedQuantity ?? item?.received_quantity ?? 0);
     const remaining = await getRemainingAllocatableForItem(grn.value.id, batchForm.value.itemId, receivedQty);
+    if (remaining <= 0 && !editingBatch.value) {
+      showNotification('All received quantity is already allocated to batches. Cannot create duplicate.', 'error');
+      return;
+    }
     if (batchForm.value.batchQuantity > remaining) {
       showNotification(`Batch quantity (${batchForm.value.batchQuantity}) cannot exceed remaining quantity (${remaining}). Received quantity: ${receivedQty}`, 'error');
       return;
@@ -2491,9 +2489,6 @@ const saveBatch = async () => {
     
     // Do NOT generate batch_number or batchId in frontend.
     // DB generates batch_number via fn_generate_batch_number_from_grn: BATCH-{GRN_NUMBER}-{YYYYMMDD}-{SEQ}
-
-    // Get current user name
-    const currentUser = getCurrentUserName();
 
     const batchData = {
       itemId: batchForm.value.itemId,
@@ -2518,8 +2513,7 @@ const saveBatch = async () => {
         temperature: '',
         remarks: ''
       },
-      createdBy: currentUser,
-      created_by: asUuidOrNull(authStore.user?.id), // UUID only - never pass user name
+      created_by: getCurrentUserUUID(),
       createdAt: new Date().toISOString(),
       created_at: new Date().toISOString()
     };
@@ -2576,14 +2570,10 @@ const approveBatchQC = async (batch) => {
   if (!confirmed) return;
   
   try {
-    // Get current user name
-    const currentUser = getCurrentUserName();
-    
     const result = await updateBatchInSupabase(batch.id, {
       qcStatus: 'approved',
       qc_status: 'approved',
-      qcCheckedBy: currentUser,
-      qc_checked_by: currentUser,
+      qc_checked_by: getCurrentUserUUID(),
       qcCheckedAt: new Date().toISOString(),
       qc_checked_at: new Date().toISOString(),
       qcData: batch.qcData,
@@ -2615,14 +2605,10 @@ const rejectBatchQC = async (batch) => {
   if (!confirmed) return;
   
   try {
-    // Get current user name
-    const currentUser = getCurrentUserName();
-    
     const result = await updateBatchInSupabase(batch.id, {
       qcStatus: 'rejected',
       qc_status: 'rejected',
-      qcCheckedBy: currentUser,
-      qc_checked_by: currentUser,
+      qc_checked_by: getCurrentUserUUID(),
       qcCheckedAt: new Date().toISOString(),
       qc_checked_at: new Date().toISOString(),
       qcData: batch.qcData,
@@ -2726,8 +2712,8 @@ const submitForInspection = async () => {
     const saveResult = await updateGRNInSupabase(grn.value.id, {
       items: grn.value.items,
       batches: grn.value.batches,
-      receivedBy: grn.value.receivedBy || grn.value.received_by || getCurrentUserName(),
-      received_by: grn.value.receivedBy || grn.value.received_by || getCurrentUserName()
+      receivedBy: grn.value.receivedBy || grn.value.received_by,
+      received_by: safeUUID(grn.value.received_by) || getCurrentUserUUID()
     });
     
     if (!saveResult.success) {
@@ -2830,8 +2816,8 @@ const approveGRN = async () => {
     const saveResult = await updateGRNInSupabase(grn.value.id, {
       items: grn.value.items,
       batches: grn.value.batches,
-      receivedBy: grn.value.receivedBy || grn.value.received_by || getCurrentUserName(),
-      received_by: grn.value.receivedBy || grn.value.received_by || getCurrentUserName()
+      receivedBy: grn.value.receivedBy || grn.value.received_by,
+      received_by: safeUUID(grn.value.received_by) || getCurrentUserUUID()
     });
     
     if (!saveResult.success) {
@@ -2842,15 +2828,9 @@ const approveGRN = async () => {
     
     console.log('✅ All GRN data saved to Supabase successfully');
     
-    // Get current user name
-    const currentUser = getCurrentUserName();
-    
     const result = await updateGRNInSupabase(grn.value.id, {
       status: 'passed', // Use 'passed' to match database constraint (allowed: 'draft', 'pending', 'passed', 'hold', 'rejected', 'conditional')
-      qcCheckedBy: currentUser,
-      qc_checked_by: currentUser,
-      approvedBy: currentUser,
-      approved_by: asUuidOrNull(authStore.user?.id), // UUID only - never pass user name
+      approved_by: getCurrentUserUUID(),
       approvedAt: new Date().toISOString(),
       approved_at: new Date().toISOString()
     });
@@ -2983,8 +2963,8 @@ const submitForGRNApproval = async () => {
     const saveResult = await updateGRNInSupabase(grn.value.id, {
       items: grn.value.items,
       batches: grn.value.batches,
-      receivedBy: grn.value.receivedBy || grn.value.received_by || getCurrentUserName(),
-      received_by: grn.value.receivedBy || grn.value.received_by || getCurrentUserName()
+      receivedBy: grn.value.receivedBy || grn.value.received_by,
+      received_by: safeUUID(grn.value.received_by) || getCurrentUserUUID()
     });
     
     if (!saveResult.success) {
@@ -3000,8 +2980,8 @@ const submitForGRNApproval = async () => {
       submitted_for_approval: true,
       submittedForApprovalAt: new Date().toISOString(),
       submitted_for_approval_at: new Date().toISOString(),
-      submittedForApprovalBy: getCurrentUserName(),
-      submitted_for_approval_by: getCurrentUserName()
+      submittedForApprovalBy: null,
+      submitted_for_approval_by: getCurrentUserUUID()
     });
     
     if (result.success) {
@@ -3317,12 +3297,9 @@ const createPurchasing = async () => {
       grand_total: totalAmount * 1.15,
       payment_method: 'CASH_ON_HAND', // Required: must be one of CASH_ON_HAND, ATM_MARKET_PURCHASE, FREE_SAMPLE, ONLINE_GATEWAY
       status: 'draft',
-      created_by: asUuidOrNull(authStore.user?.id), // CRITICAL: UUID only - never pass user name
+      created_by: getCurrentUserUUID(),
       created_at: new Date().toISOString()
     };
-    
-    console.log('\n📝 PURCHASING INVOICE TO INSERT:', JSON.stringify(purchasingInvoice, null, 2));
-    console.log('📝 PURCHASING ITEMS TO INSERT:', JSON.stringify(purchasingItems, null, 2));
     
     // Insert purchasing invoice
     const { data: newInvoice, error: invoiceError } = await supabaseClient
@@ -3443,36 +3420,6 @@ const getQCCheckedByDisplay = () => {
   }
   
   return 'N/A';
-};
-
-// Get current user name for auto-filling "Received By"
-const getCurrentUserName = () => {
-  try {
-    // Try auth store first
-    if (authStore && authStore.user && authStore.user.name) {
-      return authStore.user.name;
-    }
-    
-    // Try localStorage
-    const savedUser = localStorage.getItem('sakura_current_user');
-    if (savedUser) {
-      const user = JSON.parse(savedUser);
-      if (user && user.name) {
-        return user.name;
-      }
-    }
-    
-    // Fallback to window user if available
-    if (window.user && window.user.name) {
-      return window.user.name;
-    }
-    
-    // Last fallback
-    return 'Current User';
-  } catch (error) {
-    console.error('Error getting current user name:', error);
-    return 'Current User';
-  }
 };
 
 // Get max available quantity for an item (ordered - already received from other GRNs + current item's old qty)
@@ -3726,15 +3673,11 @@ const saveItemEdit = async (index) => {
       hasItemObject: !!updatedItems[index].item
     });
     
-    // Auto-fill "Received By" with current user if not set
-    const currentUser = getCurrentUserName();
-    const receivedBy = grn.value.receivedBy || grn.value.received_by || currentUser;
-    
-    // Update GRN with new items and receivedBy
+    const receivedByDisplay = grn.value.receivedBy || grn.value.received_by;
     const result = await updateGRNInSupabase(grn.value.id, {
       items: updatedItems,
-      receivedBy: receivedBy,
-      received_by: receivedBy
+      receivedBy: receivedByDisplay,
+      received_by: safeUUID(grn.value.received_by) || getCurrentUserUUID()
     });
     
     if (result.success) {
@@ -3764,13 +3707,11 @@ const cancelItemEdit = (index) => {
 const editGRN = () => {
   if (!grn.value) return;
   
-  // Pre-fill edit form with current GRN data
-  // Auto-fill "Received By" with current user if not set
-  const currentUser = getCurrentUserName();
+  // Pre-fill edit form with current GRN data (receivedBy for display only)
   editForm.value = {
     grnDate: grn.value.grnDate || grn.value.grn_date ? (grn.value.grnDate || grn.value.grn_date).split('T')[0] : '',
     receivingLocation: grn.value.receivingLocation || grn.value.receiving_location || '',
-    receivedBy: grn.value.receivedBy || grn.value.received_by || currentUser,
+    receivedBy: grn.value.receivedBy || grn.value.received_by,
     supplierInvoiceNumber: grn.value.supplierInvoiceNumber || grn.value.supplier_invoice_number || '',
     deliveryNoteNumber: grn.value.deliveryNoteNumber || grn.value.delivery_note_number || '',
     externalReferenceId: grn.value.externalReferenceId || grn.value.external_reference_id || ''
@@ -3806,18 +3747,15 @@ const saveEditGRN = async () => {
   
   saving.value = true;
   try {
-    // Auto-fill "Received By" with current user if not set
-    const currentUser = getCurrentUserName();
-    const receivedBy = editForm.value.receivedBy || currentUser;
-    
+    const receivedByDisplay = editForm.value.receivedBy || grn.value.receivedBy || grn.value.received_by;
     const updatedData = {
       ...grn.value,
       grnDate: editForm.value.grnDate,
       grn_date: editForm.value.grnDate,
       receivingLocation: editForm.value.receivingLocation,
       receiving_location: editForm.value.receivingLocation,
-      receivedBy: receivedBy,
-      received_by: receivedBy,
+      receivedBy: receivedByDisplay,
+      received_by: safeUUID(grn.value.received_by) || getCurrentUserUUID(),
       supplierInvoiceNumber: editForm.value.supplierInvoiceNumber || null,
       supplier_invoice_number: editForm.value.supplierInvoiceNumber || null,
       deliveryNoteNumber: editForm.value.deliveryNoteNumber || null,

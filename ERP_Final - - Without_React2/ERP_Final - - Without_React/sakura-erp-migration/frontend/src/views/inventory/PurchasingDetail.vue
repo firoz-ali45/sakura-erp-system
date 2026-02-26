@@ -292,7 +292,7 @@
             </div>
             <div>
               <label class="text-sm text-gray-500">Created By</label>
-              <p class="font-semibold text-gray-800 mt-1">{{ invoice.created_by || 'System' }}</p>
+              <p class="font-semibold text-gray-800 mt-1">{{ getUserDisplayName(invoice.created_by) || 'System' }}</p>
             </div>
           </div>
         </div>
@@ -543,7 +543,7 @@
               </div>
               <div>
                 <p class="font-semibold text-gray-800">Created</p>
-                <p class="text-sm text-gray-500">{{ formatDateTime(invoice.created_at) }} by {{ invoice.created_by || 'System' }}</p>
+                <p class="text-sm text-gray-500">{{ formatDateTime(invoice.created_at) }} by {{ getUserDisplayName(invoice.created_by) || 'System' }}</p>
               </div>
             </div>
             <div v-if="invoice.approved_at" class="flex items-center gap-4">
@@ -552,7 +552,7 @@
               </div>
               <div>
                 <p class="font-semibold text-gray-800">Approved</p>
-                <p class="text-sm text-gray-500">{{ formatDateTime(invoice.approved_at) }} by {{ invoice.approved_by || 'N/A' }}</p>
+                <p class="text-sm text-gray-500">{{ formatDateTime(invoice.approved_at) }} by {{ getUserDisplayName(invoice.approved_by) || 'N/A' }}</p>
               </div>
             </div>
             <div v-if="invoice.posted_at" class="flex items-center gap-4">
@@ -561,7 +561,7 @@
               </div>
               <div>
                 <p class="font-semibold text-gray-800">Posted to GL</p>
-                <p class="text-sm text-gray-500">{{ formatDateTime(invoice.posted_at) }} by {{ invoice.posted_by || 'N/A' }}</p>
+                <p class="text-sm text-gray-500">{{ formatDateTime(invoice.posted_at) }} by {{ getUserDisplayName(invoice.posted_by) || 'N/A' }}</p>
               </div>
             </div>
             <div v-if="invoice.paid_date" class="flex items-center gap-4">
@@ -609,8 +609,9 @@
 import { ref, computed, watch, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
-import { asUuidOrNull } from '@/utils/uuidUtils';
+import { getCurrentUserUUID, safeUUID } from '@/utils/uuidUtils';
 import { useAuthStore } from '@/stores/auth';
+import { useUserDisplay } from '@/composables/useUserDisplay';
 import DocumentFlow from '@/components/common/DocumentFlow.vue';
 import ItemFlow from '@/components/common/ItemFlow.vue';
 
@@ -618,6 +619,7 @@ const { t } = useI18n();
 const route = useRoute();
 const router = useRouter();
 const authStore = useAuthStore();
+const { loadUserMap, getUserDisplayName } = useUserDisplay();
 
 // State
 const invoice = ref(null);
@@ -790,6 +792,10 @@ const loadInvoice = async () => {
     
     invoice.value = invoiceData;
 
+    // Load user names for created_by, approved_by, posted_by (UUID → name)
+    const userIds = [invoiceData.created_by, invoiceData.approved_by, invoiceData.posted_by].filter(Boolean);
+    if (userIds.length) await loadUserMap(userIds);
+
     const { canCreateNextDocument } = await import('@/services/erpViews.js');
     const rpcResult = await canCreateNextDocument('PURCHASE', invoiceData.id);
     canCreatePayment.value = rpcResult;
@@ -950,7 +956,7 @@ const recordPayment = async () => {
       payment_amount: newPayment.value.payment_amount,
       payment_channel: newPayment.value.payment_channel,
       reference_number: newPayment.value.reference_number,
-      created_by: asUuidOrNull(authStore.user?.id)
+      created_by: getCurrentUserUUID()
     };
     
     const { error } = await supabaseClient
@@ -1016,7 +1022,7 @@ const approveInvoice = async () => {
       .from('purchasing_invoices')
       .update({ 
         status: 'approved',
-        approved_by: asUuidOrNull(authStore.user?.id),
+        approved_by: getCurrentUserUUID(),
         approved_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       })
@@ -1060,7 +1066,7 @@ const postToGL = async () => {
       .from('purchasing_invoices')
       .update({ 
         status: 'posted',
-        posted_by: asUuidOrNull(authStore.user?.id),
+        posted_by: getCurrentUserUUID(),
         posted_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       })
