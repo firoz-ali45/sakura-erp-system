@@ -20,7 +20,8 @@ const migrations = [
   '20260224000002_batches_auto_batch_number.sql',
   '20260224000003_batches_qc_status.sql',
   '20260224000004_batches_qc_status_constraint.sql',
-  '20260226000001_add_batch_id_grn_batches.sql'
+  '20260226000001_add_batch_id_grn_batches.sql',
+  '20260226000002_trg_ledger_use_batches_only.sql'
 ];
 
 async function run() {
