@@ -2519,7 +2519,7 @@ const saveBatch = async () => {
         remarks: ''
       },
       createdBy: currentUser,
-      created_by: asUuidOrNull(authStore.user?.id),
+      created_by: asUuidOrNull(authStore.user?.id), // UUID only - never pass user name
       createdAt: new Date().toISOString(),
       created_at: new Date().toISOString()
     };
@@ -2850,7 +2850,7 @@ const approveGRN = async () => {
       qcCheckedBy: currentUser,
       qc_checked_by: currentUser,
       approvedBy: currentUser,
-      approved_by: asUuidOrNull(authStore.user?.id),
+      approved_by: asUuidOrNull(authStore.user?.id), // UUID only - never pass user name
       approvedAt: new Date().toISOString(),
       approved_at: new Date().toISOString()
     });
@@ -3317,7 +3317,7 @@ const createPurchasing = async () => {
       grand_total: totalAmount * 1.15,
       payment_method: 'CASH_ON_HAND', // Required: must be one of CASH_ON_HAND, ATM_MARKET_PURCHASE, FREE_SAMPLE, ONLINE_GATEWAY
       status: 'draft',
-      created_by: asUuidOrNull(authStore.user?.id), // UUID only - never send name
+      created_by: asUuidOrNull(authStore.user?.id), // CRITICAL: UUID only - never pass user name
       created_at: new Date().toISOString()
     };
     

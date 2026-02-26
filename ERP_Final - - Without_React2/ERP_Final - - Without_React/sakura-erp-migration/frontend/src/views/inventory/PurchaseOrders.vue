@@ -920,6 +920,7 @@
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
+import { asUuidOrNull } from '@/utils/uuidUtils';
 import { useAuthStore } from '@/stores/auth';
 import { 
   loadPurchaseOrdersFromSupabase, 
@@ -933,7 +934,6 @@ import { loadItemsFromSupabase } from '@/services/supabase';
 import * as XLSX from 'xlsx';
 import { useI18n } from '@/composables/useI18n';
 import { useInventoryLocations } from '@/composables/useInventoryLocations';
-import { asUuidOrNull } from '@/utils/uuidUtils';
 
 const router = useRouter();
 const { loadLocationsForPO } = useInventoryLocations();
@@ -1689,7 +1689,7 @@ const savePurchaseOrder = async () => {
       totalAmount: totalAmount.value,
       vatAmount: totalVAT.value,
       creator: currentUserName, // Save creator name (display)
-      createdBy: asUuidOrNull(authStore.user?.id),
+      createdBy: asUuidOrNull(authStore.user?.id), // UUID only - never pass user name
       items: newOrder.value.items.map(item => ({
         itemId: item.itemId,
         quantity: item.quantity,

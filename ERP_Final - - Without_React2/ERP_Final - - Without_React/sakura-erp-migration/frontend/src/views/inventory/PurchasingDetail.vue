@@ -609,8 +609,8 @@
 import { ref, computed, watch, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
-import { useAuthStore } from '@/stores/auth';
 import { asUuidOrNull } from '@/utils/uuidUtils';
+import { useAuthStore } from '@/stores/auth';
 import DocumentFlow from '@/components/common/DocumentFlow.vue';
 import ItemFlow from '@/components/common/ItemFlow.vue';
 
