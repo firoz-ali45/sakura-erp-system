@@ -3,6 +3,6 @@
   "private": true,
   "description": "Root package for Vercel deploy when Root Directory is empty",
   "scripts": {
-    "build": "cd \"ERP_Final - - Without_React2/ERP_Final - - Without_React/sakura-erp-migration/frontend\" && npm ci && npm run build"
+    "build": "node build.mjs"
   }
 }
