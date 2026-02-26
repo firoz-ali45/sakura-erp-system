@@ -3282,8 +3282,21 @@ const createPurchasing = async () => {
     // Default draft from GRN to CASH_ON_HAND; user can change on Purchasing detail.
     // CRITICAL: created_by MUST be UUID only - never user name (fixes "invalid input syntax for type uuid")
     // ============================================================
-    // CRITICAL: created_by must be UUID only - never user name (fixes "invalid input syntax for type uuid: Ali")
-    const createdByUuid = safeUUID(getCurrentUserUUID());
+    let createdByUuid = safeUUID(getCurrentUserUUID());
+    // Fallback: if auth has old session (id: "Ali"), fetch UUID from users table by email
+    if (!createdByUuid) {
+      const u = authStore.user;
+      const userObj = (u && typeof u === 'object' && 'value' in u) ? u.value : u;
+      const email = userObj?.email;
+      if (email) {
+        const { data: userRow } = await supabaseClient
+          .from('users')
+          .select('id')
+          .eq('email', String(email).toLowerCase().trim())
+          .maybeSingle();
+        createdByUuid = safeUUID(userRow?.id);
+      }
+    }
     if (!createdByUuid) {
       showNotification('Session expired or invalid. Please log out and log back in, then try again.', 'warning', 8000);
       return;
