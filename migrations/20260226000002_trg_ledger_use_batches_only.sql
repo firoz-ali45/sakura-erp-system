@@ -13,7 +13,9 @@ DECLARE
   v_po_id bigint;
   v_batch_id uuid;
   v_has_grn_batches boolean;
+  v_created_by uuid;
 BEGIN
+  v_created_by := COALESCE(NEW.approved_by, NEW.created_by);
   IF NEW.status NOT IN ('approved', 'passed') OR (OLD.status IS NOT NULL AND OLD.status IN ('approved', 'passed')) THEN
     RETURN NEW;
   END IF;
@@ -63,7 +65,7 @@ BEGIN
         v_batch.qty, 0,
         v_unit_cost, v_batch.qty * v_unit_cost,
         'GRN'::inventory_movement_type, 'GRN'::inventory_reference_type,
-        NEW.id::text, COALESCE(NEW.approved_by_name, NEW.created_by::text, 'System')
+        NEW.id::text, v_created_by
       );
     END LOOP;
   ELSE
@@ -81,7 +83,7 @@ BEGIN
         v_item.qty, 0,
         COALESCE(v_item.unit_price, 0), v_item.qty * COALESCE(v_item.unit_price, 0),
         'GRN'::inventory_movement_type, 'GRN'::inventory_reference_type,
-        NEW.id::text, COALESCE(NEW.approved_by_name, NEW.created_by::text, 'System')
+        NEW.id::text, v_created_by
       );
     END LOOP;
   END IF;

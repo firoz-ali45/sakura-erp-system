@@ -2518,7 +2518,7 @@ const saveBatch = async () => {
         remarks: ''
       },
       createdBy: currentUser,
-      created_by: currentUser,
+      created_by: authStore.user?.id || null, // UUID for batches.created_by
       createdAt: new Date().toISOString(),
       created_at: new Date().toISOString()
     };
@@ -2849,7 +2849,7 @@ const approveGRN = async () => {
       qcCheckedBy: currentUser,
       qc_checked_by: currentUser,
       approvedBy: currentUser,
-      approved_by: currentUser,
+      approved_by: authStore.user?.id || null, // UUID required for grn_inspections.approved_by
       approvedAt: new Date().toISOString(),
       approved_at: new Date().toISOString()
     });

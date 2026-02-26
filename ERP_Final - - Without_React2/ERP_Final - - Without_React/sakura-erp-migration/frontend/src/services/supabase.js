@@ -3427,6 +3427,7 @@ export async function updateGRNInSupabase(grnId, updates) {
       submitted_for_approval_at: grnFields.submittedForApprovalAt !== undefined ? (grnFields.submittedForApprovalAt ? new Date(grnFields.submittedForApprovalAt).toISOString() : null) : (grnFields.submitted_for_approval_at !== undefined ? (grnFields.submitted_for_approval_at ? new Date(grnFields.submitted_for_approval_at).toISOString() : null) : undefined),
       submitted_for_approval_by: grnFields.submittedForApprovalBy !== undefined ? (grnFields.submittedForApprovalBy || grnFields.submitted_for_approval_by || null) : undefined,
       approved_by_name: grnFields.approvedBy !== undefined ? (grnFields.approvedBy || grnFields.approved_by || null) : undefined,
+      approved_by: (grnFields.approved_by && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(grnFields.approved_by)) ? grnFields.approved_by : undefined,
       approval_date: grnFields.approvedAt !== undefined ? (grnFields.approvedAt ? new Date(grnFields.approvedAt).toISOString() : null) : (grnFields.approved_at !== undefined ? (grnFields.approved_at ? new Date(grnFields.approved_at).toISOString() : null) : undefined),
       // Combine notes and deliveryNoteNumber
       notes: grnFields.notes !== undefined || grnFields.deliveryNoteNumber !== undefined ? (() => {
@@ -4007,12 +4008,13 @@ export async function saveBatchToSupabase(batch) {
         created_at: batch.createdAt || batch.created_at || now
       };
       // Optional columns — add only if we have values; PGRST204 retry will strip missing ones
+      const cb = batch.createdBy || batch.created_by;
       const optional = {
         ...(batch.id ? { id: batch.id } : {}),
         storage_location: batch.storageLocation || batch.storage_location || null,
         vendor_batch_number: batch.vendorBatchNumber || batch.vendor_batch_number || null,
         qc_status: batch.qcStatus || batch.qc_status || 'pending',
-        created_by: batch.createdBy || batch.created_by || null
+        ...(cb && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(cb)) ? { created_by: cb } : {})
       };
 
       const tryInsertGrnBatch = async (payload) => {
@@ -4181,8 +4183,9 @@ export async function updateBatchInSupabase(batchId, updates) {
       if (updates.vendorBatchNumber !== undefined || updates.vendor_batch_number !== undefined) {
         updateData.vendor_batch_number = updates.vendorBatchNumber ?? updates.vendor_batch_number;
       }
-      if (updates.createdBy !== undefined || updates.created_by !== undefined) {
-        updateData.created_by = updates.createdBy ?? updates.created_by;
+      const cb = updates.createdBy ?? updates.created_by;
+      if (cb !== undefined && cb !== null && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(cb))) {
+        updateData.created_by = cb;
       }
 
       // Columns known to be missing in batches/grn_batches — never send
