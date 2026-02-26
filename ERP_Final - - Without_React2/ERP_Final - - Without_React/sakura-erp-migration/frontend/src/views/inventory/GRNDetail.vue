@@ -3280,7 +3280,14 @@ const createPurchasing = async () => {
     // payment_method: DB allows only CASH_ON_HAND, ATM_MARKET_PURCHASE, FREE_SAMPLE, ONLINE_GATEWAY.
     // BANK_TRANSFER is forbidden here (manual payments only in Finance → Payments).
     // Default draft from GRN to CASH_ON_HAND; user can change on Purchasing detail.
+    // CRITICAL: created_by MUST be UUID only - never user name (fixes "invalid input syntax for type uuid")
     // ============================================================
+    // CRITICAL: created_by must be UUID only - never user name (fixes "invalid input syntax for type uuid: Ali")
+    const createdByUuid = safeUUID(getCurrentUserUUID());
+    if (!createdByUuid) {
+      showNotification('Session expired or invalid. Please log out and log back in, then try again.', 'warning', 8000);
+      return;
+    }
     const purchasingInvoice = {
       grn_id: grn.value.id,
       grn_number: grn.value.grnNumber || grn.value.grn_number,
@@ -3297,7 +3304,7 @@ const createPurchasing = async () => {
       grand_total: totalAmount * 1.15,
       payment_method: 'CASH_ON_HAND', // Required: must be one of CASH_ON_HAND, ATM_MARKET_PURCHASE, FREE_SAMPLE, ONLINE_GATEWAY
       status: 'draft',
-      created_by: getCurrentUserUUID(),
+      created_by: createdByUuid,
       created_at: new Date().toISOString()
     };
     

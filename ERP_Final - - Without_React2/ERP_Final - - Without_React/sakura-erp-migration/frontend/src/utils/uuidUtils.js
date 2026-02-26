@@ -25,12 +25,15 @@ export const asUuidOrNull = safeUUID;
 
 /**
  * Get current user UUID for DB writes. NEVER returns name.
- * Use for: created_by, approved_by, posted_by, deleted_by
+ * Handles Pinia ref: store.user may be ref, use .value to unwrap.
+ * Legacy localStorage (id: "Ali") → safeUUID returns null.
  */
 export function getCurrentUserUUID() {
   try {
     const store = useAuthStore();
-    const id = store?.user?.id;
+    const u = store.user;
+    const raw = (u && typeof u === 'object' && 'value' in u) ? u.value : u;
+    const id = (raw && typeof raw === 'object') ? raw.id : null;
     return safeUUID(id);
   } catch {
     return null;
