@@ -3,7 +3,9 @@
  * Uses universalPrintService for locked format. Batch+expiry table for transfers.
  */
 import { buildItemsTableWithBatch } from '@/services/universalPrintService.js';
-import { getUserDisplayName, loadUserMap } from '@/composables/useUserMap.js';
+import { useUserDisplay } from '@/composables/useUserDisplay.js';
+
+const { getUserDisplayName, loadUserMap } = useUserDisplay();
 
 const LOGO_URL = window.location.origin + '/Sakura_Pink_Logo.png';
 const PRINT_FRAME_ID = 'print-frame-sakura';
@@ -199,7 +201,8 @@ export function buildStockTransferPrintHtml(transfer, items) {
  * Open print dialog for Stock Transfer Document.
  */
 export async function printStockTransfer(transfer, items) {
-  await loadUserMap();
+  const userIds = [transfer?.created_by].filter(Boolean);
+  if (userIds.length) await loadUserMap(userIds);
   const html = buildStockTransferPrintHtml(transfer, items);
   return printDocument(html, 'Stock Transfer - ' + (transfer?.transfer_number || 'Draft'));
 }
