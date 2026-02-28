@@ -1,8 +1,16 @@
 # Vercel par naya deployment nahi aa raha – fix checklist
 
-Commit push ho raha hai lekin Vercel pe naya deployment nahi dikh raha.
+Commit push ho raha hai lekin Vercel pe naya deployment nahi dikh raha. Neeche steps follow karo.
 
-**Sabse pehle (one-time):** GitHub Actions se auto-deploy ke liye **secret** set karo → **[.github/VERCEL_DEPLOY_SECRET_SETUP.md](.github/VERCEL_DEPLOY_SECRET_SETUP.md)** — uske baad har push to `main` ya `fix/grn-batches` par Vercel deploy trigger hoga.
+---
+
+## 0. `vercel.json` / `rootDirectory` schema error – FIXED
+
+- **Error:** "should NOT have additional property 'rootDirectory'"
+- **Fix:** Repo **root** aur beech wale path se `vercel.json` **hata diye**. Ab sirf **ek** `vercel.json` hai:  
+  `ERP_Final - - Without_React2/.../sakura-erp-migration/frontend/vercel.json`  
+  Usme **rootDirectory nahi** hai. Root Directory sirf **Vercel Dashboard** → Settings → Build and Deployment me set karo.
+- Naya deploy ab is error ke bina chalna chahiye.
 
 ---
 

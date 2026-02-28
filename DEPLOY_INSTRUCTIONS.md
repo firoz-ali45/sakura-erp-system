@@ -34,9 +34,8 @@ Agar tum chahte ho ki **main** hi production rahe:
 
 ---
 
-## Build Error Fix (23h ago wala)
+## Build Error Fix (rootDirectory schema error)
 
-`vercel.json` update kiya gaya hai:
-- `rootDirectory` add kiya – build ab sahi path se chalega
-- `npm ci` → `npm run build` simplify kiya
-- Build error resolve hona chahiye
+- **Root Directory** sirf **Vercel Dashboard** me set karo (Settings → Build and Deployment). `vercel.json` me `rootDirectory` **mat dalna** – schema error aata hai.
+- Repo me ab sirf **ek** `vercel.json` hai: frontend folder me. Usme `rootDirectory` nahi hai.
+- Build: `npm run build`, Output: `dist`.
