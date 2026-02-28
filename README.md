@@ -46,13 +46,14 @@ Each service exposes a class (e.g. `InventoryService`) and repository interface;
 
 ## Deploy on Vercel
 
-Frontend (Vue SPA) ko **Vercel** par deploy karne ke liye: **[VERCEL_DEPLOY.md](./VERCEL_DEPLOY.md)** — step-by-step guide (Hindi/English).
+**Definitive fix & auto-deploy:** **[VERCEL_SOLVED.md](./VERCEL_SOLVED.md)** — schema error fix + Commit & Push = Auto Deploy.
 
-- **Root Directory**: `ERP_Final - - Without_React2/ERP_Final - - Without_React/sakura-erp-migration/frontend`
+- **Root Directory** sirf **Vercel Dashboard** me set karo (Settings → Build and Deployment):  
+  `ERP_Final - - Without_React2/ERP_Final - - Without_React/sakura-erp-migration/frontend`  
+  **`vercel.json` me `rootDirectory` mat dalna** — schema error aata hai.
 - Build: `npm run build`, Output: `dist`
-- Backend (Supabase) pehle se cloud par; sirf frontend Vercel par host hota hai.
-
-*Commit & push to `main` triggers Vercel deploy (sakura-erp-system-miuq). Root Directory Vercel Dashboard me set hai; `vercel.json` me `rootDirectory` mat dalna (schema error).*
+- **Commit & push to `main`** → Vercel auto deploy (sakura-erp-system-miuq).
+- Step-by-step: [VERCEL_DEPLOY.md](./VERCEL_DEPLOY.md)
 
 ## License
 

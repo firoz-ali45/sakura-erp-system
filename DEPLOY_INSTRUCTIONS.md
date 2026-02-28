@@ -34,9 +34,6 @@ Agar tum chahte ho ki **main** hi production rahe:
 
 ---
 
-## Build Error Fix (23h ago wala)
+## Build Error Fix (vercel.json schema)
 
-`vercel.json` update kiya gaya hai:
-- `rootDirectory` add kiya – build ab sahi path se chalega
-- `npm ci` → `npm run build` simplify kiya
-- Build error resolve hona chahiye
+**Important:** `rootDirectory` **vercel.json mein NAHI dalna**. Vercel schema mein ye property valid nahi hai – isliye "should NOT have additional property rootDirectory" error aata hai. Root Directory **sirf Vercel Dashboard** → Settings → Build and Deployment mein set karo (value: `ERP_Final - - Without_React2/ERP_Final - - Without_React/sakura-erp-migration/frontend`).
