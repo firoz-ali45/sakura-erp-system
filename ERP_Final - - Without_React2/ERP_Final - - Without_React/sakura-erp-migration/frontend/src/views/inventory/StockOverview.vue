@@ -118,7 +118,14 @@ async function load() {
   loading.value = true;
   try {
     const data = await fetchInventoryBalance();
-    rows.value = data || [];
+    // v_inventory_balance may return batch_number or batch; frontend expects batch_no — map so Batch ID shows (no "—")
+    const list = (data || []).map((r) => ({
+      ...r,
+      batch_no: r.batch_no ?? r.batch_number ?? r.batch ?? null,
+      // Some views use location instead of location_name
+      location_name: r.location_name ?? r.location ?? null
+    }));
+    rows.value = list;
   } catch (e) {
     console.warn('StockOverview load:', e);
     rows.value = [];
