@@ -1,0 +1,14 @@
+# Main branch pe push hote hi Vercel deploy trigger (backup - agar Git integration miss kare)
+name: Trigger Vercel Deploy on main push
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  trigger-vercel:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Vercel deployment
+        run: |
+          curl -s -X GET "https://api.vercel.com/v1/integrations/deploy/prj_VsTQWkUyDQqIogM3cqKUK8nrmuzc/6DAzsrbj0c"
