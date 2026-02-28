@@ -14,11 +14,14 @@ Commit push ho raha hai lekin Vercel pe naya deployment nahi dikh raha. Neeche s
 
 ---
 
-## 2. Vercel Git connection dobara set karo
+## 2. Vercel Git connection – sakura-erp-system-miuq **inactive** ho to
+
+Agar GitHub repo page pe **Deployments** me "Production - sakura-erp-system-miuq" **inactive** dikhe, to is project ko repo se connect karo:
 
 1. **Vercel** → project **sakura-erp-system-miuq** → **Settings** → **Git**
-2. Agar "Connected to GitHub" dikhe to **Disconnect** karo, phir dubara **Connect** karke same repo select karo
-3. Confirm karo **Production Branch** = `main` (Settings → Environments)
+2. **Connect Git Repository** pe click karo → **GitHub** → **firoz-ali45/sakura-erp-system** select karo
+3. **Production Branch** = `main` set karo (Settings → Environments)
+4. Save karke **main** par ek naya commit push karo – usi se naya deployment trigger hoga
 
 ---
 

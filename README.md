@@ -52,7 +52,7 @@ Frontend (Vue SPA) ko **Vercel** par deploy karne ke liye: **[VERCEL_DEPLOY.md](
 - Build: `npm run build`, Output: `dist`
 - Backend (Supabase) pehle se cloud par; sirf frontend Vercel par host hota hai.
 
-*Commit & push to `main` triggers Vercel deploy (sakura-erp-system-miuq).*
+*Commit & push to `main` triggers Vercel deploy (sakura-erp-system-miuq). Root Directory Vercel Dashboard me set hai; `vercel.json` me `rootDirectory` mat dalna (schema error).*
 
 ## License
 
