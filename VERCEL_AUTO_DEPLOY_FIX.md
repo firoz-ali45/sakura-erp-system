@@ -4,6 +4,16 @@ Commit push ho raha hai lekin Vercel pe naya deployment nahi dikh raha. Neeche s
 
 ---
 
+## 0. `vercel.json` / `rootDirectory` schema error – FIXED
+
+- **Error:** "should NOT have additional property 'rootDirectory'"
+- **Fix:** Repo **root** aur beech wale path se `vercel.json` **hata diye**. Ab sirf **ek** `vercel.json` hai:  
+  `ERP_Final - - Without_React2/.../sakura-erp-migration/frontend/vercel.json`  
+  Usme **rootDirectory nahi** hai. Root Directory sirf **Vercel Dashboard** → Settings → Build and Deployment me set karo.
+- Naya deploy ab is error ke bina chalna chahiye.
+
+---
+
 ## 1. GitHub Webhook check karo
 
 1. **GitHub** → repo **firoz-ali45/sakura-erp-system** → **Settings** → **Webhooks**

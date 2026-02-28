@@ -34,8 +34,9 @@ npx vercel --prod
 
 ## 5. Repo mein vercel.json
 
-- **Root** aur **frontend** dono `vercel.json` mein `rootDirectory` **nahi** hona chahiye (ab nahi hai).
-- `$schema` add kiya hai taaki invalid properties reject hon.
+- Repo **root** pe ab koi `vercel.json` nahi; sirf **frontend** folder me ek `vercel.json` hai (Vercel Root Directory yahi hai).
+- Is file me `rootDirectory` **kabhi mat add karna** – Vercel schema error dega. Root Directory sirf Dashboard me set karo.
+- `$schema` use ho raha hai taaki invalid properties reject hon.
 
 ---
 

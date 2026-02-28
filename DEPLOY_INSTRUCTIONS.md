@@ -57,7 +57,7 @@ git push origin main
 
 ---
 
-## 4. Agar deploy “Error” dikhe
+## 4. Agar deploy "Error" dikhe
 
 1. **Vercel Dashboard** → **Deployments** → us deployment par click karo.
 2. **Building** / **Logs** open karke **error message** dekho.
