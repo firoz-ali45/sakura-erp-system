@@ -1,9 +1,9 @@
-# 🚀 Deploy: Commit & Push se Auto Deploy
+﻿# ðŸš€ Deploy: Commit & Push se Auto Deploy
 
 ## Problem
 - Commit & Push karne ke baad deploy nahi ho raha
 - Vercel Production **main** branch se deploy karta hai
-- Aap **fix/grn-batches** pe push karte ho → PR open hota hai, merge nahi hota
+- Aap **fix/grn-batches** pe push karte ho â†’ PR open hota hai, merge nahi hota
 - Isliye Production deploy trigger nahi hota
 
 ## Solution: Ek Baar Vercel Setting Change Karo
@@ -11,7 +11,7 @@
 ### Step 1: Vercel Dashboard
 1. https://vercel.com pe jao
 2. **sakura-erp-system-miuq** project kholo
-3. **Settings** → **Git** section
+3. **Settings** â†’ **Git** section
 
 ### Step 2: Production Branch Change
 - **Production Branch** ko `main` se change karke **`fix/grn-batches`** kar do
@@ -21,7 +21,7 @@
 Ab jab bhi tum **fix/grn-batches** pe **Commit & Push** karoge:
 - Vercel automatically Production deploy karega
 - Koi PR merge, koi extra step nahi
-- **Commit & Push = Deploy** ✅
+- **Commit & Push = Deploy** âœ…
 
 ---
 
@@ -34,14 +34,7 @@ Agar tum chahte ho ki **main** hi production rahe:
 
 ---
 
-<<<<<<< HEAD
-## Build Error Fix (rootDirectory schema error)
-
-- **Root Directory** sirf **Vercel Dashboard** me set karo (Settings → Build and Deployment). `vercel.json` me `rootDirectory` **mat dalna** – schema error aata hai.
-- Repo me ab sirf **ek** `vercel.json` hai: frontend folder me. Usme `rootDirectory` nahi hai.
-- Build: `npm run build`, Output: `dist`.
-=======
 ## Build Error Fix (vercel.json schema)
 
-**Important:** `rootDirectory` **vercel.json mein NAHI dalna**. Vercel schema mein ye property valid nahi hai – isliye "should NOT have additional property rootDirectory" error aata hai. Root Directory **sirf Vercel Dashboard** → Settings → Build and Deployment mein set karo (value: `ERP_Final - - Without_React2/ERP_Final - - Without_React/sakura-erp-migration/frontend`).
->>>>>>> origin/main
+**Important:** `rootDirectory` **vercel.json mein NAHI dalna**. Vercel schema mein ye property valid nahi hai – isliye "should NOT have additional property rootDirectory" error aata hai. Root Directory **sirf Vercel Dashboard** → Settings → Build and Deployment mein set karo (value: `ERP_Final - - Without_React2/ERP_Final - - Without_React/sakura-erp-migration/frontend`). Repo me frontend folder me sirf ek `vercel.json` hai; usme $schema hai, `rootDirectory` nahi. Build: `npm run build`, Output: `dist`.
+
