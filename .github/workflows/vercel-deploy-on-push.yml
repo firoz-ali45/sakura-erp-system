@@ -1,0 +1,25 @@
+# Trigger Vercel deployment when code is pushed to main.
+# Uses Deploy Hook so deploy works even if Vercel Git integration is inactive.
+# Required: Add secret VERCEL_DEPLOY_HOOK_URL in repo Settings → Secrets and variables → Actions.
+
+name: Deploy to Vercel on Push
+
+on:
+  push:
+    branches: [main, fix/grn-batches]
+
+jobs:
+  trigger-vercel:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Vercel deployment
+        env:
+          HOOK: ${{ secrets.VERCEL_DEPLOY_HOOK_URL }}
+        run: |
+          if [ -z "$HOOK" ]; then
+            echo "::warning::VERCEL_DEPLOY_HOOK_URL secret not set. Add it in repo Settings → Secrets → Actions."
+            exit 0
+          fi
+          curl -f -sS -X POST "$HOOK"
+          echo ""
+          echo "Vercel deploy triggered. Check project sakura-erp-system-miuq → Deployments."

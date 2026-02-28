@@ -1,6 +1,8 @@
 # Vercel par naya deployment nahi aa raha – fix checklist
 
-Commit push ho raha hai lekin Vercel pe naya deployment nahi dikh raha. Neeche steps follow karo.
+Commit push ho raha hai lekin Vercel pe naya deployment nahi dikh raha.
+
+**Sabse pehle (one-time):** GitHub Actions se auto-deploy ke liye **secret** set karo → **[.github/VERCEL_DEPLOY_SECRET_SETUP.md](.github/VERCEL_DEPLOY_SECRET_SETUP.md)** — uske baad har push to `main` ya `fix/grn-batches` par Vercel deploy trigger hoga.
 
 ---
 
