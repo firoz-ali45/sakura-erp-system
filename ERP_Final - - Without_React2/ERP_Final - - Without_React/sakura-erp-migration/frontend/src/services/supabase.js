@@ -3993,9 +3993,40 @@ async function insertInventoryBatchFromGrnBatch(supabase, batch) {
 }
 
 /**
+ * Build payload for batches table (when grn_batches is a VIEW).
+ * View mapping: grn_id -> source_doc_id, quantity -> qty_received, source_doc_type = 'GRN'.
+ */
+function toExpiryISO(expiry) {
+  if (expiry == null) return null;
+  if (typeof expiry === 'string' && expiry.match(/^\d{4}-\d{2}-\d{2}/)) return expiry;
+  const d = new Date(expiry);
+  return isNaN(d.getTime()) ? null : d.toISOString();
+}
+
+function buildBatchesTablePayload(batch) {
+  const quantity = batch.qty_received ?? batch.batchQuantity ?? 0;
+  const now = new Date().toISOString();
+  const expiry = batch.expiryDate || batch.expiry_date;
+  const cb = batch.createdBy || batch.created_by;
+  return {
+    source_doc_type: 'GRN',
+    source_doc_id: batch.grnId || batch.grn_id,
+    item_id: batch.itemId || batch.item_id,
+    expiry_date: toExpiryISO(expiry),
+    qty_received: quantity,
+    created_at: batch.createdAt || batch.created_at || now,
+    storage_location: batch.storageLocation || batch.storage_location || null,
+    vendor_batch_number: batch.vendorBatchNumber || batch.vendor_batch_number || null,
+    qc_status: batch.qcStatus || batch.qc_status || 'pending',
+    ...(batch.id ? { id: batch.id } : {}),
+    ...(cb && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(cb)) ? { created_by: cb } : {})
+  };
+}
+
+/**
  * Save batch to Supabase or localStorage
  * ISO 22000 Rule: Batch = Item + Expiry Date + GRN
- * Persists to grn_batches and inserts a new row in inventory_batches (no upsert; each batch = one row).
+ * Persists to grn_batches (or batches table when grn_batches is a VIEW) and inserts a new row in inventory_batches (no upsert; each batch = one row).
  */
 export async function saveBatchToSupabase(batch) {
   if (USE_SUPABASE && supabaseClient) {
@@ -4031,6 +4062,40 @@ export async function saveBatchToSupabase(batch) {
       let insertPayload = { ...minimalPayload, ...optional };
       delete insertPayload.updated_at; // grn_batches view has no updated_at — schema cache error
       let { data, error } = await tryInsertGrnBatch(insertPayload);
+
+      // When grn_batches is a VIEW, Postgres returns: "cannot insert into column 'expiry_date' of view 'grn_batches'"
+      const isViewInsertError = error && (
+        (error.message && error.message.includes('cannot insert into') && error.message.includes('view')) ||
+        (error.message && error.message.includes("of view 'grn_batches'"))
+      );
+      if (isViewInsertError) {
+        const batchesPayload = buildBatchesTablePayload(batch);
+        const { data: batchesData, error: batchesError } = await supabaseClient
+          .from('batches')
+          .insert([batchesPayload])
+          .select()
+          .single();
+        if (batchesError) {
+          console.error('❌ Error saving batch to batches table:', batchesError);
+          return { success: false, error: batchesError?.message || 'Failed to save batch' };
+        }
+        // Return in grn_batches view shape for frontend (grn_id, quantity alias)
+        data = batchesData ? {
+          id: batchesData.id,
+          grn_id: batchesData.source_doc_id,
+          item_id: batchesData.item_id,
+          batch_number: batchesData.batch_number,
+          batch_id: batchesData.batch_id,
+          quantity: batchesData.qty_received,
+          expiry_date: batchesData.expiry_date,
+          qc_status: batchesData.qc_status,
+          storage_location: batchesData.storage_location,
+          vendor_batch_number: batchesData.vendor_batch_number,
+          created_by: batchesData.created_by,
+          created_at: batchesData.created_at
+        } : null;
+        error = null;
+      }
 
       if (error) {
         if (error.code === 'PGRST205' || error.message?.includes('not found')) {
