@@ -4016,7 +4016,7 @@ function buildBatchesTablePayload(batch, tenantId) {
     expiry_date: toExpiryISO(expiry),
     qty_received: quantity,
     created_at: batch.createdAt || batch.created_at || now,
-    tenant_id: tenantId != null ? tenantId : DEFAULT_TENANT_ID,
+    tenant_id: (tenantId != null && String(tenantId).trim()) ? String(tenantId).trim() : getDefaultTenantId(),
     storage_location: batch.storageLocation || batch.storage_location || null,
     vendor_batch_number: batch.vendorBatchNumber || batch.vendor_batch_number || null,
     qc_status: batch.qcStatus || batch.qc_status || 'pending',
@@ -4025,30 +4025,42 @@ function buildBatchesTablePayload(batch, tenantId) {
   };
 }
 
-/** Default tenant_id for single-tenant when DB has no row to copy from. */
-const DEFAULT_TENANT_ID = typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_TENANT_ID
-  ? import.meta.env.VITE_TENANT_ID
-  : '00000000-0000-0000-0000-000000000000';
+/** Fallback tenant_id when DB has no row to copy from. Always non-empty so batches.tenant_id NOT NULL is satisfied. */
+const FALLBACK_TENANT_UUID = '00000000-0000-0000-0000-000000000000';
+
+function getDefaultTenantId() {
+  try {
+    const envId = typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_TENANT_ID;
+    const id = (envId && typeof envId === 'string' && envId.trim()) ? envId.trim() : FALLBACK_TENANT_UUID;
+    return id || FALLBACK_TENANT_UUID;
+  } catch (_) {
+    return FALLBACK_TENANT_UUID;
+  }
+}
 
 /**
- * Resolve tenant_id for batches insert (batches.tenant_id NOT NULL).
+ * Resolve tenant_id for batches/grn_batches insert (tenant_id NOT NULL).
  * Tries: grn_inspections.tenant_id → batches for this GRN → any batches row → env/default.
+ * Always returns a non-empty string (never null/undefined).
  */
 async function resolveTenantIdForBatch(client, grnId) {
-  if (!grnId || !client) return DEFAULT_TENANT_ID;
+  const defaultId = getDefaultTenantId();
+  if (!client) return defaultId;
+  if (grnId) {
+    try {
+      const { data: grnRow } = await client.from('grn_inspections').select('tenant_id').eq('id', grnId).limit(1).maybeSingle();
+      if (grnRow && grnRow.tenant_id != null && String(grnRow.tenant_id).trim()) return String(grnRow.tenant_id).trim();
+    } catch (_) { /* column may not exist */ }
+    try {
+      const { data: batchRow } = await client.from('batches').select('tenant_id').eq('source_doc_type', 'GRN').eq('source_doc_id', grnId).limit(1).maybeSingle();
+      if (batchRow && batchRow.tenant_id != null && String(batchRow.tenant_id).trim()) return String(batchRow.tenant_id).trim();
+    } catch (_) { /* ignore */ }
+  }
   try {
-    const { data: grnRow } = await client.from('grn_inspections').select('tenant_id').eq('id', grnId).limit(1).single();
-    if (grnRow && grnRow.tenant_id != null) return grnRow.tenant_id;
-  } catch (_) { /* column may not exist */ }
-  try {
-    const { data: batchRow } = await client.from('batches').select('tenant_id').eq('source_doc_type', 'GRN').eq('source_doc_id', grnId).limit(1).single();
-    if (batchRow && batchRow.tenant_id != null) return batchRow.tenant_id;
+    const { data: anyRow } = await client.from('batches').select('tenant_id').limit(1).maybeSingle();
+    if (anyRow && anyRow.tenant_id != null && String(anyRow.tenant_id).trim()) return String(anyRow.tenant_id).trim();
   } catch (_) { /* ignore */ }
-  try {
-    const { data: anyRow } = await client.from('batches').select('tenant_id').limit(1).single();
-    if (anyRow && anyRow.tenant_id != null) return anyRow.tenant_id;
-  } catch (_) { /* ignore */ }
-  return DEFAULT_TENANT_ID;
+  return defaultId;
 }
 
 /**
@@ -4059,15 +4071,21 @@ async function resolveTenantIdForBatch(client, grnId) {
 export async function saveBatchToSupabase(batch) {
   if (USE_SUPABASE && supabaseClient) {
     try {
+      // ROOT FIX: Resolve tenant_id once upfront — required by both grn_batches (table) and batches (view fallback). Never send null.
+      const grnId = batch.grnId || batch.grn_id;
+      const tenantId = await resolveTenantIdForBatch(supabaseClient, grnId);
+      const safeTenantId = (tenantId != null && String(tenantId).trim()) ? String(tenantId).trim() : getDefaultTenantId();
+
       const quantity = batch.qty_received ?? batch.batchQuantity ?? 0;
       const now = new Date().toISOString();
-      // MINIMAL payload — grn_batches view has no updated_at; avoid schema cache error
+      // MINIMAL payload — include tenant_id so grn_batches TABLE (when not a view) also gets it
       const minimalPayload = {
-        grn_id: batch.grnId || batch.grn_id,
+        grn_id: grnId,
         item_id: batch.itemId || batch.item_id,
         expiry_date: batch.expiryDate || batch.expiry_date,
         quantity,
-        created_at: batch.createdAt || batch.created_at || now
+        created_at: batch.createdAt || batch.created_at || now,
+        tenant_id: safeTenantId
       };
       // Optional columns — add only if we have values; PGRST204 retry will strip missing ones
       const cb = batch.createdBy || batch.created_by;
@@ -4097,9 +4115,8 @@ export async function saveBatchToSupabase(batch) {
         (error.message && error.message.includes("of view 'grn_batches'"))
       );
       if (isViewInsertError) {
-        const grnId = batch.grnId || batch.grn_id;
-        const tenantId = await resolveTenantIdForBatch(supabaseClient, grnId);
-        const batchesPayload = buildBatchesTablePayload(batch, tenantId);
+        // batches table path — use same tenant_id already resolved above (never null)
+        const batchesPayload = buildBatchesTablePayload(batch, safeTenantId);
         const { data: batchesData, error: batchesError } = await supabaseClient
           .from('batches')
           .insert([batchesPayload])
