@@ -2497,6 +2497,7 @@ const saveBatch = async () => {
       expiry_date: batchForm.value.expiryDate,
       batchQuantity: batchForm.value.batchQuantity,
       batch_quantity: batchForm.value.batchQuantity,
+      remainingQty: getRemainingQuantity(batchForm.value.itemId),
       storageLocation: batchForm.value.storageLocation,
       storage_location: batchForm.value.storageLocation,
       vendorBatchNumber: batchForm.value.vendorBatchNumber || null,

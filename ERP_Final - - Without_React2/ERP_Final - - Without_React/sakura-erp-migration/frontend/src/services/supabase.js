@@ -1,6 +1,9 @@
 // Supabase Configuration - Same as index.html
 import { cachedFetch, cacheKeys, invalidateCache } from '@/utils/dataCache';
 import { getCurrentUserUUID, safeUUID } from '@/utils/uuidUtils';
+import { dbInsert, dbInsertMany, dbUpdate, getCurrentCompanyId, setCurrentCompanyId } from '@/services/db';
+
+export { getCurrentCompanyId, setCurrentCompanyId };
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || 'https://kexwnurwavszvmlpifsf.supabase.co';
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtleHdudXJ3YXZzenZtbHBpZnNmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjUyNzk5OTksImV4cCI6MjA4MDg1NTk5OX0.w7RlFdXVFdKtqJJ99L0Q1ofzUiwillyy-g1ASEj1q-U';
@@ -3034,57 +3037,26 @@ export async function saveGRNToSupabase(grn) {
       }
     });
 
-    // Log the data being inserted for debugging
-    console.log('📝 Inserting GRN data:', JSON.stringify(insertData, null, 2));
-
-    // Insert GRN into grn_inspections only (table 'grns' does not exist)
-    const { data: grnData, error: grnError } = await supabaseClient
-      .from('grn_inspections')
-      .insert([insertData])
-      .select()
-      .single();
-
-    if (grnError) {
-      console.error('❌ Error saving GRN to Supabase:', grnError);
-      console.error('❌ Error details:', {
-        message: grnError.message,
-        details: grnError.details,
-        hint: grnError.hint,
-        code: grnError.code
-      });
-      const hintMsg = grnError.message?.includes('schema cache') || grnError.message?.includes('not find the table')
-        ? 'Ensure table public.grn_inspections exists. Run your GRN migration (e.g. CREATE_GRN_TABLES or grn_inspections / grn_inspection_items) in Supabase SQL Editor.'
-        : (grnError.hint || 'Check that grn_inspections and grn_inspection_items tables exist.');
+    let grnData;
+    try {
+      grnData = await dbInsert(supabaseClient, 'grn_inspections', insertData, { skipCompanyId: true });
+    } catch (grnError) {
+      const hintMsg = grnError?.message?.includes('schema cache') || grnError?.message?.includes('not find the table')
+        ? 'Ensure table public.grn_inspections exists. Run your GRN migration in Supabase SQL Editor.'
+        : (grnError?.hint || 'Check that grn_inspections and grn_inspection_items tables exist.');
       return {
         success: false,
-        error: grnError.message || 'Failed to save GRN',
-        details: grnError.details,
+        error: grnError?.message || 'Failed to save GRN',
+        details: grnError?.details,
         hint: hintMsg
       };
     }
 
-    // CRITICAL: Verify GRN was actually created
     if (!grnData || !grnData.id) {
-      console.error('❌ GRN data is missing or has no ID after insert!');
-      console.error('❌ GRN Data:', grnData);
-      return {
-        success: false,
-        error: 'GRN was not created properly - missing ID'
-      };
+      return { success: false, error: 'GRN was not created properly - missing ID' };
     }
 
-    console.log('✅ GRN created successfully with ID:', grnData.id);
-
-    // Save GRN items separately - CRITICAL: Must save items after GRN is created
-    console.log('🔍 Checking items to save:', {
-      hasItems: !!items,
-      itemsLength: items?.length || 0,
-      hasGrnData: !!grnData,
-      grnDataId: grnData?.id
-    });
-
     if (items && items.length > 0 && grnData && grnData.id) {
-      console.log('📦 Saving GRN items:', items.length, 'items to GRN:', grnData.id);
       const grnItems = items.map((item, index) => {
         // Get item details if item_id is provided
         let itemCode = item.itemCode || item.item_code || null;
@@ -3112,7 +3084,7 @@ export async function saveGRNToSupabase(grn) {
         });
 
         if (!itemId) {
-          console.warn(`⚠️ GRN Item ${index + 1} missing itemId!`, item);
+          /* skip item without itemId */
         }
 
         return {
@@ -3152,93 +3124,33 @@ export async function saveGRNToSupabase(grn) {
         };
       });
 
-      console.log('📦 GRN Items to insert:', JSON.stringify(grnItems, null, 2));
-
-      // Try grn_inspection_items first, fallback to grn_items if needed
-      let { data: insertedItems, error: itemsError } = await supabaseClient
-        .from('grn_inspection_items')
-        .insert(grnItems)
-        .select();
-
-      // If table doesn't exist, try alternative table name
-      if (itemsError && (itemsError.code === '42P01' || itemsError.message?.includes('does not exist'))) {
-        console.warn('⚠️ grn_inspection_items table not found, trying alternative...');
-        const { data: insertedItemsAlt, error: itemsErrorAlt } = await supabaseClient
-          .from('grn_items')
-          .insert(grnItems)
-          .select();
-
-        if (!itemsErrorAlt) {
-          itemsError = null;
-          insertedItems = insertedItemsAlt;
-          console.warn('⚠️ Saved to grn_items table (please run CREATE_GRN_TABLES.sql)');
-        } else {
-          itemsError = itemsErrorAlt;
+      let insertedItems;
+      let itemsError = null;
+      try {
+        insertedItems = await dbInsertMany(supabaseClient, 'grn_inspection_items', grnItems, { skipCompanyId: true });
+      } catch (e) {
+        itemsError = e;
+        if (e?.code === '42P01' || e?.message?.includes('does not exist')) {
+          try {
+            insertedItems = await dbInsertMany(supabaseClient, 'grn_items', grnItems, { skipCompanyId: true });
+            itemsError = null;
+          } catch (altErr) {
+            itemsError = altErr;
+          }
         }
       }
 
       if (itemsError) {
-        console.error('❌ Error saving GRN items to Supabase:', itemsError);
-        console.error('❌ Items error details:', {
-          message: itemsError.message,
-          details: itemsError.details,
-          hint: itemsError.hint,
-          code: itemsError.code
-        });
-        console.error('❌ Items that failed to insert:', JSON.stringify(grnItems, null, 2));
-        console.error('⚠️ Make sure you have run CREATE_GRN_TABLES.sql and FIX_GRN_CONSTRAINTS.sql in Supabase SQL Editor');
-
-        // Check if it's a constraint violation
-        if (itemsError.code === '23514' || itemsError.message?.includes('check constraint')) {
-          console.error('❌ CHECK CONSTRAINT VIOLATION - This is likely a packaging_condition issue');
-          console.error('❌ Run FIX_GRN_CONSTRAINTS.sql in Supabase SQL Editor');
-        }
-
-        // CRITICAL: Delete the GRN if items failed to save (rollback)
-        console.error('🔄 Rolling back GRN creation because items failed to save...');
         try {
-          await supabaseClient
-            .from('grn_inspections')
-            .delete()
-            .eq('id', grnData.id);
-          console.log('✅ GRN rolled back (deleted)');
-        } catch (rollbackError) {
-          console.error('❌ Failed to rollback GRN:', rollbackError);
-        }
+          await supabaseClient.from('grn_inspections').delete().eq('id', grnData.id);
+        } catch (_) {}
 
-        // CRITICAL: Throw error so user knows items failed to save
-        throw new Error(`Failed to save GRN items: ${itemsError.message}. GRN has been rolled back. Please check console for details and run FIX_GRN_CONSTRAINTS.sql.`);
-      } else {
-        console.log('✅ GRN items saved successfully:', insertedItems?.length || grnItems.length, 'items');
-        if (insertedItems && insertedItems.length > 0) {
-          console.log('✅ First inserted item sample:', {
-            id: insertedItems[0].id,
-            item_id: insertedItems[0].item_id,
-            item_name: insertedItems[0].item_name,
-            item_code: insertedItems[0].item_code,
-            grn_inspection_id: insertedItems[0].grn_inspection_id
-          });
-        } else {
-          console.warn('⚠️ Items insert returned no data, but no error. Check if items were actually saved.');
-        }
-      }
-    } else {
-      console.warn('⚠️ No items to save or GRN data missing:', {
-        hasItems: !!items,
-        itemsLength: items?.length || 0,
-        hasGrnData: !!grnData,
-        grnDataId: grnData?.id
-      });
-      // CRITICAL: If items were supposed to be saved but weren't, this is an error
-      if (items && items.length > 0) {
-        console.error('❌ CRITICAL: Items were provided but not saved!', {
-          itemsCount: items.length,
-          grnDataExists: !!grnData,
-          grnDataId: grnData?.id,
-          grnData: grnData
-        });
-        // Don't throw here - GRN was saved, items can be added manually
-        // But log it clearly
+        return {
+          success: false,
+          error: itemsError?.message || 'Failed to save GRN items. GRN has been rolled back.',
+          details: itemsError?.details,
+          hint: 'Run FIX_GRN_CONSTRAINTS.sql in Supabase if needed.'
+        };
       }
     }
 
@@ -3256,9 +3168,7 @@ export async function saveGRNToSupabase(grn) {
       .eq('id', grnData.id)
       .single();
 
-    // If relationship query fails, try without relationship (fallback)
     if (reloadError && (reloadError.code === '42P01' || reloadError.message?.includes('does not exist') || reloadError.message?.includes('relation') || reloadError.message?.includes('foreign key'))) {
-      console.warn('⚠️ Relationship query failed, trying without relationship:', reloadError.message);
       const { data: fullGRNAlt, error: reloadErrorAlt } = await supabaseClient
         .from('grn_inspections')
         .select(`
@@ -3271,49 +3181,21 @@ export async function saveGRNToSupabase(grn) {
       if (!reloadErrorAlt && fullGRNAlt) {
         fullGRN = fullGRNAlt;
         reloadError = null;
-        console.log('✅ Loaded GRN without item relationship (will load manually)');
       } else {
         reloadError = reloadErrorAlt || reloadError;
       }
     }
 
-    // Do NOT fallback to 'grns' - that table does not exist.
     if (reloadError) {
-      console.error('❌ Error reloading GRN:', reloadError);
-      console.error('❌ Reload error details:', {
-        message: reloadError.message,
-        details: reloadError.details,
-        hint: reloadError.hint
-      });
-      // Still return success with the GRN data we have, but manually add items
       if (items && items.length > 0) {
         grnData.items = items;
-        console.log('⚠️ Manually adding items to GRN data due to reload error');
       }
       return { success: true, data: grnData };
     }
 
-    // Log items count for debugging
-    if (fullGRN) {
-      console.log('✅ GRN reloaded with', fullGRN.items?.length || 0, 'items');
-      if (fullGRN.items && fullGRN.items.length > 0) {
-        console.log('✅ First item sample:', {
-          itemId: fullGRN.items[0].item_id,
-          itemName: fullGRN.items[0].item?.name || fullGRN.items[0].item_name,
-          itemSku: fullGRN.items[0].item?.sku || fullGRN.items[0].item_code,
-          hasItem: !!fullGRN.items[0].item
-        });
-      } else {
-        console.warn('⚠️ GRN reloaded but items array is empty!');
-        // If items were saved but not loaded, manually add them
-        if (items && items.length > 0) {
-          console.log('⚠️ Manually adding items to GRN data');
-          fullGRN.items = items;
-        }
-      }
+    if (fullGRN && fullGRN.items?.length === 0 && items?.length > 0) {
+      fullGRN.items = items;
     }
-
-    console.log('✅ GRN saved to Supabase');
     const status = (grnFields.status || '').toLowerCase();
     if (status && status !== 'draft') {
       try {
@@ -4071,30 +3953,32 @@ async function resolveTenantIdForBatch(client, grnId) {
 export async function saveBatchToSupabase(batch) {
   if (USE_SUPABASE && supabaseClient) {
     try {
-      // ROOT FIX: Resolve tenant_id once upfront — required by both grn_batches (table) and batches (view fallback). Never send null.
+      const quantity = Number(batch.qty_received ?? batch.batchQuantity ?? 0) || 0;
+      const remainingQty = batch.remainingQty != null ? Number(batch.remainingQty) : null;
+      if (remainingQty != null && quantity > remainingQty) {
+        return { success: false, error: `Batch quantity (${quantity}) cannot exceed remaining received quantity (${remainingQty}).` };
+      }
+
       const grnId = batch.grnId || batch.grn_id;
       const tenantId = await resolveTenantIdForBatch(supabaseClient, grnId);
       const safeTenantId = (tenantId != null && String(tenantId).trim()) ? String(tenantId).trim() : getDefaultTenantId();
 
-      const quantity = batch.qty_received ?? batch.batchQuantity ?? 0;
       const now = new Date().toISOString();
-      // MINIMAL payload — include tenant_id so grn_batches TABLE (when not a view) also gets it
+      const createdByUuid = safeUUID(batch.createdBy || batch.created_by) || getCurrentUserUUID();
       const minimalPayload = {
         grn_id: grnId,
         item_id: batch.itemId || batch.item_id,
         expiry_date: batch.expiryDate || batch.expiry_date,
         quantity,
         created_at: batch.createdAt || batch.created_at || now,
-        tenant_id: safeTenantId
+        tenant_id: safeTenantId,
+        created_by: createdByUuid
       };
-      // Optional columns — add only if we have values; PGRST204 retry will strip missing ones
-      const cb = batch.createdBy || batch.created_by;
       const optional = {
         ...(batch.id ? { id: batch.id } : {}),
         storage_location: batch.storageLocation || batch.storage_location || null,
         vendor_batch_number: batch.vendorBatchNumber || batch.vendor_batch_number || null,
-        qc_status: batch.qcStatus || batch.qc_status || 'pending',
-        ...(cb && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(cb)) ? { created_by: cb } : {})
+        qc_status: batch.qcStatus || batch.qc_status || 'pending'
       };
 
       const tryInsertGrnBatch = async (payload) => {
@@ -4115,14 +3999,12 @@ export async function saveBatchToSupabase(batch) {
         (error.message && error.message.includes("of view 'grn_batches'"))
       );
       if (isViewInsertError) {
-        // batches table path — use same tenant_id already resolved above (never null)
+        // batches table path — use global DB layer (tenant_id, created_by UUID, created_at)
         const batchesPayload = buildBatchesTablePayload(batch, safeTenantId);
-        const { data: batchesData, error: batchesError } = await supabaseClient
-          .from('batches')
-          .insert([batchesPayload])
-          .select()
-          .single();
-        if (batchesError) {
+        let batchesData;
+        try {
+          batchesData = await dbInsert(supabaseClient, 'batches', batchesPayload);
+        } catch (batchesError) {
           console.error('❌ Error saving batch to batches table:', batchesError);
           return { success: false, error: batchesError?.message || 'Failed to save batch' };
         }
@@ -4607,7 +4489,7 @@ function getPurchasingInvoiceByIdFromLocalStorage(invoiceId) {
 }
 
 /**
- * Save purchasing invoice to Supabase
+ * Save purchasing invoice to Supabase (via global DB layer: company_id, created_by UUID, created_at).
  */
 export async function savePurchasingInvoiceToSupabase(invoiceData) {
   if (!USE_SUPABASE || !supabaseClient) {
@@ -4615,21 +4497,11 @@ export async function savePurchasingInvoiceToSupabase(invoiceData) {
   }
 
   try {
-    const { data, error } = await supabaseClient
-      .from('purchasing_invoices')
-      .insert(invoiceData)
-      .select()
-      .single();
-
-    if (error) {
-      console.error('Error saving purchasing invoice:', error);
-      return { success: false, error: error.message };
-    }
-
+    const data = await dbInsert(supabaseClient, 'purchasing_invoices', invoiceData);
     return { success: true, data };
   } catch (error) {
-    console.error('Exception saving purchasing invoice:', error);
-    return { success: false, error: error.message };
+    console.error('Error saving purchasing invoice:', error);
+    return { success: false, error: error?.message || 'Failed to save invoice' };
   }
 }
 
@@ -4650,7 +4522,7 @@ function savePurchasingInvoiceToLocalStorage(invoiceData) {
 }
 
 /**
- * Update purchasing invoice in Supabase
+ * Update purchasing invoice in Supabase (via global DB layer).
  */
 export async function updatePurchasingInvoiceInSupabase(invoiceId, updates) {
   if (!USE_SUPABASE || !supabaseClient) {
@@ -4658,25 +4530,13 @@ export async function updatePurchasingInvoiceInSupabase(invoiceId, updates) {
   }
 
   try {
-    const { data, error } = await supabaseClient
-      .from('purchasing_invoices')
-      .update({
-        ...updates,
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', invoiceId)
-      .select()
-      .single();
-
-    if (error) {
-      console.error('Error updating purchasing invoice:', error);
-      return { success: false, error: error.message };
-    }
-
+    const data = await dbUpdate(supabaseClient, 'purchasing_invoices', {
+      ...updates,
+      updated_at: new Date().toISOString()
+    }, { id: invoiceId });
     return { success: true, data };
   } catch (error) {
-    console.error('Exception updating purchasing invoice:', error);
-    return { success: false, error: error.message };
+    return { success: false, error: error?.message || 'Failed to update invoice' };
   }
 }
 
@@ -4723,7 +4583,7 @@ export async function loadPurchasingInvoiceItems(invoiceId) {
 }
 
 /**
- * Save purchasing invoice items
+ * Save purchasing invoice items (via global DB layer; child table no company_id).
  */
 export async function savePurchasingInvoiceItems(invoiceId, items) {
   if (!USE_SUPABASE || !supabaseClient) {
@@ -4733,23 +4593,13 @@ export async function savePurchasingInvoiceItems(invoiceId, items) {
   try {
     const itemsToInsert = items.map(item => ({
       ...item,
-      purchasing_invoice_id: invoiceId
+      purchasing_invoice_id: safeUUID(invoiceId) || invoiceId
     }));
-
-    const { data, error } = await supabaseClient
-      .from('purchasing_invoice_items')
-      .insert(itemsToInsert)
-      .select();
-
-    if (error) {
-      console.error('Error saving purchasing invoice items:', error);
-      return { success: false, error: error.message };
-    }
-
+    const data = await dbInsertMany(supabaseClient, 'purchasing_invoice_items', itemsToInsert, { skipCompanyId: true });
     return { success: true, data };
   } catch (error) {
-    console.error('Exception saving purchasing invoice items:', error);
-    return { success: false, error: error.message };
+    console.error('Error saving purchasing invoice items:', error);
+    return { success: false, error: error?.message || 'Failed to save items' };
   }
 }
 
