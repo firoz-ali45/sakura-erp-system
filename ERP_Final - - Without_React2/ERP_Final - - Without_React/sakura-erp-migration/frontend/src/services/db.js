@@ -16,9 +16,9 @@ const STORAGE_KEY_COMPANY = 'sakura_company_id';
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /** Tables that need BOTH company_id and tenant_id (same context value) — production batches has company_id NOT NULL */
-const BOTH_COMPANY_AND_TENANT_TABLES = new Set(['batches', 'grn_batches']);
-/** Tables that have no company_id/tenant_id column (inject skipped to avoid PGRST204) */
-const SKIP_COMPANY_TABLES = new Set(['grn_inspections', 'grn_inspection_items', 'grn_inspection_item', 'purchase_order_items', 'purchasing_invoice_items']);
+const BOTH_COMPANY_AND_TENANT_TABLES = new Set(['batches']);
+/** grn_batches is a VIEW over batches; view may not expose company_id in schema cache — skip inject so insert does not error; fallback path inserts into batches with company_id */
+const SKIP_COMPANY_TABLES = new Set(['grn_inspections', 'grn_inspection_items', 'grn_inspection_item', 'purchase_order_items', 'purchasing_invoice_items', 'grn_batches']);
 
 /** If value is a valid UUID return it, else null. Re-export from uuidUtils for DB layer. */
 export { safeUUID };
