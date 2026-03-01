@@ -711,11 +711,12 @@ function recalcItemTotal(item) {
 async function persistItemCost(item) {
   try {
     const { supabaseClient } = await import('@/services/supabase.js');
+    const { dbUpdate } = await import('@/services/db.js');
     const total = itemTotal(item);
-    await supabaseClient.from('purchasing_invoice_items').update({
+    await dbUpdate(supabaseClient, 'purchasing_invoice_items', {
       unit_cost: Number(item.unit_cost) || 0,
       total_cost: total
-    }).eq('id', item.id);
+    }, { id: item.id });
     item.total_cost = total;
     await loadInvoice();
   } catch (e) {

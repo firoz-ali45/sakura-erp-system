@@ -38,14 +38,14 @@ export async function getRoles(filters = {}) {
 export async function createRole({ role_name, role_code, description, is_active = true }, actingUserId = null) {
   const client = await sb();
   if (!client) throw new Error('Supabase not ready');
+  const { dbInsert } = await import('@/services/db.js');
   const code = role_code || role_name?.toUpperCase().replace(/\s+/g, '_');
-  const { data, error } = await client.from('roles').insert({
+  const data = await dbInsert(client, 'roles', {
     role_name,
     role_code: code,
     description,
     is_active: is_active ?? true
-  }).select().single();
-  if (error) throw error;
+  });
   const uid = actingUserId || _currentUserId();
   if (uid) {
     logActivity(uid, 'role_create', 'roles', data?.id, { role_name, role_code: code });
@@ -119,11 +119,11 @@ export async function getUsersByRole(roleCode) {
 export async function updateRole(id, payload, actingUserId = null) {
   const client = await sb();
   if (!client) throw new Error('Supabase not ready');
-  const { data, error } = await client.from('roles').update({
+  const { dbUpdate } = await import('@/services/db.js');
+  const data = await dbUpdate(client, 'roles', {
     ...payload,
     updated_at: new Date().toISOString()
-  }).eq('id', id).select().single();
-  if (error) throw error;
+  }, { id });
   const uid = actingUserId || _currentUserId();
   if (uid) {
     logActivity(uid, 'role_edit', 'roles', id, { changes: Object.keys(payload) });
@@ -208,11 +208,12 @@ export async function getRoleLocationAccess(roleId) {
 export async function setRoleLocationAccess(roleId, locationIds, accessAllLocations) {
   const client = await sb();
   if (!client) throw new Error('Supabase not ready');
+  const { dbInsertMany, dbUpdate } = await import('@/services/db.js');
   await client.from('role_location_access').delete().eq('role_id', roleId);
   if (!accessAllLocations && locationIds?.length) {
-    await client.from('role_location_access').insert(locationIds.map(lid => ({ role_id: roleId, location_id: lid })));
+    await dbInsertMany(client, 'role_location_access', locationIds.map(lid => ({ role_id: roleId, location_id: lid })));
   }
-  await client.from('roles').update({ access_all_locations: !!accessAllLocations, updated_at: new Date().toISOString() }).eq('id', roleId);
+  await dbUpdate(client, 'roles', { access_all_locations: !!accessAllLocations, updated_at: new Date().toISOString() }, { id: roleId });
   return { success: true };
 }
 
@@ -468,8 +469,8 @@ export async function getBlockedUsers() {
 export async function updateUserStatus(userId, status) {
   const client = await sb();
   if (!client) throw new Error('Supabase not ready');
-  const { error } = await client.from('users').update({ status, updated_at: new Date().toISOString() }).eq('id', userId);
-  if (error) throw error;
+  const { dbUpdate } = await import('@/services/db.js');
+  await dbUpdate(client, 'users', { status, updated_at: new Date().toISOString() }, { id: userId });
   const uid = _currentUserId();
   if (uid) {
     logActivity(uid, status === 'deleted' ? 'user_delete' : 'user_status_change', 'users', userId, { status });

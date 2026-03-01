@@ -502,6 +502,7 @@ export async function createTransferDraft(payload) {
   if (from_location_id === to_location_id) return { success: false, error: 'Source and destination must be different' };
 
   try {
+    const { dbInsert, dbInsertMany } = await import('@/services/db.js');
     const insertPayload = {
       from_location_id,
       to_location_id,
@@ -511,13 +512,7 @@ export async function createTransferDraft(payload) {
       business_date: new Date().toISOString().slice(0, 10) // auto today
     };
 
-    const { data: header, error: headerError } = await supabaseClient
-      .from('transfer_orders')
-      .insert(insertPayload)
-      .select()
-      .single();
-
-    if (headerError) return { success: false, error: headerError.message };
+    const header = await dbInsert(supabaseClient, 'transfer_orders', insertPayload);
     if (!header) return { success: false, error: 'Insert failed' };
 
     const items = payload.items || [];
@@ -528,10 +523,11 @@ export async function createTransferDraft(payload) {
     })).filter((r) => r.requested_qty > 0);
 
     if (rows.length > 0) {
-      const { error: itemsError } = await supabaseClient.from('transfer_order_items').insert(rows);
-      if (itemsError) {
+      try {
+        await dbInsertMany(supabaseClient, 'transfer_order_items', rows);
+      } catch (itemsError) {
         await supabaseClient.from('transfer_orders').delete().eq('id', header.id);
-        return { success: false, error: itemsError.message };
+        return { success: false, error: itemsError?.message || 'Items insert failed' };
       }
     }
 
@@ -571,8 +567,8 @@ export async function updateTransferDraft(transferId, payload) {
         requested_qty: Number(it.requested_qty) || 0
       })).filter((r) => r.requested_qty > 0);
       if (rows.length > 0) {
-        const { error: insErr } = await supabaseClient.from('transfer_order_items').insert(rows);
-        if (insErr) return { success: false, error: insErr.message };
+        const { dbInsertMany } = await import('@/services/db.js');
+        await dbInsertMany(supabaseClient, 'transfer_order_items', rows);
       }
     }
 

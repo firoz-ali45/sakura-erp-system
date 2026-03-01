@@ -3981,17 +3981,16 @@ export async function saveBatchToSupabase(batch) {
         qc_status: batch.qcStatus || batch.qc_status || 'pending'
       };
 
-      const tryInsertGrnBatch = async (payload) => {
-        return await supabaseClient
-          .from('grn_batches')
-          .insert([payload])
-          .select()
-          .single();
-      };
-
       let insertPayload = { ...minimalPayload, ...optional };
       delete insertPayload.updated_at; // grn_batches view has no updated_at — schema cache error
-      let { data, error } = await tryInsertGrnBatch(insertPayload);
+      let data, error;
+      try {
+        data = await dbInsert(supabaseClient, 'grn_batches', insertPayload);
+        error = null;
+      } catch (e) {
+        error = e;
+        data = null;
+      }
 
       // When grn_batches is a VIEW, Postgres returns: "cannot insert into column 'expiry_date' of view 'grn_batches'"
       const isViewInsertError = error && (
@@ -4042,9 +4041,13 @@ export async function saveBatchToSupabase(batch) {
             } else if (attempt === 0) {
               ['batch_id', 'batch_number', 'grn_number', 'qc_data', 'qc_checked_at', 'updated_at'].forEach(k => delete insertPayload[k]);
             }
-            const res = await tryInsertGrnBatch(insertPayload);
-            retryData = res.data;
-            retryError = res.error;
+            try {
+              retryData = await dbInsert(supabaseClient, 'grn_batches', insertPayload);
+              retryError = null;
+            } catch (e) {
+              retryError = e;
+              retryData = null;
+            }
           }
           if (!retryError) {
             const invBatch = await insertInventoryBatchFromGrnBatch(supabaseClient, batch);
@@ -4052,7 +4055,7 @@ export async function saveBatchToSupabase(batch) {
             if (invBatch && retryData?.id) {
               const upd = { batch_number: invBatch.batch_number };
               if (invBatch.id) upd.batch_id = invBatch.id;
-              await supabaseClient.from('grn_batches').update(upd).eq('id', retryData.id);
+              await dbUpdate(supabaseClient, 'grn_batches', upd, { id: retryData.id });
               merged = { ...retryData, batch_number: invBatch.batch_number, batch_id: invBatch.id };
             }
             return { success: true, data: merged };
@@ -4067,7 +4070,7 @@ export async function saveBatchToSupabase(batch) {
       if (invBatch && data?.id) {
         const upd = { batch_number: invBatch.batch_number };
         if (invBatch.id) upd.batch_id = invBatch.id;
-        await supabaseClient.from('grn_batches').update(upd).eq('id', data.id);
+        await dbUpdate(supabaseClient, 'grn_batches', upd, { id: data.id });
         mergedData = { ...data, batch_number: invBatch.batch_number, batch_id: invBatch.id };
       }
       return { success: true, data: mergedData };

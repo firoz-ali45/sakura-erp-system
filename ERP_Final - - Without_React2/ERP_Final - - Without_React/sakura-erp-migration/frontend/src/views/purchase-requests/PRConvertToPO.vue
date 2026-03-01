@@ -497,37 +497,34 @@ const createPO = async () => {
     }
     console.log('PR Items Updated');
     
-    // STEP 4: Update PR Status
-    await supabaseClient
-      .from('purchase_requests')
-      .update({
-        status: 'fully_ordered',
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', pr.value.id);
+    // STEP 4: Update PR Status (centralized db layer)
+    const { dbUpdate, dbInsertMany } = await import('@/services/db.js');
+    await dbUpdate(supabaseClient, 'purchase_requests', {
+      status: 'fully_ordered',
+      updated_at: new Date().toISOString()
+    }, { id: pr.value.id });
     console.log('PR Status Updated');
-    
-    // STEP 5: Insert pr_po_linkage — DOCUMENT CHAIN (required for DocumentFlow/ItemFlow)
-    for (const item of selectedItems) {
-      try {
-        await supabaseClient.from('pr_po_linkage').insert({
-          pr_id: pr.value.id,
-          pr_number: pr.value.pr_number || null,
-          pr_item_id: item.id,
-          pr_item_number: item.item_number || 10,
-          po_id: createdPOId,
-          po_number: createdPONumber,
-          pr_quantity: item.quantity || 0,
-          converted_quantity: item.convertQty || 0,
-          remaining_quantity: 0,
-          unit: item.unit || 'EA',
-          conversion_type: 'full',
-          status: 'active',
-          converted_at: new Date().toISOString()
-        });
-      } catch (linkErr) {
-        console.warn('pr_po_linkage insert (non-critical):', linkErr?.message);
-      }
+
+    // STEP 5: Insert pr_po_linkage — DOCUMENT CHAIN (via dbInsertMany: company_id, created_by)
+    const linkageRows = selectedItems.map((item) => ({
+      pr_id: pr.value.id,
+      pr_number: pr.value.pr_number || null,
+      pr_item_id: item.id,
+      pr_item_number: item.item_number || 10,
+      po_id: createdPOId,
+      po_number: createdPONumber,
+      pr_quantity: item.quantity || 0,
+      converted_quantity: item.convertQty || 0,
+      remaining_quantity: 0,
+      unit: item.unit || 'EA',
+      conversion_type: 'full',
+      status: 'active',
+      converted_at: new Date().toISOString()
+    }));
+    try {
+      if (linkageRows.length) await dbInsertMany(supabaseClient, 'pr_po_linkage', linkageRows);
+    } catch (linkErr) {
+      console.warn('pr_po_linkage insert (non-critical):', linkErr?.message);
     }
     
     // SUCCESS!

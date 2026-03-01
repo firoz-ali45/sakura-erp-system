@@ -2,6 +2,7 @@ import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
 import api from '../services/api';
 import { loginWithSupabase, initSupabase, supabaseClient, USE_SUPABASE } from '../services/supabase';
+import { setCurrentCompanyId, getCurrentCompanyId } from '../services/db';
 
 export const useAuthStore = defineStore('auth', () => {
   // Restore user from localStorage on initialization - safe check
@@ -95,6 +96,9 @@ export const useAuthStore = defineStore('auth', () => {
         const token = `supabase_${supabaseResult.user.id}`;
         setToken(token);
         setUser(supabaseResult.user);
+        // Multi-tenant: set company context so dbInsert always has company_id
+        const companyId = supabaseResult.user?.user_metadata?.company_id ?? supabaseResult.user?.app_metadata?.company_id ?? getCurrentCompanyId();
+        setCurrentCompanyId(companyId);
         // Set session persistence flags
         localStorage.setItem('sakura_logged_in', 'true');
         const tabId = sessionStorage.getItem('sakura_tab_id') || `tab_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
@@ -143,6 +147,9 @@ export const useAuthStore = defineStore('auth', () => {
         
         setToken(authToken);
         setUser(userData);
+        // Multi-tenant: set company context so dbInsert always has company_id
+        const companyId = userData?.company_id ?? getCurrentCompanyId();
+        setCurrentCompanyId(companyId);
         // Set session persistence flags
         localStorage.setItem('sakura_logged_in', 'true');
         const tabId = sessionStorage.getItem('sakura_tab_id') || `tab_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
@@ -278,9 +285,11 @@ export const useAuthStore = defineStore('auth', () => {
     if (!user.value) {
       fetchCurrentUser();
     }
-  } else if (sakuraLoggedIn && user.value) {
-    // Supabase/localStorage auth - user already restored, just verify session
-    console.log('✅ Restored user session from localStorage:', user.value.email);
+  }
+  if (sakuraLoggedIn && user.value) {
+    // Multi-tenant: ensure company context is set for restored session
+    const companyId = user.value.company_id ?? getCurrentCompanyId();
+    setCurrentCompanyId(companyId);
   }
 
   return {

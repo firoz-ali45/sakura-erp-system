@@ -309,6 +309,7 @@ const submitPayment = async () => {
       const authStore = (await import('@/stores/auth')).useAuthStore();
       
       const inv = openInvoices.value.find(i => i.id === newPayment.value.invoice_id);
+      const { dbInsert } = await import('@/services/db.js');
       const payload = {
         payment_type: 'MANUAL',
         payment_method: 'BANK_TRANSFER',
@@ -319,10 +320,9 @@ const submitPayment = async () => {
         currency: 'SAR',
         reference: newPayment.value.reference_number || null,
         payment_date: newPayment.value.payment_date,
-        status: 'completed',
-        created_by: getCurrentUserUUID()
+        status: 'completed'
       };
-      const { data } = await supabaseClient.from('finance_payments').insert(payload).select('id, payment_number').single();
+      const data = await dbInsert(supabaseClient, 'finance_payments', payload);
       await logAction('INSERT', 'finance_payments', data?.id, null, payload);
       const uid = authStore.user?.id;
       if (uid) {

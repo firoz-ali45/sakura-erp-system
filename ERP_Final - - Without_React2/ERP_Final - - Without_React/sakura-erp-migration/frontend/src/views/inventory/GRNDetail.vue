@@ -1433,12 +1433,8 @@ const loadGRN = async () => {
     const result = await getGRNById(grnId);
       if (result && result.success && result.data) {
         grn.value = result.data;
-      
-      // Debug: Log GRN status and full data
-      console.log('✅ GRN loaded - Full Data:', grn.value);
-      console.log('✅ GRN Status:', grn.value.status, 'GRN Number:', grn.value.grnNumber || grn.value.grn_number);
-      console.log('✅ GRN Items Count:', grn.value.items?.length || 0);
-      console.log('✅ GRN Items:', grn.value.items);
+      // Load user display names (received_by, approved_by, batch created_by) so UUIDs are not shown
+      await loadCreatedByNameMap(grn.value.batches || [], grn.value);
       
       // Fetch PO number when GRN is loaded
       await fetchPurchaseOrderNumber();
@@ -1802,7 +1798,7 @@ const loadBatchesForGRNLocal = async (grnId) => {
   }
 };
 
-// Map UUID → users.name for display (batches.created_by, grn.received_by, grn.approved_by)
+// Map UUID → users.full_name/name for display (batches.created_by, grn.received_by, grn.approved_by)
 const loadCreatedByNameMap = async (batches, grnData) => {
   const batchIds = (batches || []).map(b => b.created_by ?? b.createdBy).filter(Boolean);
   const grnIds = grnData ? [
@@ -1818,9 +1814,11 @@ const loadCreatedByNameMap = async (batches, grnData) => {
   try {
     const { supabaseClient } = await import('@/services/supabase.js');
     if (!supabaseClient) return;
-    const { data } = await supabaseClient.from('users').select('id, name').in('id', ids);
+    const { data } = await supabaseClient.from('users').select('id, name, full_name, email').in('id', ids);
     const map = {};
-    (data || []).forEach((r) => { map[r.id] = r.name || null; });
+    (data || []).forEach((r) => {
+      map[r.id] = (r.full_name && String(r.full_name).trim()) || (r.name && String(r.name).trim()) || (r.email && String(r.email).split('@')[0]) || null;
+    });
     createdByNameMap.value = map;
   } catch (e) {
     console.warn('loadCreatedByNameMap:', e);

@@ -213,12 +213,11 @@ async function saveLocation() {
       allow_production: form.value.allow_production,
       is_active: form.value.is_active
     };
+    const { dbInsert, dbUpdate } = await import('@/services/db.js');
     if (isEdit.value && editingId) {
-      const { error } = await supabaseClient.from('inventory_locations').update(payload).eq('id', editingId);
-      if (error) throw error;
+      await dbUpdate(supabaseClient, 'inventory_locations', payload, { id: editingId });
     } else {
-      const { error } = await supabaseClient.from('inventory_locations').insert(payload);
-      if (error) throw error;
+      await dbInsert(supabaseClient, 'inventory_locations', payload);
     }
     closeForm();
     await load();
@@ -234,8 +233,8 @@ async function disableLocation(loc) {
     const { ensureSupabaseReady, supabaseClient } = await import('@/services/supabase.js');
     const ready = await ensureSupabaseReady();
     if (!ready || !supabaseClient) return;
-    const { error } = await supabaseClient.from('inventory_locations').update({ is_active: false }).eq('id', loc.id);
-    if (error) throw error;
+    const { dbUpdate } = await import('@/services/db.js');
+    await dbUpdate(supabaseClient, 'inventory_locations', { is_active: false }, { id: loc.id });
     await load();
   } catch (e) {
     console.error(e);

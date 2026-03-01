@@ -271,8 +271,9 @@ const saveAtm = async () => {
   try {
     const { supabaseClient } = await import('@/services/supabase.js');
     const linkedBank = (atmForm.value.linked_bank_name || '').trim() || null;
+    const { dbInsert, dbUpdate } = await import('@/services/db.js');
     if (editingAtm.value) {
-      await supabaseClient.from('finance_atms').update({
+      await dbUpdate(supabaseClient, 'finance_atms', {
         atm_name: atmForm.value.atm_name,
         atm_number: (atmForm.value.atm_number || '').trim() || null,
         linked_bank_name: linkedBank,
@@ -280,9 +281,9 @@ const saveAtm = async () => {
         location: (atmForm.value.location || '').trim() || null,
         is_active: atmForm.value.is_active,
         updated_at: new Date().toISOString()
-      }).eq('id', editingAtm.value.id);
+      }, { id: editingAtm.value.id });
     } else {
-      await supabaseClient.from('finance_atms').insert({
+      await dbInsert(supabaseClient, 'finance_atms', {
         atm_name: atmForm.value.atm_name,
         atm_number: (atmForm.value.atm_number || '').trim() || null,
         linked_bank_name: linkedBank,
@@ -306,8 +307,9 @@ const saveBank = async () => {
   savingBank.value = true;
   try {
     const { supabaseClient } = await import('@/services/supabase.js');
+    const { dbInsert, dbUpdate } = await import('@/services/db.js');
     if (editingBank.value) {
-      await supabaseClient.from('finance_banks').update({
+      await dbUpdate(supabaseClient, 'finance_banks', {
         bank_name: bankForm.value.bank_name,
         account_name: (bankForm.value.account_name || '').trim() || null,
         account_number: (bankForm.value.account_number || '').trim() || null,
@@ -315,9 +317,9 @@ const saveBank = async () => {
         swift_code: (bankForm.value.swift_code || '').trim() || null,
         is_active: bankForm.value.is_active,
         updated_at: new Date().toISOString()
-      }).eq('id', editingBank.value.id);
+      }, { id: editingBank.value.id });
     } else {
-      await supabaseClient.from('finance_banks').insert({
+      await dbInsert(supabaseClient, 'finance_banks', {
         bank_name: bankForm.value.bank_name,
         account_name: (bankForm.value.account_name || '').trim() || null,
         account_number: (bankForm.value.account_number || '').trim() || null,

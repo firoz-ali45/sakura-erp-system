@@ -15,8 +15,8 @@ const FALLBACK_COMPANY_UUID = '00000000-0000-0000-0000-000000000000';
 const STORAGE_KEY_COMPANY = 'sakura_company_id';
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-/** Tables that use tenant_id instead of company_id (same context value) */
-const TENANT_ID_TABLES = new Set(['batches', 'grn_batches']);
+/** Tables that need BOTH company_id and tenant_id (same context value) — production batches has company_id NOT NULL */
+const BOTH_COMPANY_AND_TENANT_TABLES = new Set(['batches', 'grn_batches']);
 /** Tables that have no company_id/tenant_id column (inject skipped to avoid PGRST204) */
 const SKIP_COMPANY_TABLES = new Set(['grn_inspections', 'grn_inspection_items', 'grn_inspection_item', 'purchase_order_items', 'purchasing_invoice_items']);
 
@@ -98,10 +98,9 @@ function prepareInsertPayload(table, data, options = {}) {
   }
 
   if (!options.skipCompanyId && companyId != null && !SKIP_COMPANY_TABLES.has(table)) {
-    if (TENANT_ID_TABLES.has(table)) {
+    sanitized.company_id = sanitized.company_id ?? companyId;
+    if (BOTH_COMPANY_AND_TENANT_TABLES.has(table)) {
       sanitized.tenant_id = sanitized.tenant_id ?? companyId;
-    } else {
-      sanitized.company_id = sanitized.company_id ?? companyId;
     }
   }
   if (!options.skipCreatedBy) {
