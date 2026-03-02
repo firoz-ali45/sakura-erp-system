@@ -1,6 +1,8 @@
 -- Fix uq_batch_tenant duplicate: generate batch_number unique per (tenant_id, grn, item)
 -- Previously count was per (grn_id, item_id) only; same tenant could get duplicate seq under race/retry.
 -- Now count includes tenant_id so (tenant_id, batch_number) stays unique.
+-- IMPORTANT: Drop old 3-arg overload so the trigger uses the 4-arg (tenant-aware) version.
+DROP FUNCTION IF EXISTS public.fn_generate_batch_number_from_grn(uuid, uuid, date);
 
 CREATE OR REPLACE FUNCTION public.fn_generate_batch_number_from_grn(
   p_grn_id uuid,
