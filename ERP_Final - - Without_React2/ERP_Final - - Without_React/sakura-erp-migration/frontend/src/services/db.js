@@ -17,10 +17,25 @@ const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12
 
 /** Tables that need BOTH company_id and tenant_id (same context value) — production batches has company_id NOT NULL */
 const BOTH_COMPANY_AND_TENANT_TABLES = new Set(['batches', 'grn_batches']);
-/** Tables that have no company_id/tenant_id column (inject skipped to avoid PGRST204) */
-const SKIP_COMPANY_TABLES = new Set(['grn_inspections', 'grn_inspection_items', 'grn_inspection_item', 'purchase_order_items', 'purchasing_invoice_items', 'purchase_orders', 'purchase_requests', 'pr_po_linkage']);
-/** Tables that have no created_by column — do not inject to avoid schema cache error */
-const SKIP_CREATED_BY_TABLES = new Set(['grn_inspection_items', 'grn_inspection_item', 'purchase_order_items', 'purchasing_invoice_items']);
+/**
+ * Schema alignment: tables that have NO company_id column (do not inject — avoid PGRST204).
+ * Derived from actual Supabase schema for all tables used with dbInsert/dbInsertMany.
+ */
+const SKIP_COMPANY_TABLES = new Set([
+  'grn_inspections', 'grn_inspection_items', 'grn_inspection_item',
+  'purchase_order_items', 'purchasing_invoice_items', 'purchase_orders', 'purchase_requests', 'pr_po_linkage',
+  'purchasing_invoices', 'finance_atms', 'finance_banks', 'finance_payments',
+  'inventory_locations', 'roles', 'role_location_access',
+  'transfer_orders', 'transfer_order_items'
+]);
+/**
+ * Schema alignment: tables that have NO created_by column (do not inject — avoid schema cache error).
+ */
+const SKIP_CREATED_BY_TABLES = new Set([
+  'grn_inspection_items', 'grn_inspection_item', 'purchase_order_items', 'purchasing_invoice_items',
+  'finance_atms', 'finance_banks', 'inventory_locations', 'pr_po_linkage',
+  'roles', 'role_location_access', 'transfer_orders', 'transfer_order_items'
+]);
 
 /** If value is a valid UUID return it, else null. Re-export from uuidUtils for DB layer. */
 export { safeUUID };
