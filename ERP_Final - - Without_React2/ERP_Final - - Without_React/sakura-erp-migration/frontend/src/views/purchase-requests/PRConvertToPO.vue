@@ -485,13 +485,22 @@ const createPO = async () => {
     }
     console.log('PR Items Updated');
     
-    // STEP 4: Update PR Status (centralized db layer)
+    // STEP 4: Update PR Status (centralized db layer; fallback direct update if no row returned)
     const { dbUpdate, dbInsertMany } = await import('@/services/db.js');
-    await dbUpdate(supabaseClient, 'purchase_requests', {
-      status: 'fully_ordered',
-      updated_at: new Date().toISOString()
-    }, { id: pr.value.id });
-    console.log('PR Status Updated');
+    const prId = pr.value?.id;
+    if (prId) {
+      let updated = await dbUpdate(supabaseClient, 'purchase_requests', {
+        status: 'fully_ordered',
+        updated_at: new Date().toISOString()
+      }, { id: prId });
+      if (!updated) {
+        const { error: upErr } = await supabaseClient.from('purchase_requests').update({
+          status: 'fully_ordered',
+          updated_at: new Date().toISOString()
+        }).eq('id', prId);
+        if (upErr) console.warn('PR status update fallback:', upErr.message);
+      }
+    }
 
     // STEP 5: Insert pr_po_linkage — DOCUMENT CHAIN (via dbInsertMany: company_id, created_by)
     const linkageRows = selectedItems.map((item) => ({

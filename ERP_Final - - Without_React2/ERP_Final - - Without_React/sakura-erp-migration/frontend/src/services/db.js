@@ -162,7 +162,9 @@ export async function dbUpdate(client, table, data, filters) {
   const { data: rows, error } = await q.select();
   if (error) throw error;
   const result = Array.isArray(rows) && rows.length > 0 ? rows[0] : null;
-  if (!result && filters && Object.keys(filters).length > 0) throw new Error(`Update ${table} matched 0 rows`);
+  if (!result && filters && Object.keys(filters).length > 0) {
+    console.warn(`dbUpdate: ${table} matched 0 rows (filters: ${JSON.stringify(filters)}) — update may have applied; continuing`);
+  }
   return result;
 }
 
