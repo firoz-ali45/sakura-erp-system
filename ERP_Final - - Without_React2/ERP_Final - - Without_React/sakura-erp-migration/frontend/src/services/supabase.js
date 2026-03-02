@@ -3886,11 +3886,12 @@ function toExpiryISO(expiry) {
   return isNaN(d.getTime()) ? null : d.toISOString();
 }
 
-function buildBatchesTablePayload(batch, tenantId) {
+function buildBatchesTablePayload(batch, tenantId, branchId) {
   const quantity = batch.qty_received ?? batch.batchQuantity ?? 0;
   const now = new Date().toISOString();
   const expiry = batch.expiryDate || batch.expiry_date;
   const cb = batch.createdBy || batch.created_by;
+  const safeBranchId = (branchId != null && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(branchId))) ? String(branchId).trim() : null;
   return {
     source_doc_type: 'GRN',
     source_doc_id: batch.grnId || batch.grn_id,
@@ -3899,6 +3900,7 @@ function buildBatchesTablePayload(batch, tenantId) {
     qty_received: quantity,
     created_at: batch.createdAt || batch.created_at || now,
     tenant_id: (tenantId != null && String(tenantId).trim()) ? String(tenantId).trim() : getDefaultTenantId(),
+    ...(safeBranchId ? { branch_id: safeBranchId } : {}),
     storage_location: batch.storageLocation || batch.storage_location || null,
     vendor_batch_number: batch.vendorBatchNumber || batch.vendor_batch_number || null,
     qc_status: batch.qcStatus || batch.qc_status || 'pending',
@@ -3946,6 +3948,34 @@ async function resolveTenantIdForBatch(client, grnId) {
 }
 
 /**
+ * Resolve branch_id for batches insert (branch_id NOT NULL).
+ * Tries: existing batches for this GRN → any batches row → first branch from branches table.
+ * Returns UUID string or null (caller must use a fallback or fail).
+ */
+async function resolveBranchIdForBatch(client, grnId) {
+  if (!client) return null;
+  if (grnId) {
+    try {
+      const { data: batchRow } = await client.from('batches').select('branch_id').eq('source_doc_type', 'GRN').eq('source_doc_id', grnId).limit(1).maybeSingle();
+      if (batchRow && batchRow.branch_id != null && String(batchRow.branch_id).trim()) return batchRow.branch_id;
+    } catch (_) { /* ignore */ }
+  }
+  try {
+    const { data: anyRow } = await client.from('batches').select('branch_id').limit(1).maybeSingle();
+    if (anyRow && anyRow.branch_id != null) return anyRow.branch_id;
+  } catch (_) { /* ignore */ }
+  try {
+    const { data: branch } = await client.from('branches').select('id').eq('is_active', true).limit(1).maybeSingle();
+    if (branch && branch.id) return branch.id;
+  } catch (_) { /* ignore */ }
+  try {
+    const { data: branch } = await client.from('branches').select('id').limit(1).maybeSingle();
+    if (branch && branch.id) return branch.id;
+  } catch (_) { /* ignore */ }
+  return null;
+}
+
+/**
  * Save batch to Supabase or localStorage
  * ISO 22000 Rule: Batch = Item + Expiry Date + GRN
  * Persists to grn_batches (or batches table when grn_batches is a VIEW) and inserts a new row in inventory_batches (no upsert; each batch = one row).
@@ -3960,8 +3990,15 @@ export async function saveBatchToSupabase(batch) {
       }
 
       const grnId = batch.grnId || batch.grn_id;
-      const tenantId = await resolveTenantIdForBatch(supabaseClient, grnId);
+      const [tenantId, branchId] = await Promise.all([
+        resolveTenantIdForBatch(supabaseClient, grnId),
+        resolveBranchIdForBatch(supabaseClient, grnId)
+      ]);
       const safeTenantId = (tenantId != null && String(tenantId).trim()) ? String(tenantId).trim() : getDefaultTenantId();
+      const safeBranchId = (branchId != null && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(branchId))) ? String(branchId).trim() : null;
+      if (!safeBranchId) {
+        return { success: false, error: 'No branch found. Please add at least one branch (e.g. in Settings or Branches) and try again.' };
+      }
 
       const now = new Date().toISOString();
       const createdByUuid = safeUUID(batch.createdBy || batch.created_by) || getCurrentUserUUID();
@@ -3972,7 +4009,8 @@ export async function saveBatchToSupabase(batch) {
         quantity,
         created_at: batch.createdAt || batch.created_at || now,
         tenant_id: safeTenantId,
-        created_by: createdByUuid
+        created_by: createdByUuid,
+        ...(safeBranchId ? { branch_id: safeBranchId } : {})
       };
       const optional = {
         ...(batch.id ? { id: batch.id } : {}),
@@ -3998,8 +4036,8 @@ export async function saveBatchToSupabase(batch) {
         (error.message && error.message.includes("of view 'grn_batches'"))
       );
       if (isViewInsertError) {
-        // batches table path — use global DB layer (tenant_id, created_by UUID, created_at)
-        const batchesPayload = buildBatchesTablePayload(batch, safeTenantId);
+        // batches table path — use global DB layer (tenant_id, branch_id, created_by UUID, created_at)
+        const batchesPayload = buildBatchesTablePayload(batch, safeTenantId, safeBranchId);
         let batchesData;
         try {
           batchesData = await dbInsert(supabaseClient, 'batches', batchesPayload);
