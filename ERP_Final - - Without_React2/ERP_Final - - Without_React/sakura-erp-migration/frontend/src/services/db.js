@@ -19,6 +19,8 @@ const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12
 const BOTH_COMPANY_AND_TENANT_TABLES = new Set(['batches', 'grn_batches']);
 /** Tables that have no company_id/tenant_id column (inject skipped to avoid PGRST204) */
 const SKIP_COMPANY_TABLES = new Set(['grn_inspections', 'grn_inspection_items', 'grn_inspection_item', 'purchase_order_items', 'purchasing_invoice_items', 'purchase_orders', 'purchase_requests', 'pr_po_linkage']);
+/** Tables that have no created_by column — do not inject to avoid schema cache error */
+const SKIP_CREATED_BY_TABLES = new Set(['grn_inspection_items', 'grn_inspection_item', 'purchase_order_items', 'purchasing_invoice_items']);
 
 /** If value is a valid UUID return it, else null. Re-export from uuidUtils for DB layer. */
 export { safeUUID };
@@ -103,7 +105,7 @@ function prepareInsertPayload(table, data, options = {}) {
       sanitized.tenant_id = sanitized.tenant_id ?? companyId;
     }
   }
-  if (!options.skipCreatedBy) {
+  if (!options.skipCreatedBy && !SKIP_CREATED_BY_TABLES.has(table)) {
     const uid = getCurrentUserUUID();
     if (sanitized.created_by != null && _safeUUID(sanitized.created_by) === null) {
       sanitized.created_by = uid;
@@ -112,6 +114,8 @@ function prepareInsertPayload(table, data, options = {}) {
     } else {
       sanitized.created_by = _safeUUID(sanitized.created_by);
     }
+  } else if (SKIP_CREATED_BY_TABLES.has(table)) {
+    delete sanitized.created_by;
   }
   if (!options.skipCreatedAt && sanitized.created_at == null) {
     sanitized.created_at = new Date().toISOString();
