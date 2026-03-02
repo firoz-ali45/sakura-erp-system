@@ -2104,10 +2104,12 @@ const getUuidDisplayName = (uuidOrName) => {
   return safeUUID(uuidOrName) ? t('common.notAvailable') : uuidOrName;
 };
 
-/** created_by is UUID from batches; resolve to users.name for display. */
+/** created_by is UUID from batches; prefer DB created_by_name (view), then map, then fallback. */
 const getBatchCreatedByDisplay = (batch) => {
   const fallback = safeNotAvailable();
   if (!batch) return fallback;
+  const fromDb = batch.created_by_name ?? batch.createdByName;
+  if (fromDb && String(fromDb).trim()) return fromDb.trim();
   const uid = batch.created_by ?? batch.createdBy;
   if (!uid) return fallback;
   const name = createdByNameMap.value[uid];

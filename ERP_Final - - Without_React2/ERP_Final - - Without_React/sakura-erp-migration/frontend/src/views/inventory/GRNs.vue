@@ -188,7 +188,7 @@
                   {{ formatStatus(grn.status || 'draft') }}
                 </span>
               </td>
-              <td :class="['px-6 py-4 text-sm text-gray-700', textAlign]">{{ grn.receivedBy || grn.received_by || 'N/A' }}</td>
+              <td :class="['px-6 py-4 text-sm text-gray-700', textAlign]">{{ grn.received_by_name || grn.receivedBy || grn.received_by || 'N/A' }}</td>
               <td :class="['px-6 py-4 text-sm', textAlign]" @click.stop>
                 <div class="relative">
                   <button @click.stop="toggleGRNMenu(grn.id)" class="text-gray-600 hover:text-gray-800">
@@ -1081,7 +1081,7 @@ const filteredGRNs = computed(() => {
   // Received By filter
   if (criteria.receivedBy) {
     filtered = filtered.filter(g => {
-      const receivedBy = (g.receivedBy || g.received_by || '').toLowerCase();
+      const receivedBy = (g.received_by_name || g.receivedBy || g.received_by || '').toLowerCase();
       const matches = receivedBy === criteria.receivedBy.toLowerCase();
       return criteria.receivedByMode === 'including' ? matches : !matches;
     });
@@ -1701,7 +1701,7 @@ const exportGRNs = (grnsToExport) => {
     'Supplier': getSupplierName(grn),
     'Receiving Location': grn.receivingLocation || grn.receiving_location || 'N/A',
     'Status': formatStatus(grn.status),
-    'Received By': grn.receivedBy || grn.received_by || 'N/A',
+    'Received By': grn.received_by_name || grn.receivedBy || grn.received_by || 'N/A',
     'QC Checked By': grn.qcCheckedBy || grn.qc_checked_by || 'N/A',
     'Supplier Invoice': grn.supplierInvoiceNumber || grn.supplier_invoice_number || 'N/A',
     'Delivery Note': grn.deliveryNoteNumber || grn.delivery_note_number || 'N/A',
