@@ -390,10 +390,7 @@ const getPricingModeLabel = (mode) => {
 };
 
 const createPO = async () => {
-  console.log('============ CREATE PO START (DIRECT) ============');
-  
   if (!canConvert.value) {
-    console.log('Cannot convert - validation failed');
     showNotification('Please select a supplier and at least one item', 'error');
     return;
   }
@@ -401,33 +398,26 @@ const createPO = async () => {
   converting.value = true;
   
   try {
-    // Import supabase directly to bypass any cached service
     const { supabaseClient } = await import('@/services/supabase');
-    
-    // Prepare data
+    const { dbInsert } = await import('@/services/db.js');
+
     const selectedItems = convertibleItems.value.filter(i => i.selected);
     const totalAmount = selectedItems.reduce((sum, i) => sum + ((i.convertQty || 0) * (i.poPrice || 0)), 0);
     const vatRate = 0.15;
     const vatAmount = totalAmount * vatRate;
-    
-    // Generate PO number
+
     const year = new Date().getFullYear();
     const timestamp = Date.now().toString().slice(-6);
     const poNumber = `PO-${year}-${timestamp}`;
-    
-    console.log('Creating PO:', poNumber);
-    console.log('Supplier:', selectedSupplier.value.name);
-    console.log('Items:', selectedItems.length);
-    console.log('Total:', totalAmount);
-    
-    // STEP 1: Create PO Header — DOCUMENT CHAIN: source_pr_id links PO to originating PR
-    const { data: newPO, error: poError } = await supabaseClient
-      .from('purchase_orders')
-      .insert({
+
+    // STEP 1: Create PO Header via centralized db layer (tenant_id/company_id skipped for PO; created_by/created_at injected)
+    let newPO;
+    try {
+      newPO = await dbInsert(supabaseClient, 'purchase_orders', {
         po_number: poNumber,
         supplier_id: selectedSupplier.value.id,
         supplier_name: selectedSupplier.value.name,
-        source_pr_id: pr.value.id, // ROOT FIX: document chain
+        source_pr_id: pr.value.id,
         status: 'pending',
         business_date: new Date().toISOString().split('T')[0],
         order_date: new Date().toISOString(),
@@ -437,16 +427,14 @@ const createPO = async () => {
         ordered_quantity: selectedItems.reduce((sum, i) => sum + (i.convertQty || 0), 0),
         remaining_quantity: selectedItems.reduce((sum, i) => sum + (i.convertQty || 0), 0),
         receiving_status: 'not_received'
-      })
-      .select()
-      .single();
-    
-    if (poError) {
-      console.error('PO Header Error:', poError);
-      throw new Error('Failed to create PO: ' + poError.message);
+      });
+    } catch (poErr) {
+      if (poErr?.code === 'PGRST116' || poErr?.message?.includes('no row returned')) {
+        const { data: refetch } = await supabaseClient.from('purchase_orders').select('id, po_number').eq('po_number', poNumber).limit(1);
+        newPO = Array.isArray(refetch) && refetch.length > 0 ? refetch[0] : null;
+      }
+      if (!newPO) throw poErr;
     }
-    
-    console.log('PO Created:', newPO);
     const createdPONumber = newPO.po_number || poNumber;
     const createdPOId = newPO.id;
     

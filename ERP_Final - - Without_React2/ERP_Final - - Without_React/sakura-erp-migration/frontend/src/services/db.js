@@ -16,9 +16,9 @@ const STORAGE_KEY_COMPANY = 'sakura_company_id';
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /** Tables that need BOTH company_id and tenant_id (same context value) — production batches has company_id NOT NULL */
-const BOTH_COMPANY_AND_TENANT_TABLES = new Set(['batches']);
-/** grn_batches is a VIEW over batches; view may not expose company_id in schema cache — skip inject so insert does not error; fallback path inserts into batches with company_id */
-const SKIP_COMPANY_TABLES = new Set(['grn_inspections', 'grn_inspection_items', 'grn_inspection_item', 'purchase_order_items', 'purchasing_invoice_items', 'grn_batches']);
+const BOTH_COMPANY_AND_TENANT_TABLES = new Set(['batches', 'grn_batches']);
+/** Tables that have no company_id/tenant_id column (inject skipped to avoid PGRST204) */
+const SKIP_COMPANY_TABLES = new Set(['grn_inspections', 'grn_inspection_items', 'grn_inspection_item', 'purchase_order_items', 'purchasing_invoice_items', 'purchase_orders', 'purchase_requests', 'pr_po_linkage']);
 
 /** If value is a valid UUID return it, else null. Re-export from uuidUtils for DB layer. */
 export { safeUUID };
@@ -129,8 +129,10 @@ function prepareInsertPayload(table, data, options = {}) {
 export async function dbInsert(client, table, data, options = {}) {
   if (!client) throw new Error('DB client required');
   const payload = prepareInsertPayload(table, data, options);
-  const { data: result, error } = await client.from(table).insert([payload]).select().single();
+  const { data: rows, error } = await client.from(table).insert([payload]).select();
   if (error) throw error;
+  const result = Array.isArray(rows) && rows.length > 0 ? rows[0] : null;
+  if (!result) throw new Error(`Insert into ${table} succeeded but no row returned (check RLS or RETURNING)`);
   return result;
 }
 
@@ -157,8 +159,10 @@ export async function dbUpdate(client, table, data, filters) {
       if (value !== undefined && value !== null) q = q.eq(key, value);
     });
   }
-  const { data: result, error } = await q.select().single();
+  const { data: rows, error } = await q.select();
   if (error) throw error;
+  const result = Array.isArray(rows) && rows.length > 0 ? rows[0] : null;
+  if (!result && filters && Object.keys(filters).length > 0) throw new Error(`Update ${table} matched 0 rows`);
   return result;
 }
 
