@@ -339,32 +339,10 @@ const loadData = async () => {
       getPurchaseRequestById(prId),
       loadSuppliersFromSupabase()
     ]);
-
+    
     pr.value = prData;
-    if (!prData) {
-      loading.value = false;
-      return;
-    }
-
-    // Document state: block if PR already closed or has linked PO
-    const status = (prData.status || '').toLowerCase().trim();
-    if (status === 'closed') {
-      showNotification('This Purchase Request is closed. Convert to PO is not allowed.', 'error');
-      router.replace(`/homeportal/pr-detail/${prId}`);
-      loading.value = false;
-      return;
-    }
-    const { supabaseClient } = await import('@/services/supabase.js');
-    const { data: linkRows } = await supabaseClient.from('pr_po_linkage').select('pr_id').eq('pr_id', prId).limit(1);
-    if (linkRows && linkRows.length > 0) {
-      showNotification('This Purchase Request already has a linked Purchase Order. Duplicate conversion is not allowed.', 'error');
-      router.replace(`/homeportal/pr-detail/${prId}`);
-      loading.value = false;
-      return;
-    }
-
     suppliers.value = (supplierList || []).filter(s => !s.deleted);
-
+    
     // Initialize convertible items
     if (prData?.items) {
       convertibleItems.value = prData.items
@@ -417,24 +395,16 @@ const createPO = async () => {
     return;
   }
 
-  // Backend-level guard: block if PR was closed or linked to PO (e.g. by another tab)
-  const prId = pr.value?.id;
-  if (prId) {
-    const { supabaseClient } = await import('@/services/supabase.js');
-    const { data: prRow } = await supabaseClient.from('purchase_requests').select('status').eq('id', prId).maybeSingle();
-    if (prRow && (prRow.status || '').toLowerCase().trim() === 'closed') {
-      showNotification('This Purchase Request is closed. Conversion blocked.', 'error');
-      return;
-    }
-    const { data: linkRows } = await supabaseClient.from('pr_po_linkage').select('pr_id').eq('pr_id', prId).limit(1);
-    if (linkRows && linkRows.length > 0) {
-      showNotification('This Purchase Request already has a linked PO. Duplicate conversion blocked.', 'error');
-      return;
-    }
+  // BUSINESS RULE: Block if PR already has linked PO or is CLOSED (document state control)
+  const { canCreateNextDocument } = await import('@/services/erpViews.js');
+  const canProceed = await canCreateNextDocument('PR', pr.value?.id);
+  if (!canProceed) {
+    showNotification('This Purchase Request already has a linked Purchase Order or is closed. Duplicate conversion is not allowed.', 'error');
+    return;
   }
-
+  
   converting.value = true;
-
+  
   try {
     const { supabaseClient } = await import('@/services/supabase');
     const { dbInsert } = await import('@/services/db.js');
@@ -504,13 +474,17 @@ const createPO = async () => {
       console.log('PO Items Created');
     }
     
-    // STEP 3: Update PR Items with PO reference
+    // STEP 3: Update PR Items with PO reference (quantity_remaining so auto-close trigger can set PR status = CLOSED)
     for (const item of selectedItems) {
+      const qty = parseFloat(item.quantity) || 0;
+      const ordered = parseFloat(item.convertQty) || 0;
+      const remaining = Math.max(0, qty - ordered);
       await supabaseClient
         .from('purchase_request_items')
         .update({
           status: 'converted_to_po',
-          quantity_ordered: item.convertQty,
+          quantity_ordered: ordered,
+          quantity_remaining: remaining,
           po_id: createdPOId,
           po_number: createdPONumber,
           conversion_date: new Date().toISOString(),

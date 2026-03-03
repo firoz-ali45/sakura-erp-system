@@ -3058,20 +3058,16 @@ const createPurchasing = async () => {
     console.log('🛒 GRN Number:', grn.value.grnNumber || grn.value.grn_number);
     console.log('='.repeat(60));
     
-    // Validate GRN is approved and not closed (document state control)
-    const grnStatus = (grn.value.status || '').toLowerCase().trim();
+    // Validate GRN is approved
+    const grnStatus = (grn.value.status || '').toLowerCase();
     console.log('📋 GRN Status:', grnStatus);
-
-    if (grnStatus === 'closed') {
-      showNotification('This GRN is closed. Create Purchasing is not allowed.', 'error');
-      return;
-    }
+    
     if (grnStatus !== 'approved' && grnStatus !== 'passed') {
       showNotification('GRN must be approved before creating Purchasing Invoice.', 'error');
       return;
     }
-
-    // Check if purchasing invoice already exists for this GRN (backend-level guard)
+    
+    // Check if purchasing invoice already exists for this GRN
     const { ensureSupabaseReady, supabaseClient } = await import('@/services/supabase.js');
     const ready = await ensureSupabaseReady();
     
@@ -3088,8 +3084,17 @@ const createPurchasing = async () => {
       .single();
     
     if (existingInvoice) {
-      showNotification('Purchasing Invoice already exists for this GRN. Duplicate creation is not allowed. Redirecting...', 'info');
+      showNotification(`Purchasing Invoice already exists for this GRN. Redirecting...`, 'info');
       router.push(`/homeportal/purchasing-detail/${existingInvoice.id}`);
+      return;
+    }
+
+    // BUSINESS RULE: Block if GRN is CLOSED or Purchasing already exists (document state control)
+    const { canCreateNextDocument } = await import('@/services/erpViews.js');
+    const canCreate = await canCreateNextDocument('GRN', grn.value.id);
+    if (!canCreate) {
+      showNotification('Purchasing already exists for this GRN or the GRN is closed. Duplicate creation is not allowed.', 'error');
+      canCreatePurchase.value = false;
       return;
     }
     
@@ -3338,30 +3343,18 @@ const createPurchasing = async () => {
       created_at: new Date().toISOString()
     };
     
-    // Insert purchasing invoice
-    const { data: newInvoice, error: invoiceError } = await supabaseClient
-      .from('purchasing_invoices')
-      .insert(purchasingInvoice)
-      .select()
-      .single();
+    // Insert purchasing invoice via service (enforces: no duplicate PUR for GRN, GRN not closed)
+    const { savePurchasingInvoiceToSupabase } = await import('@/services/supabase.js');
+    const result = await savePurchasingInvoiceToSupabase(purchasingInvoice);
     
-    if (invoiceError) {
-      console.error('❌ Error creating purchasing invoice:', invoiceError);
-      console.error('❌ Error code:', invoiceError.code);
-      console.error('❌ Error message:', invoiceError.message);
-
-      if (invoiceError.code === '42P01') {
-        showNotification('Purchasing module tables not created yet. Please run the SQL migration script first.', 'warning', 8000);
-        return;
-      }
-      // Duplicate GRN → Purchasing blocked by DB trigger
-      if (invoiceError.code === 'P0001' || (invoiceError.message && invoiceError.message.includes('already exists for this GRN'))) {
-        showNotification('Purchasing invoice already exists for this GRN. Duplicate creation is not allowed.', 'error', 8000);
-        return;
-      }
-
-      showNotification(`Error creating purchasing invoice: ${invoiceError.message}`, 'error', 10000);
-      throw new Error(invoiceError.message || 'Failed to create purchasing invoice');
+    if (!result.success) {
+      showNotification(result.error || 'Failed to create purchasing invoice', 'error', 8000);
+      return;
+    }
+    const newInvoice = result.data;
+    if (!newInvoice || !newInvoice.id) {
+      showNotification('Purchasing invoice was not created. Please try again.', 'error');
+      return;
     }
     
     console.log('✅ Purchasing Invoice created:', newInvoice.id, 'Invoice#:', newInvoice.invoice_number);

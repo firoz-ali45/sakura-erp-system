@@ -5,6 +5,7 @@
 
 import { supabaseClient, ensureSupabaseReady, USE_SUPABASE } from './supabase';
 import { cachedFetch, cacheKeys, invalidateCache } from '@/utils/dataCache';
+import { canCreateNextDocument } from '@/services/erpViews.js';
 
 // Cache key for purchase requests
 const PR_CACHE_KEY = 'sakura_purchase_requests';
@@ -168,50 +169,7 @@ export async function getPurchaseRequestById(prId) {
         .eq('pr_id', prId)
         .eq('deleted', false)
         .order('item_number', { ascending: true });
-
-      // STEP 2b: Fetch DB-aggregated item summary (ordered PO, received GRN, invoiced PUR) — RPC first (bypasses RLS), then view fallback
-      let summaryMap = {};
-      try {
-        const { data: summaryRows, error: rpcError } = await supabaseClient.rpc('fn_get_pr_item_summary', { p_pr_id: prId });
-        if (!rpcError && summaryRows && summaryRows.length) {
-          summaryRows.forEach(row => {
-            const id = row.pr_item_id != null ? String(row.pr_item_id) : '';
-            summaryMap[id] = {
-              ordered_po_qty: Number(row.ordered_po_qty) || 0,
-              received_grn_qty: Number(row.received_grn_qty) || 0,
-              invoiced_pur_qty: Number(row.invoiced_pur_qty) || 0
-            };
-          });
-        } else if (rpcError) {
-          const { data: viewRows } = await supabaseClient
-            .from('v_pr_item_summary')
-            .select('pr_item_id, ordered_po_qty, received_grn_qty, invoiced_pur_qty')
-            .eq('pr_id', prId);
-          if (viewRows && viewRows.length) {
-            viewRows.forEach(row => {
-              const id = row.pr_item_id != null ? String(row.pr_item_id) : '';
-              summaryMap[id] = {
-                ordered_po_qty: Number(row.ordered_po_qty) || 0,
-                received_grn_qty: Number(row.received_grn_qty) || 0,
-                invoiced_pur_qty: Number(row.invoiced_pur_qty) || 0
-              };
-            });
-          }
-        }
-      } catch (_) { /* RPC/view may not exist */ }
-
-      // Merge summary into items (DB-driven aggregation; no UI cache; normalize id for map lookup)
-      const itemsWithSummary = (items || []).map(it => {
-        const sum = summaryMap[it.id != null ? String(it.id) : ''] || {};
-        return {
-          ...it,
-          quantity_ordered: it.quantity_ordered ?? sum.ordered_po_qty,
-          ordered_po_qty: sum.ordered_po_qty,
-          received_grn_qty: sum.received_grn_qty,
-          invoiced_pur_qty: sum.invoiced_pur_qty
-        };
-      });
-
+      
       // STEP 3: Fetch status history
       const { data: history, error: historyError } = await supabaseClient
         .from('pr_status_history')
@@ -219,10 +177,10 @@ export async function getPurchaseRequestById(prId) {
         .eq('pr_id', prId)
         .order('change_date', { ascending: false });
       
-      // STEP 4: Combine data (items include DB-aggregated ordered/received/invoiced)
+      // STEP 4: Combine data
       const result = {
         ...pr,
-        items: itemsWithSummary,
+        items: items || [],
         status_history: history || []
       };
       
@@ -835,31 +793,17 @@ export async function convertPRToPO(prIds, supplierId, pricingMode = 'estimated'
     console.error('Supabase not ready!');
     return { success: false, error: 'Supabase not configured' };
   }
+
+  // BUSINESS RULE: Block conversion if PR already has linked PO or status = CLOSED (backend enforcement)
+  const prId = Array.isArray(prIds) ? prIds[0] : prIds;
+  if (prId) {
+    const canConvert = await canCreateNextDocument('PR', prId);
+    if (!canConvert) {
+      return { success: false, error: 'This Purchase Request already has a linked Purchase Order or is closed. Duplicate conversion is not allowed.' };
+    }
+  }
   
   try {
-    // Backend enforcement: block conversion if PR is closed or already has linked PO
-    for (const prId of Array.isArray(prIds) ? prIds : [prIds]) {
-      const { data: prRow } = await supabaseClient
-        .from('purchase_requests')
-        .select('id, status')
-        .eq('id', prId)
-        .maybeSingle();
-      if (prRow) {
-        const status = (prRow.status || '').toLowerCase().trim();
-        if (status === 'closed') {
-          return { success: false, error: 'Cannot convert: Purchase Request is already closed.' };
-        }
-        const { data: linkRows } = await supabaseClient
-          .from('pr_po_linkage')
-          .select('pr_id')
-          .eq('pr_id', prId)
-          .limit(1);
-        if (linkRows && linkRows.length > 0) {
-          return { success: false, error: 'Cannot convert: Purchase Request already has a linked Purchase Order.' };
-        }
-      }
-    }
-
     // First try the RPC function
     const { data, error } = await supabaseClient
       .rpc('convert_pr_to_po', {

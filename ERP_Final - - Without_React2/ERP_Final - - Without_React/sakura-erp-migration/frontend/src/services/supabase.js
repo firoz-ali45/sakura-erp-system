@@ -3747,6 +3747,14 @@ export async function getGRNById(grnId) {
       grnData.batches = [];
     }
 
+    // Ensure receiving location is available under both keys for UI
+    if (grnData.receiving_location != null && grnData.receiving_location !== '') {
+      grnData.receivingLocation = grnData.receivingLocation || grnData.receiving_location;
+    }
+    if (grnData.receivingLocation != null && grnData.receivingLocation !== '') {
+      grnData.receiving_location = grnData.receiving_location || grnData.receivingLocation;
+    }
+
     return { success: true, data: grnData };
   } catch (error) {
     console.error('❌ Error in getGRNById:', error);
@@ -4061,6 +4069,18 @@ export async function saveBatchToSupabase(batch) {
           created_at: batchesData.created_at
         } : null;
         error = null;
+        // Sync GRN receiving_location from this batch when GRN has none
+        if (grnId && (batchesData?.storage_location || batch.storageLocation || batch.storage_location)) {
+          const sl = String(batchesData?.storage_location || batch.storageLocation || batch.storage_location).trim();
+          if (sl) {
+            try {
+              const { data: grnRow } = await supabaseClient.from('grn_inspections').select('receiving_location').eq('id', grnId).maybeSingle();
+              if (grnRow && (grnRow.receiving_location == null || String(grnRow.receiving_location || '').trim() === '')) {
+                await supabaseClient.from('grn_inspections').update({ receiving_location: sl }).eq('id', grnId);
+              }
+            } catch (_) { /* non-fatal */ }
+          }
+        }
       }
 
       if (error) {
@@ -4110,6 +4130,16 @@ export async function saveBatchToSupabase(batch) {
         if (invBatch.id) upd.batch_id = invBatch.id;
         await dbUpdate(supabaseClient, 'grn_batches', upd, { id: data.id });
         mergedData = { ...data, batch_number: invBatch.batch_number, batch_id: invBatch.id };
+      }
+      // Keep GRN receiving_location in sync: if empty, set from this batch's storage_location
+      const storageLoc = batch.storageLocation || batch.storage_location;
+      if (grnId && storageLoc && String(storageLoc).trim() !== '') {
+        try {
+          const { data: grnRow } = await supabaseClient.from('grn_inspections').select('receiving_location').eq('id', grnId).maybeSingle();
+          if (grnRow && (grnRow.receiving_location == null || String(grnRow.receiving_location || '').trim() === '')) {
+            await supabaseClient.from('grn_inspections').update({ receiving_location: String(storageLoc).trim() }).eq('id', grnId);
+          }
+        } catch (_) { /* non-fatal */ }
       }
       return { success: true, data: mergedData };
     } catch (err) {
@@ -4535,6 +4565,15 @@ function getPurchasingInvoiceByIdFromLocalStorage(invoiceId) {
 export async function savePurchasingInvoiceToSupabase(invoiceData) {
   if (!USE_SUPABASE || !supabaseClient) {
     return savePurchasingInvoiceToLocalStorage(invoiceData);
+  }
+
+  const grnId = invoiceData.grn_id || invoiceData.grnId;
+  if (grnId) {
+    const { canCreateNextDocument } = await import('@/services/erpViews.js');
+    const canCreate = await canCreateNextDocument('GRN', grnId);
+    if (!canCreate) {
+      return { success: false, error: 'Purchasing already exists for this GRN or the GRN is closed. Duplicate creation is not allowed.' };
+    }
   }
 
   try {
