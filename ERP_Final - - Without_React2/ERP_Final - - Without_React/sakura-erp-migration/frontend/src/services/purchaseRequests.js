@@ -168,7 +168,37 @@ export async function getPurchaseRequestById(prId) {
         .eq('pr_id', prId)
         .eq('deleted', false)
         .order('item_number', { ascending: true });
-      
+
+      // STEP 2b: Fetch DB-aggregated item summary (ordered PO, received GRN, invoiced PUR) from view
+      let summaryMap = {};
+      try {
+        const { data: summaryRows } = await supabaseClient
+          .from('v_pr_item_summary')
+          .select('pr_item_id, ordered_po_qty, received_grn_qty, invoiced_pur_qty')
+          .eq('pr_id', prId);
+        if (summaryRows && summaryRows.length) {
+          summaryRows.forEach(row => {
+            summaryMap[row.pr_item_id] = {
+              ordered_po_qty: Number(row.ordered_po_qty) || 0,
+              received_grn_qty: Number(row.received_grn_qty) || 0,
+              invoiced_pur_qty: Number(row.invoiced_pur_qty) || 0
+            };
+          });
+        }
+      } catch (_) { /* view may not exist in older projects */ }
+
+      // Merge summary into items (DB-driven aggregation; no UI cache)
+      const itemsWithSummary = (items || []).map(it => {
+        const sum = summaryMap[it.id] || {};
+        return {
+          ...it,
+          quantity_ordered: it.quantity_ordered ?? sum.ordered_po_qty,
+          ordered_po_qty: sum.ordered_po_qty,
+          received_grn_qty: sum.received_grn_qty,
+          invoiced_pur_qty: sum.invoiced_pur_qty
+        };
+      });
+
       // STEP 3: Fetch status history
       const { data: history, error: historyError } = await supabaseClient
         .from('pr_status_history')
@@ -176,10 +206,10 @@ export async function getPurchaseRequestById(prId) {
         .eq('pr_id', prId)
         .order('change_date', { ascending: false });
       
-      // STEP 4: Combine data
+      // STEP 4: Combine data (items include DB-aggregated ordered/received/invoiced)
       const result = {
         ...pr,
-        items: items || [],
+        items: itemsWithSummary,
         status_history: history || []
       };
       
