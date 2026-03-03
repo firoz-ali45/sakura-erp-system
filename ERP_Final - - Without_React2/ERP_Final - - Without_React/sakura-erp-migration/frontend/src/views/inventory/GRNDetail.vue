@@ -208,7 +208,7 @@
             </div>
             <div class="pb-4 border-b border-gray-200">
               <label class="block text-sm font-medium text-gray-600 mb-1">{{ t('inventory.grn.receivingLocation') }}</label>
-              <p class="text-gray-900 font-medium">{{ grn.receivingLocation || grn.receiving_location || t('common.notAvailable') }}</p>
+              <p class="text-gray-900 font-medium">{{ receivingLocationDisplay }}</p>
             </div>
             <div>
               <label class="block text-sm font-medium text-gray-600 mb-1">{{ t('inventory.grn.receivedBy') }}</label>
@@ -1230,6 +1230,18 @@ const grnStatus = computed(() => {
   }
   
   return status;
+});
+
+// Receiving location: GRN header first, else derive from batches (first batch storage_location or unique list)
+const receivingLocationDisplay = computed(() => {
+  const g = grn.value;
+  if (!g) return t('common.notAvailable');
+  const fromGrn = g.receivingLocation || g.receiving_location;
+  if (fromGrn && String(fromGrn).trim() !== '') return fromGrn.trim();
+  const batches = g.batches || [];
+  if (batches.length === 0) return t('common.notAvailable');
+  const locs = [...new Set((batches.map(b => b.storage_location || b.storageLocation).filter(Boolean)))];
+  return locs.length > 0 ? locs.join(', ') : t('common.notAvailable');
 });
 
 // Check if batch quantities match received quantities
@@ -3046,16 +3058,20 @@ const createPurchasing = async () => {
     console.log('🛒 GRN Number:', grn.value.grnNumber || grn.value.grn_number);
     console.log('='.repeat(60));
     
-    // Validate GRN is approved
-    const grnStatus = (grn.value.status || '').toLowerCase();
+    // Validate GRN is approved and not closed (document state control)
+    const grnStatus = (grn.value.status || '').toLowerCase().trim();
     console.log('📋 GRN Status:', grnStatus);
-    
+
+    if (grnStatus === 'closed') {
+      showNotification('This GRN is closed. Create Purchasing is not allowed.', 'error');
+      return;
+    }
     if (grnStatus !== 'approved' && grnStatus !== 'passed') {
       showNotification('GRN must be approved before creating Purchasing Invoice.', 'error');
       return;
     }
-    
-    // Check if purchasing invoice already exists for this GRN
+
+    // Check if purchasing invoice already exists for this GRN (backend-level guard)
     const { ensureSupabaseReady, supabaseClient } = await import('@/services/supabase.js');
     const ready = await ensureSupabaseReady();
     
@@ -3072,7 +3088,7 @@ const createPurchasing = async () => {
       .single();
     
     if (existingInvoice) {
-      showNotification(`Purchasing Invoice already exists for this GRN. Redirecting...`, 'info');
+      showNotification('Purchasing Invoice already exists for this GRN. Duplicate creation is not allowed. Redirecting...', 'info');
       router.push(`/homeportal/purchasing-detail/${existingInvoice.id}`);
       return;
     }
@@ -3333,16 +3349,17 @@ const createPurchasing = async () => {
       console.error('❌ Error creating purchasing invoice:', invoiceError);
       console.error('❌ Error code:', invoiceError.code);
       console.error('❌ Error message:', invoiceError.message);
-      console.error('❌ Error details:', invoiceError.details);
-      console.error('❌ Error hint:', invoiceError.hint);
-      
-      // Check if table doesn't exist (need to run migration first)
+
       if (invoiceError.code === '42P01') {
         showNotification('Purchasing module tables not created yet. Please run the SQL migration script first.', 'warning', 8000);
         return;
       }
-      
-      // Show the actual error message to help debug
+      // Duplicate GRN → Purchasing blocked by DB trigger
+      if (invoiceError.code === 'P0001' || (invoiceError.message && invoiceError.message.includes('already exists for this GRN'))) {
+        showNotification('Purchasing invoice already exists for this GRN. Duplicate creation is not allowed.', 'error', 8000);
+        return;
+      }
+
       showNotification(`Error creating purchasing invoice: ${invoiceError.message}`, 'error', 10000);
       throw new Error(invoiceError.message || 'Failed to create purchasing invoice');
     }

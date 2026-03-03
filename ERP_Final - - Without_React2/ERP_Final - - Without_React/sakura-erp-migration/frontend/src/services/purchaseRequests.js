@@ -794,6 +794,29 @@ export async function convertPRToPO(prIds, supplierId, pricingMode = 'estimated'
   }
   
   try {
+    // Backend enforcement: block conversion if PR is closed or already has linked PO
+    for (const prId of Array.isArray(prIds) ? prIds : [prIds]) {
+      const { data: prRow } = await supabaseClient
+        .from('purchase_requests')
+        .select('id, status')
+        .eq('id', prId)
+        .maybeSingle();
+      if (prRow) {
+        const status = (prRow.status || '').toLowerCase().trim();
+        if (status === 'closed') {
+          return { success: false, error: 'Cannot convert: Purchase Request is already closed.' };
+        }
+        const { data: linkRows } = await supabaseClient
+          .from('pr_po_linkage')
+          .select('pr_id')
+          .eq('pr_id', prId)
+          .limit(1);
+        if (linkRows && linkRows.length > 0) {
+          return { success: false, error: 'Cannot convert: Purchase Request already has a linked Purchase Order.' };
+        }
+      }
+    }
+
     // First try the RPC function
     const { data, error } = await supabaseClient
       .rpc('convert_pr_to_po', {
