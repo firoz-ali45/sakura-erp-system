@@ -169,27 +169,40 @@ export async function getPurchaseRequestById(prId) {
         .eq('deleted', false)
         .order('item_number', { ascending: true });
 
-      // STEP 2b: Fetch DB-aggregated item summary (ordered PO, received GRN, invoiced PUR) from view
+      // STEP 2b: Fetch DB-aggregated item summary (ordered PO, received GRN, invoiced PUR) — RPC first (bypasses RLS), then view fallback
       let summaryMap = {};
       try {
-        const { data: summaryRows } = await supabaseClient
-          .from('v_pr_item_summary')
-          .select('pr_item_id, ordered_po_qty, received_grn_qty, invoiced_pur_qty')
-          .eq('pr_id', prId);
-        if (summaryRows && summaryRows.length) {
+        const { data: summaryRows, error: rpcError } = await supabaseClient.rpc('fn_get_pr_item_summary', { p_pr_id: prId });
+        if (!rpcError && summaryRows && summaryRows.length) {
           summaryRows.forEach(row => {
-            summaryMap[row.pr_item_id] = {
+            const id = row.pr_item_id != null ? String(row.pr_item_id) : '';
+            summaryMap[id] = {
               ordered_po_qty: Number(row.ordered_po_qty) || 0,
               received_grn_qty: Number(row.received_grn_qty) || 0,
               invoiced_pur_qty: Number(row.invoiced_pur_qty) || 0
             };
           });
+        } else if (rpcError) {
+          const { data: viewRows } = await supabaseClient
+            .from('v_pr_item_summary')
+            .select('pr_item_id, ordered_po_qty, received_grn_qty, invoiced_pur_qty')
+            .eq('pr_id', prId);
+          if (viewRows && viewRows.length) {
+            viewRows.forEach(row => {
+              const id = row.pr_item_id != null ? String(row.pr_item_id) : '';
+              summaryMap[id] = {
+                ordered_po_qty: Number(row.ordered_po_qty) || 0,
+                received_grn_qty: Number(row.received_grn_qty) || 0,
+                invoiced_pur_qty: Number(row.invoiced_pur_qty) || 0
+              };
+            });
+          }
         }
-      } catch (_) { /* view may not exist in older projects */ }
+      } catch (_) { /* RPC/view may not exist */ }
 
-      // Merge summary into items (DB-driven aggregation; no UI cache)
+      // Merge summary into items (DB-driven aggregation; no UI cache; normalize id for map lookup)
       const itemsWithSummary = (items || []).map(it => {
-        const sum = summaryMap[it.id] || {};
+        const sum = summaryMap[it.id != null ? String(it.id) : ''] || {};
         return {
           ...it,
           quantity_ordered: it.quantity_ordered ?? sum.ordered_po_qty,
