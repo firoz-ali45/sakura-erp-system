@@ -129,7 +129,8 @@ export async function updateStockTransferItemPickingMulti(transferId, itemId, al
           picked_qty: Number(a.pickedQty) || 0,
           damaged_qty: Number(a.damagedQty) || 0,
           unit_cost: a.unitCost != null ? Number(a.unitCost) : null
-        }));
+        }))
+    : [];
   const { data, error } = await supabaseClient.rpc('fn_update_stock_transfer_item_picking_multi', {
     p_transfer_id: transferId,
     p_item_id: itemId,
