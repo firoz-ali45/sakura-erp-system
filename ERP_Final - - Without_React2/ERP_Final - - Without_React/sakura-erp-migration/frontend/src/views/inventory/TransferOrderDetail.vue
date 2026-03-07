@@ -132,7 +132,7 @@
           </div>
           <div>
             <label class="block text-sm text-gray-500 mb-1">Created by</label>
-            <p class="font-medium">{{ order.requested_by || '—' }}</p>
+            <p class="font-medium">{{ order.requested_by_name || order.requested_by || '—' }}</p>
           </div>
           <div>
             <label class="block text-sm text-gray-500 mb-1">Status</label>

@@ -273,6 +273,12 @@ const routes = [
         meta: { requiresAuth: true, requiredPermission: 'user_management_permissions' }
       },
       {
+        path: 'user-management/departments',
+        name: 'UserManagementDepartments',
+        component: () => import('../views/user-management/DepartmentsList.vue'),
+        meta: { requiresAuth: true }
+      },
+      {
         path: 'user-management/access-matrix',
         name: 'UserManagementAccessMatrix',
         component: () => import('../views/user-management/AccessMatrixPage.vue'),

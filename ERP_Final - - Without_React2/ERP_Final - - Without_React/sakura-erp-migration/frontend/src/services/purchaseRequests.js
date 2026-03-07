@@ -223,7 +223,8 @@ export async function createPurchaseRequest(prData) {
     const headerData = {
       requester_id: prData.requesterId,
       requester_name: prData.requesterName || 'Unknown User',
-      department: prData.department,
+      department_id: prData.department_id || null,
+      department: prData.department || null,
       cost_center: prData.costCenter || null,
       business_date: prData.businessDate || new Date().toISOString().split('T')[0],
       required_date: prData.requiredDate,
@@ -327,6 +328,7 @@ export async function updatePurchaseRequest(prId, updates) {
   try {
     // Prepare update data (convert camelCase to snake_case)
     const updateData = {};
+    if (updates.department_id !== undefined) updateData.department_id = updates.department_id;
     if (updates.department !== undefined) updateData.department = updates.department;
     if (updates.costCenter !== undefined) updateData.cost_center = updates.costCenter;
     if (updates.requiredDate !== undefined) updateData.required_date = updates.requiredDate;

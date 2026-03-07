@@ -130,7 +130,7 @@
                 </span>
               </td>
               <td class="px-6 py-4 text-sm text-right">{{ formatNum(row.requested_total) }}</td>
-              <td class="px-6 py-4 text-sm text-gray-700">{{ row.requested_by || '—' }}</td>
+              <td class="px-6 py-4 text-sm text-gray-700">{{ row.requested_by_name || row.requested_by || '—' }}</td>
               <td class="px-6 py-4 text-sm text-gray-700">{{ formatDateTime(row.created_at) }}</td>
               <td class="px-6 py-4 text-sm text-gray-600">{{ lastAction(row) }}</td>
               <td class="px-6 py-4" @click.stop>
@@ -264,6 +264,7 @@ const filteredRows = computed(() => {
     list = list.filter(
       (r) =>
         (r.transfer_number || '').toLowerCase().includes(q) ||
+        (r.requested_by_name || '').toLowerCase().includes(q) ||
         (r.requested_by || '').toLowerCase().includes(q)
     );
   }
@@ -322,10 +323,10 @@ function statusClass(s) {
 }
 
 function lastAction(row) {
-  if (row.rejected_by) return `Declined by ${row.rejected_by}`;
-  if (row.approved_by_level2) return `Approved by ${row.approved_by_level2}`;
-  if (row.approved_by_level1) return `Approved by ${row.approved_by_level1}`;
-  if (row.requested_by) return `Submitted by ${row.requested_by}`;
+  if (row.rejected_by) return `Declined by ${row.rejected_by_name || row.rejected_by || '—'}`;
+  if (row.approved_by_level2) return `Approved by ${row.approved_by_level2_name || row.approved_by_level2 || '—'}`;
+  if (row.approved_by_level1) return `Approved by ${row.approved_by_level1_name || row.approved_by_level1 || '—'}`;
+  if (row.requested_by) return `Submitted by ${row.requested_by_name || row.requested_by || '—'}`;
   return '—';
 }
 
@@ -410,7 +411,7 @@ async function exportExcel() {
     to_name: 'To Location',
     status: 'Status',
     requested_total: 'Total Items',
-    requested_by: 'Created By',
+    requested_by_name: 'Created By',
     created_at: 'Created At'
   };
   exportToExcel(filteredRows.value, headers, 'Transfer_Orders');

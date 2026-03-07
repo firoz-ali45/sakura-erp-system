@@ -956,6 +956,68 @@ function getDepartmentsFromLocalStorage() {
   }
 }
 
+/**
+ * Fetch all departments for User Management CRUD (active + inactive). Single source of truth.
+ */
+export async function fetchDepartmentsForManagement() {
+  const ready = await ensureSupabaseReady();
+  if (!ready) return [];
+  const { data, error } = await supabaseClient.from('departments').select('*').order('name', { ascending: true });
+  if (error) {
+    console.warn('fetchDepartmentsForManagement:', error);
+    return [];
+  }
+  return data || [];
+}
+
+/**
+ * Create department in Supabase. Returns created row.
+ */
+export async function createDepartment(payload) {
+  const ready = await ensureSupabaseReady();
+  if (!ready) throw new Error('Supabase not ready');
+  const { data, error } = await supabaseClient.from('departments').insert({
+    code: payload.code || (payload.name || '').toUpperCase().replace(/\s+/g, '_').slice(0, 20),
+    name: payload.name,
+    description: payload.description || null,
+    is_active: payload.is_active !== false
+  }).select().single();
+  if (error) throw new Error(error.message || 'Failed to create department');
+  return data;
+}
+
+/**
+ * Update department by id.
+ */
+export async function updateDepartment(id, payload) {
+  const ready = await ensureSupabaseReady();
+  if (!ready) throw new Error('Supabase not ready');
+  const { data, error } = await supabaseClient.from('departments').update({
+    code: payload.code,
+    name: payload.name,
+    description: payload.description,
+    is_active: payload.is_active
+  }).eq('id', id).select().single();
+  if (error) throw new Error(error.message || 'Failed to update department');
+  return data;
+}
+
+/**
+ * Soft-delete department (set is_active = false). Optional hard delete if table has no FK usage.
+ */
+export async function deleteDepartment(id, soft = true) {
+  const ready = await ensureSupabaseReady();
+  if (!ready) throw new Error('Supabase not ready');
+  if (soft) {
+    const { data, error } = await supabaseClient.from('departments').update({ is_active: false }).eq('id', id).select().single();
+    if (error) throw new Error(error.message || 'Failed to deactivate department');
+    return data;
+  }
+  const { error } = await supabaseClient.from('departments').delete().eq('id', id);
+  if (error) throw new Error(error.message || 'Failed to delete department');
+  return null;
+}
+
 // ==================== SUPPLIERS FUNCTIONS ====================
 
 /**
@@ -4113,7 +4175,7 @@ export async function saveBatchToSupabase(batch) {
             if (invBatch && retryData?.id) {
               const upd = { batch_number: invBatch.batch_number };
               if (invBatch.id) upd.batch_id = invBatch.id;
-              await dbUpdate(supabaseClient, 'grn_batches', upd, { id: retryData.id });
+              await dbUpdate(supabaseClient, 'batches', upd, { id: retryData.id });
               merged = { ...retryData, batch_number: invBatch.batch_number, batch_id: invBatch.id };
             }
             return { success: true, data: merged };
@@ -4128,7 +4190,7 @@ export async function saveBatchToSupabase(batch) {
       if (invBatch && data?.id) {
         const upd = { batch_number: invBatch.batch_number };
         if (invBatch.id) upd.batch_id = invBatch.id;
-        await dbUpdate(supabaseClient, 'grn_batches', upd, { id: data.id });
+        await dbUpdate(supabaseClient, 'batches', upd, { id: data.id });
         mergedData = { ...data, batch_number: invBatch.batch_number, batch_id: invBatch.id };
       }
       // Keep GRN receiving_location in sync: if empty, set from this batch's storage_location
@@ -4173,15 +4235,13 @@ const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-
 const isValidUUID = (v) => typeof v === 'string' && UUID_REGEX.test(v);
 
 /**
- * Delete batch from Supabase grn_batches table.
- * CRITICAL: Must use .eq('id', batch.id) — batch.id is UUID. Never use batch.batch_number.
- * If batchId is not a valid UUID (e.g. localStorage "batch_xxx"), skip Supabase and only do localStorage.
+ * Delete batch from Supabase. UNIFIED SCHEMA: grn_batches is a view (no direct delete). Use underlying table batches.
  */
 export async function deleteBatchFromSupabase(batchId) {
   if (USE_SUPABASE && supabaseClient && isValidUUID(batchId)) {
     try {
       const { error } = await supabaseClient
-        .from('grn_batches')
+        .from('batches')
         .delete()
         .eq('id', batchId);
 
@@ -4209,42 +4269,33 @@ export async function deleteBatchFromSupabase(batchId) {
 }
 
 /**
- * Update batch in Supabase or localStorage
- * NOTE: grn_batches/batches view may not have qc_data, qc_checked_at, updated_at — strip to avoid PGRST204/PGRST1284
+ * Update batch in Supabase or localStorage.
+ * UNIFIED SCHEMA: grn_batches is a VIEW (read-only). Updates must go to the underlying table public.batches
+ * to avoid "cannot update column ... of view grn_batches". Map view field names to batches columns (e.g. quantity -> qty_received).
  */
 export async function updateBatchInSupabase(batchId, updates) {
   if (USE_SUPABASE && supabaseClient) {
     try {
-      // Map frontend fields to database columns
       const updateData = {};
 
-      // Map quantity fields
+      // batches table: qty_received (view exposes as "quantity")
       if (updates.batchQuantity !== undefined || updates.batch_quantity !== undefined) {
-        updateData.quantity = updates.batchQuantity ?? updates.batch_quantity;
+        updateData.qty_received = updates.batchQuantity ?? updates.batch_quantity;
       }
       if (updates.quantity !== undefined) {
-        updateData.quantity = updates.quantity;
+        updateData.qty_received = updates.quantity;
       }
 
-      // QC status — batches table CHECK expects: pending, passed, failed, on_hold, expired
-      // Map frontend (approved/rejected) to DB values to avoid batches_qc_status_check violation
       if (updates.qcStatus !== undefined || updates.qc_status !== undefined) {
         const raw = ((updates.qcStatus ?? updates.qc_status) || '').toLowerCase();
         updateData.qc_status = raw === 'approved' ? 'passed' : raw === 'rejected' ? 'failed' : (raw || 'pending');
       }
-      // Skip qc_data, qc_checked_at — not in batches schema, causes PGRST204/PGRST1284
-      // QC data stays in frontend state; only qc_status persists
 
-      // Map other safe fields
       if (updates.expiry_date !== undefined || updates.expiryDate !== undefined) {
-        updateData.expiry_date = updates.expiry_date ?? updates.expiryDate;
+        const v = updates.expiry_date ?? updates.expiryDate;
+        updateData.expiry_date = v == null ? null : (typeof v === 'string' && v.length > 10 ? v.slice(0, 10) : v);
       }
-      if (updates.batch_number !== undefined) {
-        updateData.batch_number = updates.batch_number;
-      }
-      if (updates.batch_id !== undefined) {
-        updateData.batch_id = updates.batch_id;
-      }
+      if (updates.batch_number !== undefined) updateData.batch_number = updates.batch_number;
       if (updates.storageLocation !== undefined || updates.storage_location !== undefined) {
         updateData.storage_location = updates.storageLocation ?? updates.storage_location;
       }
@@ -4256,44 +4307,26 @@ export async function updateBatchInSupabase(batchId, updates) {
         updateData.created_by = cb;
       }
 
-      // Columns known to be missing in batches/grn_batches — never send
-      const STRIP_COLUMNS = ['updated_at', 'qc_data', 'qc_checked_at', 'qc_checked_by'];
-      STRIP_COLUMNS.forEach(k => delete updateData[k]);
+      ['updated_at', 'qc_data', 'qc_checked_at', 'qc_checked_by', 'batch_id'].forEach(k => delete updateData[k]);
 
       if (Object.keys(updateData).length === 0) {
         return { success: true, data: null };
       }
 
-      const tryUpdate = async (payload) => {
-        return await supabaseClient
-          .from('grn_batches')
-          .update(payload)
-          .eq('id', batchId)
-          .select()
-          .single();
-      };
-
-      let { data, error } = await tryUpdate(updateData);
+      // Update underlying table batches (grn_batches is a view — not updatable)
+      const { data, error } = await supabaseClient
+        .from('batches')
+        .update(updateData)
+        .eq('id', batchId)
+        .select()
+        .single();
 
       if (error) {
-        // If table doesn't exist (404), use localStorage
         if (error.code === 'PGRST205' || error.message?.includes('not found')) {
-          console.warn('⚠️ grn_batches table not found, using localStorage');
+          console.warn('⚠️ batches table not found, using localStorage');
           return updateBatchInLocalStorage(batchId, updates);
         }
-        // Schema cache / column missing — retry without problematic columns
-        if (error.code === 'PGRST204' || error.code === 'PGRST1284' || error.message?.includes('schema cache')) {
-          let retryPayload = { ...updateData };
-          STRIP_COLUMNS.forEach(k => delete retryPayload[k]);
-          for (let attempt = 0; attempt < 5; attempt++) {
-            const res = await tryUpdate(retryPayload);
-            if (!res.error) return { success: true, data: res.data };
-            const missingCol = res.error.message?.match(/'([^']+)' column/i)?.[1];
-            if (missingCol) delete retryPayload[missingCol];
-          }
-        }
         console.error('❌ Error updating batch in Supabase:', error);
-        // Do NOT fall back to localStorage — batch is in Supabase; return error
         return { success: false, error: error.message || 'Failed to update batch' };
       }
 

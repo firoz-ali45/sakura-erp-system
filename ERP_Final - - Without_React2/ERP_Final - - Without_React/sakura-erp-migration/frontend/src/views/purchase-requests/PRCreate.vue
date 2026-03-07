@@ -35,13 +35,13 @@
               Department <span class="text-red-500">*</span>
             </label>
             <select 
-              v-model="formData.department" 
+              v-model="formData.department_id" 
               required
               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2"
               style="--tw-ring-color: #284b44;"
             >
               <option value="">Select Department</option>
-              <option v-for="dept in departments" :key="dept" :value="dept">{{ dept }}</option>
+              <option v-for="dept in departments" :key="dept.id" :value="dept.id">{{ dept.name }} ({{ dept.code }})</option>
             </select>
           </div>
           <div>
@@ -336,6 +336,7 @@ const showItemDropdowns = reactive({});
 const formData = ref({
   id: null,
   prNumber: '',
+  department_id: '',
   department: '',
   costCenter: '',
   priority: 'normal',
@@ -345,7 +346,7 @@ const formData = ref({
   items: []
 });
 
-// Departments from DB (single source of truth) - loaded in loadInitialData
+// Departments from Supabase (single source of truth) - loaded in loadInitialData
 const departments = ref([]);
 
 // Computed
@@ -366,7 +367,7 @@ const loadInitialData = async () => {
 
     inventoryItems.value = (items || []).filter(i => !i.deleted);
     suppliers.value = (supplierList || []).filter(s => !s.deleted);
-    departments.value = (deptList || []).map(d => (typeof d === 'object' ? (d.name || d.code || '') : String(d))).filter(Boolean);
+    departments.value = (deptList || []).filter(d => d && (d.id || d.name));
     nextPRNumber.value = prNumber;
     
     // Check if editing existing PR
@@ -390,6 +391,7 @@ const loadExistingPR = async (prId) => {
       formData.value = {
         id: pr.id,
         prNumber: pr.pr_number,
+        department_id: pr.department_id,
         department: pr.department,
         costCenter: pr.cost_center || '',
         priority: pr.priority,
@@ -490,7 +492,7 @@ const validateForm = () => {
   console.log('Items count:', formData.value.items.length);
   console.log('Items:', formData.value.items);
   
-  if (!formData.value.department) {
+  if (!formData.value.department_id) {
     const msg = 'Please select a department';
     showNotification(msg, 'warning');
     alert('Validation Error: ' + msg);
@@ -554,11 +556,12 @@ const savePR = async () => {
     
     // Force business date to today (SAP BUDAT standard)
     const today = new Date().toISOString().split('T')[0];
-    
+    const selectedDept = departments.value.find(d => d.id === formData.value.department_id);
     const prData = {
       requesterId: currentUser.id || null, // Allow null for user ID
       requesterName: currentUser.name || currentUser.email || 'System User',
-      department: formData.value.department,
+      department_id: formData.value.department_id || null,
+      department: selectedDept?.name || formData.value.department || '',
       costCenter: formData.value.costCenter || null,
       priority: formData.value.priority || 'normal',
       businessDate: today, // Always use system date
@@ -641,11 +644,12 @@ const saveAndSubmit = async () => {
     
     // Force business date to today (SAP BUDAT standard)
     const today = new Date().toISOString().split('T')[0];
-    
+    const selectedDeptSubmit = departments.value.find(d => d.id === formData.value.department_id);
     const prData = {
       requesterId: currentUser.id || null,
       requesterName: currentUser.name || currentUser.email || 'System User',
-      department: formData.value.department,
+      department_id: formData.value.department_id || null,
+      department: selectedDeptSubmit?.name || formData.value.department || '',
       costCenter: formData.value.costCenter || null,
       priority: formData.value.priority || 'normal',
       businessDate: today, // Always use system date

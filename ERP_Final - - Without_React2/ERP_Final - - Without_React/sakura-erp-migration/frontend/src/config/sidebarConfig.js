@@ -215,6 +215,13 @@ export const sidebarConfig = [
         badge: 'pendingUsersCount'
       },
       {
+        id: 'departments',
+        route: '/homeportal/user-management/departments',
+        icon: 'fas fa-sitemap',
+        i18nKey: 'homePortal.departments',
+        label: 'Departments'
+      },
+      {
         id: 'tags',
         route: '/homeportal/tags',
         icon: 'fas fa-tags',
