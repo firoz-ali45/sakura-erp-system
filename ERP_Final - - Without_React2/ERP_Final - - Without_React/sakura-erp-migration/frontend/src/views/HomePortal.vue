@@ -264,6 +264,10 @@
               <i class="fas fa-user-shield w-5 text-center"></i>
               <span>{{ $t('userManagement.roles') }}</span>
             </router-link>
+            <router-link to="/homeportal/user-management/departments" class="nav-link nav-sub-item flex items-center p-3 my-1 rounded-lg" active-class="active">
+              <i class="fas fa-sitemap w-5 text-center"></i>
+              <span>{{ $t('homePortal.departments') }}</span>
+            </router-link>
             <router-link to="/homeportal/user-management/permissions" class="nav-link nav-sub-item flex items-center p-3 my-1 rounded-lg" active-class="active">
               <i class="fas fa-key w-5 text-center"></i>
               <span>{{ $t('userManagement.permissions') }}</span>
@@ -327,6 +331,14 @@
             id="manage-group" 
             :class="['nav-group-content', 'pl-8', { 'hidden': !manageGroupOpen }]"
           >
+            <router-link 
+              to="/homeportal/user-management/departments" 
+              class="nav-link nav-sub-item flex items-center p-3 my-1 rounded-lg"
+              active-class="active"
+            >
+              <i class="fas fa-sitemap w-5 text-center"></i>
+              <span>{{ $t('homePortal.departments') }}</span>
+            </router-link>
             <router-link 
               to="/homeportal/tags" 
               class="nav-link nav-sub-item flex items-center p-3 my-1 rounded-lg"
