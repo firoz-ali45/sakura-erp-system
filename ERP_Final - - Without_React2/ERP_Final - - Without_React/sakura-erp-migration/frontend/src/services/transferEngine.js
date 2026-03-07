@@ -117,6 +117,28 @@ export async function updateStockTransferItemPicking(transferId, itemId, batchId
   return data || { ok: false };
 }
 
+/** Save multiple batch allocations for one transfer item (FEFO multi-batch pick). */
+export async function updateStockTransferItemPickingMulti(transferId, itemId, allocations) {
+  const ready = await ensureSupabaseReady();
+  if (!ready || !transferId || !itemId) return { ok: false, error: 'Not ready' };
+  const payload = Array.isArray(allocations)
+    ? allocations
+        .filter((a) => a.batchId && (Number(a.pickedQty) || 0) > 0)
+        .map((a) => ({
+          batch_id: a.batchId,
+          picked_qty: Number(a.pickedQty) || 0,
+          damaged_qty: Number(a.damagedQty) || 0,
+          unit_cost: a.unitCost != null ? Number(a.unitCost) : null
+        }));
+  const { data, error } = await supabaseClient.rpc('fn_update_stock_transfer_item_picking_multi', {
+    p_transfer_id: transferId,
+    p_item_id: itemId,
+    p_allocations: payload
+  });
+  if (error) return { ok: false, error: error.message };
+  return data || { ok: false };
+}
+
 export async function confirmPickingStockTransfer(transferId, userId) {
   const ready = await ensureSupabaseReady();
   if (!ready || !transferId) return { ok: false, error: 'Not ready' };
@@ -759,7 +781,7 @@ export async function fetchBatchesFefoAtLocation(locationId, itemId) {
   const batchIds = rows.map((r) => r.batch_id).filter(Boolean);
   if (!batchIds.length) return rows;
   const { data: batchData } = await supabaseClient
-    .from('inventory_batches')
+    .from('batches')
     .select('id, expiry_date')
     .in('id', batchIds);
   const expiryMap = (batchData || []).reduce((acc, b) => {

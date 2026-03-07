@@ -416,7 +416,8 @@
 
     <PickingItemModal
       v-if="showPickingItemModal && editPickingItem"
-      :item="editPickingItem"
+      :item="pickingLineItem"
+      :existing-rows="pickingExistingRows"
       :transfer-id="transfer?.id"
       :from-location-id="transfer?.from_location_id"
       :allow-remove="!transfer?.transfer_orders_id"
@@ -565,6 +566,7 @@ import {
   fetchStockMapForItems,
   startPickingStockTransfer,
   updateStockTransferItemPicking,
+  updateStockTransferItemPickingMulti,
   confirmPickingStockTransfer,
   receiveStockTransferItem,
   fetchStockTransferAudit,
@@ -627,10 +629,14 @@ const hasInsufficientStock = computed(() => {
 
 const hasMissingBatch = computed(() => {
   if (transfer.value?.status !== 'picking') return false;
-  return items.value.some((it) => {
-    const q = Number(it.transfer_qty) || 0;
-    return q > 0 && (!it.batch_id || Number(it.picked_qty || 0) <= 0);
+  const byItem = {};
+  items.value.forEach((it) => {
+    const id = it.item_id;
+    if (!byItem[id]) byItem[id] = { transfer: 0, picked: 0 };
+    byItem[id].transfer += Number(it.transfer_qty) || 0;
+    byItem[id].picked += Number(it.picked_qty || 0);
   });
+  return Object.values(byItem).some((o) => o.transfer > 0 && o.picked < o.transfer);
 });
 
 const hasMissingBatchOnPicked = computed(() => {
@@ -867,6 +873,23 @@ async function confirmMarkPicked() {
   }
 }
 
+const pickingLineItem = computed(() => {
+  if (!editPickingItem.value) return null;
+  const id = editPickingItem.value.item_id;
+  const rows = items.value.filter((i) => i.item_id === id);
+  const total = rows.reduce((s, r) => s + (Number(r.transfer_qty) || 0), 0);
+  return {
+    item_id: id,
+    item_name: editPickingItem.value.item_name,
+    sku: editPickingItem.value.sku,
+    transfer_qty: total
+  };
+});
+const pickingExistingRows = computed(() => {
+  if (!editPickingItem.value?.item_id) return [];
+  return items.value.filter((i) => i.item_id === editPickingItem.value.item_id);
+});
+
 function openPickingModal(it) {
   editPickingItem.value = it;
   showPickingItemModal.value = true;
@@ -874,16 +897,24 @@ function openPickingModal(it) {
 
 async function onPickingSave(payload) {
   if (!transfer.value?.id || !editPickingItem.value?.item_id) return;
-  const result = await updateStockTransferItemPicking(
-    transfer.value.id,
-    editPickingItem.value.item_id,
-    payload.batchId,
-    payload.pickedQty,
-    payload.damagedQty,
-    payload.unitCost
-  );
+  const itemId = editPickingItem.value.item_id;
+  let result;
+  if (Array.isArray(payload.allocations) && payload.allocations.length > 0) {
+    result = await updateStockTransferItemPickingMulti(transfer.value.id, itemId, payload.allocations);
+  } else if (payload.batchId && (Number(payload.pickedQty) || 0) > 0) {
+    result = await updateStockTransferItemPicking(
+      transfer.value.id,
+      itemId,
+      payload.batchId,
+      payload.pickedQty,
+      payload.damagedQty,
+      payload.unitCost
+    );
+  } else {
+    result = { ok: false, error: 'No allocations' };
+  }
   if (result?.ok) {
-    showNotification('Batch saved', 'success');
+    showNotification('Batch(es) saved', 'success');
     showPickingItemModal.value = false;
     editPickingItem.value = null;
     await load();
