@@ -132,16 +132,16 @@ export async function updateRole(id, payload, actingUserId = null) {
   return data;
 }
 
-// --- PERMISSIONS MASTER ---
+// --- PERMISSIONS (public.permissions; legacy name "permissions_master" was deprecated) ---
 export async function getPermissionsMaster() {
   const client = await sb();
   if (!client) return [];
-  const { data, error } = await client.from('permissions_master').select('*').order('module').order('permission_code');
+  const { data, error } = await client.from('permissions').select('*').order('module').order('code');
   if (error) {
     console.error('getPermissionsMaster error:', error);
     return [];
   }
-  return data || [];
+  return (data || []).map((row) => ({ ...row, permission_code: row.code }));
 }
 
 // --- ROLE PERMISSIONS (permission matrix) ---
@@ -149,13 +149,15 @@ export async function getRolePermissions(roleId) {
   const client = await sb();
   if (!client) return [];
   const { data, error } = await client.from('role_permissions')
-    .select('permission_id, permissions_master(permission_code, module, action, description)')
+    .select('permission_id, permissions(code, module, action, description)')
     .eq('role_id', roleId);
   if (error) {
     console.error('getRolePermissions error:', error);
     return [];
   }
-  return (data || []).map(r => r.permissions_master).filter(Boolean);
+  return (data || [])
+    .map((r) => r.permissions && { ...r.permissions, permission_code: r.permissions.code })
+    .filter(Boolean);
 }
 
 export async function setRolePermissions(roleId, permissionCodes, actingUserId = null) {

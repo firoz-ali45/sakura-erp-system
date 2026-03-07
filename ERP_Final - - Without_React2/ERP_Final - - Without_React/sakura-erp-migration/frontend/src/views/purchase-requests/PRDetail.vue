@@ -108,9 +108,6 @@
                   <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">Item</th>
                   <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">SKU</th>
                   <th class="px-4 py-3 text-right text-sm font-semibold text-gray-700">Qty</th>
-                  <th class="px-4 py-3 text-right text-sm font-semibold text-gray-700">Ordered (PO)</th>
-                  <th class="px-4 py-3 text-right text-sm font-semibold text-gray-700">Received (GRN)</th>
-                  <th class="px-4 py-3 text-right text-sm font-semibold text-gray-700">Invoiced (PUR)</th>
                   <th class="px-4 py-3 text-right text-sm font-semibold text-gray-700">Est. Price</th>
                   <th class="px-4 py-3 text-right text-sm font-semibold text-gray-700">Total</th>
                   <th class="px-4 py-3 text-center text-sm font-semibold text-gray-700">Status</th>
@@ -130,21 +127,9 @@
                   </td>
                   <td class="px-4 py-3 text-sm text-gray-900 text-right">
                     {{ item.quantity }} {{ item.unit }}
-                  </td>
-                  <td class="px-4 py-3 text-sm text-right">
-                    <span :class="(item.ordered_po_qty ?? item.quantity_ordered) > 0 ? 'text-green-700 font-medium' : 'text-gray-500'">
-                      {{ item.ordered_po_qty ?? item.quantity_ordered ?? 0 }}
-                    </span>
-                  </td>
-                  <td class="px-4 py-3 text-sm text-right">
-                    <span :class="(item.received_grn_qty || 0) > 0 ? 'text-green-700 font-medium' : 'text-gray-500'">
-                      {{ item.received_grn_qty ?? 0 }}
-                    </span>
-                  </td>
-                  <td class="px-4 py-3 text-sm text-right">
-                    <span :class="(item.invoiced_pur_qty || 0) > 0 ? 'text-green-700 font-medium' : 'text-gray-500'">
-                      {{ item.invoiced_pur_qty ?? 0 }}
-                    </span>
+                    <div v-if="item.quantity_ordered > 0" class="text-xs text-green-600">
+                      {{ item.quantity_ordered }} ordered
+                    </div>
                   </td>
                   <td class="px-4 py-3 text-sm text-gray-900 text-right">
                     {{ formatCurrency(item.estimated_price) }}
@@ -161,7 +146,7 @@
               </tbody>
               <tfoot class="bg-gray-50">
                 <tr>
-                  <td colspan="8" class="px-4 py-3 text-right font-semibold">Total:</td>
+                  <td colspan="5" class="px-4 py-3 text-right font-semibold">Total:</td>
                   <td class="px-4 py-3 text-right font-bold text-lg" style="color: #284b44;">
                     {{ formatCurrency(pr.estimated_total_value) }}
                   </td>
