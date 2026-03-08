@@ -115,6 +115,22 @@ const routes = [
     meta: { requiresAuth: true }
   },
   {
+        path: 'production',
+    name: 'ProductionList',
+        component: () => import('../views/inventory/ProductionList.vue').catch(() => ({
+          default: { template: '<div class="p-6 bg-[#f0e1cd] min-h-screen"><div class="bg-white rounded-xl shadow-md p-6 max-w-md"><h2 class="text-xl font-bold text-gray-800 mb-2">Production</h2><p class="text-gray-600 mb-4">Module could not load. If you just added Manufacturing, run the SQL migrations in Supabase and refresh.</p><a href="#/homeportal/dashboard" class="text-[#284b44] font-medium">← Back to Dashboard</a></div></div>' }
+        })),
+    meta: { requiresAuth: true }
+  },
+  {
+        path: 'production/:id',
+    name: 'ProductionDetail',
+        component: () => import('../views/inventory/ProductionDetail.vue').catch(() => ({
+          default: { template: '<div class="p-6 bg-[#f0e1cd] min-h-screen"><div class="bg-white rounded-xl shadow-md p-6 max-w-md"><p class="text-gray-600 mb-4">Production detail could not load.</p><a href="#/homeportal/production" class="text-[#284b44] font-medium">← Back to Production</a></div></div>' }
+        })),
+    meta: { requiresAuth: true }
+  },
+  {
         path: 'grns',
     name: 'InventoryGRNs',
         component: () => import('../views/inventory/GRNs.vue'),
