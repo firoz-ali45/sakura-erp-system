@@ -82,7 +82,14 @@
           </div>
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1">Business date</label>
-            <input v-model="newForm.production_date" type="date" class="w-full px-3 py-2 border border-gray-300 rounded-lg" />
+            <input
+              v-model="newForm.production_date"
+              type="date"
+              readonly
+              class="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-700 cursor-not-allowed"
+              title="Auto-set to today (work date)"
+            />
+            <p class="text-xs text-gray-500 mt-1">Auto-set to today; not editable.</p>
           </div>
         </div>
         <div class="flex justify-end gap-2 mt-6">
@@ -137,7 +144,8 @@ function formatDateTime(d) {
 }
 
 function openNewProduction() {
-  newForm.value = { branch_id: '', production_date: new Date().toISOString().slice(0, 10) };
+  const today = new Date().toISOString().slice(0, 10);
+  newForm.value = { branch_id: '', production_date: today };
   showNewModal.value = true;
 }
 
