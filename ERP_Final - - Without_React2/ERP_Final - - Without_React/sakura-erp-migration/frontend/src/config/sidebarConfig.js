@@ -118,8 +118,7 @@ export const sidebarConfig = [
       },
       {
         id: 'production',
-        action: 'loadDashboard',
-        actionParam: 'inventory/production.html',
+        route: '/homeportal/production',
         icon: 'fas fa-industry',
         i18nKey: 'homePortal.inventoryProduction'
       },
