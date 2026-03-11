@@ -21,7 +21,14 @@
         <div class="space-y-4">
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1">Recipe name *</label>
-            <input v-model="newForm.name" type="text" class="w-full px-3 py-2 border border-gray-300 rounded-lg" placeholder="e.g. Chocolate Cake" />
+            <input
+              v-model="newForm.name"
+              type="text"
+              class="w-full px-3 py-2 border rounded-lg"
+              :class="validationErrors.name ? 'border-red-500 bg-red-50' : 'border-gray-300'"
+              placeholder="e.g. Chocolate Cake"
+            />
+            <p v-if="validationErrors.name" class="text-sm text-red-600 mt-1">{{ validationErrors.name }}</p>
           </div>
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1">Output (FG) item *</label>
@@ -29,8 +36,9 @@
             <input
               v-model="outputItemSearch"
               type="text"
-              class="w-full px-3 py-2 border border-gray-300 rounded-lg mb-1"
-              placeholder="Type to search by name or SKU..."
+              class="w-full px-3 py-2 border rounded-lg mb-1"
+              :class="validationErrors.output_item ? 'border-red-500 bg-red-50' : 'border-gray-300'"
+              placeholder="Type here to search by name or SKU (1000+ items)..."
               autocomplete="off"
             />
             <div class="border border-gray-300 rounded-lg max-h-52 overflow-y-auto bg-white">
@@ -46,7 +54,8 @@
               <div v-if="outputItemSearch && filteredOutputItems.length === 0" class="px-3 py-4 text-center text-gray-500 text-sm">No items match</div>
               <div v-else-if="!outputItemSearch && inventoryItems.length === 0" class="px-3 py-4 text-center text-gray-500 text-sm">Loading items...</div>
             </div>
-            <p class="text-xs text-gray-500 mt-1">Search by name or SKU to quickly find from {{ inventoryItems.length }} items.</p>
+            <p v-if="validationErrors.output_item" class="text-sm text-red-600 mt-1">{{ validationErrors.output_item }}</p>
+            <p v-else class="text-xs text-gray-500 mt-1">Search by name or SKU to quickly find from {{ inventoryItems.length }} items.</p>
           </div>
           <div class="grid grid-cols-2 gap-4">
             <div>
@@ -128,6 +137,7 @@ const showNewModal = ref(false);
 const createSuccess = ref(false);
 const inventoryItems = ref([]);
 const outputItemSearch = ref('');
+const validationErrors = ref({ name: '', output_item: '' });
 const newForm = ref({ name: '', output_item_id: '', base_quantity: 1, base_unit: 'Pcs' });
 
 const selectedOutputItem = computed(() => {
@@ -153,10 +163,12 @@ function selectOutputItem(item) {
 
 /** @param {boolean} addAnother - if true, keep modal open and reset form for another recipe */
 async function createRecipeSubmit(addAnother = false) {
-  if (!newForm.value.name?.trim() || !newForm.value.output_item_id) {
-    alert('Recipe name and Output item are required.');
-    return;
-  }
+  validationErrors.value = { name: '', output_item: '' };
+  const missingName = !newForm.value.name?.trim();
+  const missingItem = !newForm.value.output_item_id;
+  if (missingName) validationErrors.value.name = 'Recipe name is required.';
+  if (missingItem) validationErrors.value.output_item = 'Please select an Output (FG) item from the list above.';
+  if (missingName || missingItem) return;
   try {
     const r = await createRecipeApi({
       name: newForm.value.name.trim(),
@@ -169,6 +181,7 @@ async function createRecipeSubmit(addAnother = false) {
     recipes.value = await fetchRecipes();
     newForm.value = { name: '', output_item_id: '', base_quantity: 1, base_unit: 'Pcs' };
     outputItemSearch.value = '';
+    validationErrors.value = { name: '', output_item: '' };
     if (addAnother) {
       createSuccess.value = true;
     } else {
@@ -183,6 +196,7 @@ async function createRecipeSubmit(addAnother = false) {
 
 async function openNewModal() {
   createSuccess.value = false;
+  validationErrors.value = { name: '', output_item: '' };
   outputItemSearch.value = '';
   showNewModal.value = true;
   newForm.value = { name: '', output_item_id: '', base_quantity: 1, base_unit: 'Pcs' };

@@ -46,7 +46,9 @@ export async function getUserPermissions(userId) {
   if (!c) return [];
   const { data, error } = await c.rpc('fn_user_permissions', { p_user_id: userId });
   if (error) {
-    if (error.code !== 'PGRST202' && error.message?.includes('not found') === false) {
+    const msg = (error.message || '').toLowerCase();
+    const isMissingRelation = msg.includes('permissions_master') || msg.includes('does not exist') || msg.includes('relation');
+    if (!isMissingRelation && error.code !== 'PGRST202') {
       console.warn('getUserPermissions error:', error.message || error);
     }
     return [];
