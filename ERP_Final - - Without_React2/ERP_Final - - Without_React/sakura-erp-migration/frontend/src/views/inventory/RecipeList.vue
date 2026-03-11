@@ -25,10 +25,28 @@
           </div>
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1">Output (FG) item *</label>
-            <select v-model="newForm.output_item_id" class="w-full px-3 py-2 border border-gray-300 rounded-lg" required>
-              <option value="">Select item...</option>
-              <option v-for="i in inventoryItems" :key="i.id" :value="i.id">{{ i.name }} ({{ i.sku }})</option>
-            </select>
+            <p v-if="selectedOutputItem" class="text-sm text-[#284b44] font-medium mb-1">Selected: {{ selectedOutputItem }}</p>
+            <input
+              v-model="outputItemSearch"
+              type="text"
+              class="w-full px-3 py-2 border border-gray-300 rounded-lg mb-1"
+              placeholder="Type to search by name or SKU..."
+              autocomplete="off"
+            />
+            <div class="border border-gray-300 rounded-lg max-h-52 overflow-y-auto bg-white">
+              <div
+                v-for="i in filteredOutputItems"
+                :key="i.id"
+                @click="selectOutputItem(i)"
+                class="px-3 py-2 hover:bg-[#284b44]/10 cursor-pointer border-b border-gray-100 last:border-0"
+              >
+                <div class="font-medium text-gray-900">{{ i.name }}</div>
+                <div class="text-xs text-gray-500">{{ i.sku }}</div>
+              </div>
+              <div v-if="outputItemSearch && filteredOutputItems.length === 0" class="px-3 py-4 text-center text-gray-500 text-sm">No items match</div>
+              <div v-else-if="!outputItemSearch && inventoryItems.length === 0" class="px-3 py-4 text-center text-gray-500 text-sm">Loading items...</div>
+            </div>
+            <p class="text-xs text-gray-500 mt-1">Search by name or SKU to quickly find from {{ inventoryItems.length }} items.</p>
           </div>
           <div class="grid grid-cols-2 gap-4">
             <div>
@@ -43,9 +61,11 @@
             </div>
           </div>
         </div>
+        <p v-if="createSuccess" class="text-sm text-green-600 mt-2">Recipe created. Add another below or close.</p>
         <div class="flex justify-end gap-2 mt-6">
           <button type="button" @click="showNewModal = false" class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">Cancel</button>
-          <button type="button" @click="createRecipeSubmit" class="px-4 py-2 rounded-lg text-white" style="background-color: #284b44;">Create</button>
+          <button type="button" @click="createRecipeSubmit(true)" class="px-4 py-2 border border-[#284b44] text-[#284b44] rounded-lg hover:bg-[#284b44] hover:text-white">Create & add another</button>
+          <button type="button" @click="createRecipeSubmit(false)" class="px-4 py-2 rounded-lg text-white" style="background-color: #284b44;">Create & open</button>
         </div>
       </div>
     </div>
@@ -96,7 +116,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { fetchRecipes, createRecipe as createRecipeApi, fetchInventoryItemsForRecipe, COMMON_UNITS } from '@/services/recipeService';
 
@@ -105,11 +125,38 @@ const loading = ref(true);
 const loadError = ref('');
 const recipes = ref([]);
 const showNewModal = ref(false);
+const createSuccess = ref(false);
 const inventoryItems = ref([]);
+const outputItemSearch = ref('');
 const newForm = ref({ name: '', output_item_id: '', base_quantity: 1, base_unit: 'Pcs' });
 
-async function createRecipeSubmit() {
-  if (!newForm.value.name?.trim() || !newForm.value.output_item_id) return;
+const selectedOutputItem = computed(() => {
+  if (!newForm.value.output_item_id) return null;
+  const i = inventoryItems.value.find((x) => x.id === newForm.value.output_item_id);
+  return i ? `${i.name} (${i.sku})` : null;
+});
+
+const filteredOutputItems = computed(() => {
+  const q = (outputItemSearch.value || '').toLowerCase().trim();
+  if (!q) return inventoryItems.value.slice(0, 80);
+  return inventoryItems.value.filter(
+    (i) =>
+      (i.name && i.name.toLowerCase().includes(q)) ||
+      (i.sku && i.sku.toLowerCase().includes(q))
+  ).slice(0, 80);
+});
+
+function selectOutputItem(item) {
+  newForm.value.output_item_id = item.id;
+  outputItemSearch.value = item.name || item.sku || '';
+}
+
+/** @param {boolean} addAnother - if true, keep modal open and reset form for another recipe */
+async function createRecipeSubmit(addAnother = false) {
+  if (!newForm.value.name?.trim() || !newForm.value.output_item_id) {
+    alert('Recipe name and Output item are required.');
+    return;
+  }
   try {
     const r = await createRecipeApi({
       name: newForm.value.name.trim(),
@@ -118,16 +165,27 @@ async function createRecipeSubmit() {
       base_quantity: newForm.value.base_quantity ?? 1,
       base_unit: newForm.value.base_unit || 'Pcs'
     });
-    showNewModal.value = false;
+    createSuccess.value = true;
+    recipes.value = await fetchRecipes();
     newForm.value = { name: '', output_item_id: '', base_quantity: 1, base_unit: 'Pcs' };
-    router.push(`/homeportal/recipes/${r.id}`);
+    outputItemSearch.value = '';
+    if (addAnother) {
+      createSuccess.value = true;
+    } else {
+      showNewModal.value = false;
+      createSuccess.value = false;
+      router.push(`/homeportal/recipes/${r.id}`);
+    }
   } catch (e) {
     alert(e?.message || 'Failed to create recipe');
   }
 }
 
 async function openNewModal() {
+  createSuccess.value = false;
+  outputItemSearch.value = '';
   showNewModal.value = true;
+  newForm.value = { name: '', output_item_id: '', base_quantity: 1, base_unit: 'Pcs' };
   try {
     inventoryItems.value = await fetchInventoryItemsForRecipe();
   } catch {

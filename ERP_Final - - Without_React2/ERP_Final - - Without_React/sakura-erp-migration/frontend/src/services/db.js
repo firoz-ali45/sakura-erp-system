@@ -76,10 +76,9 @@ export function setCurrentCompanyId(companyId) {
   }
 }
 
-/** Strip fields that must NEVER be sent to DB (user names, etc.) */
+/** Strip fields that must NEVER be sent to DB (user display names only; keep entity names like recipe name, item name). */
 function sanitizePayload(data, options = {}) {
   const out = { ...data };
-  delete out.name;
   delete out.userName;
   delete out.user_name;
   delete out.approved_by_name;
