@@ -45,7 +45,12 @@ export async function getUserPermissions(userId) {
   const c = await client();
   if (!c) return [];
   const { data, error } = await c.rpc('fn_user_permissions', { p_user_id: userId });
-  if (error) { console.warn('getUserPermissions error:', error); return []; }
+  if (error) {
+    if (error.code !== 'PGRST202' && error.message?.includes('not found') === false) {
+      console.warn('getUserPermissions error:', error.message || error);
+    }
+    return [];
+  }
   return Array.isArray(data) ? data : [];
 }
 

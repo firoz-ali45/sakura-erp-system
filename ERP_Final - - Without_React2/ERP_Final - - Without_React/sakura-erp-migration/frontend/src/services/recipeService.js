@@ -117,9 +117,10 @@ export async function createRecipe(payload) {
   const tenantId = (companyId && companyId !== FALLBACK_COMPANY_UUID) ? companyId : null;
   const createdBy = getCurrentUserUUID();
   const itemId = payload.item_id || payload.output_item_id;
+  const name = (payload.name != null && String(payload.name).trim()) ? String(payload.name).trim() : 'Unnamed Recipe';
   const row = await dbInsert(supabaseClient, 'recipes', {
     code: payload.code || `RCP-${Date.now()}`,
-    name: payload.name || 'Unnamed Recipe',
+    name,
     output_item_id: itemId,
     item_id: itemId,
     output_qty_per_batch: payload.base_quantity ?? payload.output_qty_per_batch ?? 1,

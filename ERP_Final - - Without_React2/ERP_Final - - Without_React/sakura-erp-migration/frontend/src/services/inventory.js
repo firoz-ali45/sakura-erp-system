@@ -35,10 +35,16 @@ export const inventoryService = {
     }
   },
 
-  // Get single item
+  // Get single item (API path)
   async getItem(id) {
     const response = await api.get(`/inventory/items/${id}`);
     return response.data;
+  },
+
+  // Alias for getItem — returns { data } for compatibility with callers expecting .data
+  async getItemById(id) {
+    const data = await this.getItem(id);
+    return { data };
   },
 
   // Create item - Try Supabase first, fallback to API
