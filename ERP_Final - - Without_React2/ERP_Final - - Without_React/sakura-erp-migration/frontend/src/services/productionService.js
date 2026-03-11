@@ -6,6 +6,8 @@ import { ensureSupabaseReady, supabaseClient } from '@/services/supabase';
 import { dbInsert, getCurrentCompanyId } from '@/services/db';
 import { getCurrentUserUUID } from '@/utils/uuidUtils';
 
+const FALLBACK_COMPANY_UUID = '00000000-0000-0000-0000-000000000000';
+
 export async function fetchProductionOrdersList() {
   await ensureSupabaseReady();
   if (!supabaseClient) return [];
@@ -56,6 +58,7 @@ export async function createProductionOrder(payload) {
   const companyId = getCurrentCompanyId();
   const createdBy = getCurrentUserUUID();
   const productionNumber = payload.production_number || await getNextProductionNumber();
+  const tenantId = (companyId && companyId !== FALLBACK_COMPANY_UUID) ? companyId : null;
   const row = await dbInsert(supabaseClient, 'production_orders', {
     production_number: productionNumber,
     branch_id: payload.branch_id,
@@ -65,7 +68,7 @@ export async function createProductionOrder(payload) {
     status: 'draft',
     production_date: payload.production_date || null,
     company_id: companyId,
-    tenant_id: companyId,
+    tenant_id: tenantId,
     created_by: createdBy
   });
   return row;
