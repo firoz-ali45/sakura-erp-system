@@ -34,6 +34,21 @@ export async function fetchRecipeById(id) {
   return data;
 }
 
+/** Get the recipe for an inventory item (FG). Prefers active, then highest version. */
+export async function fetchRecipeByItemId(itemId) {
+  await ensureSupabaseReady();
+  if (!supabaseClient || !itemId) return null;
+  const { data, error } = await supabaseClient
+    .from('v_recipes_bom')
+    .select('*')
+    .or(`item_id.eq.${itemId},output_item_id.eq.${itemId}`)
+    .order('recipe_version', { ascending: false });
+  if (error) throw error;
+  const list = data || [];
+  const active = list.find((r) => r.status === 'active');
+  return active || list[0] || null;
+}
+
 export async function fetchRecipeIngredients(recipeId) {
   await ensureSupabaseReady();
   if (!supabaseClient) return [];

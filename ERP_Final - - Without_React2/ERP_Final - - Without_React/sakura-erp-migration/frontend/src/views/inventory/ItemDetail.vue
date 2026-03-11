@@ -146,34 +146,56 @@
         </div>
       </div>
 
-      <!-- Ingredients Section -->
+      <!-- Ingredients Section (Recipe / BOM) -->
       <div class="bg-white rounded-lg shadow-md p-6 mb-6">
         <div class="flex justify-between items-center mb-3">
-          <h3 class="text-lg font-semibold text-gray-800">Ingredients</h3>
-          <button @click="openAddIngredientsModal" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300">
-            Add Ingredients
-          </button>
-        </div>
-        <p class="text-sm text-gray-600 text-center py-4">
-          To produce this item, add the ingredients needed to produce 1 Pcs of this item here from your inventory items list.
-        </p>
-        <div class="mt-4">
-          <p v-if="itemIngredients.length === 0" class="text-gray-400 text-sm text-center">No ingredients added yet</p>
-          <div v-else class="space-y-2">
-            <div 
-              v-for="ingredient in itemIngredients" 
-              :key="ingredient.itemId || ingredient.id"
-              class="flex justify-between items-center p-3 bg-gray-50 rounded-lg"
-            >
-              <div class="flex-1">
-                <div class="font-medium text-gray-900">{{ ingredient.itemName || ingredient.name }}</div>
-                <div class="text-sm text-gray-600">Quantity: {{ ingredient.quantity || 1 }} {{ ingredient.unit || 'Pcs' }}</div>
-              </div>
-              <button @click="removeIngredient(ingredient.itemId || ingredient.id)" class="text-red-600 hover:text-red-800 ml-3">
-                <i class="fas fa-times"></i>
-              </button>
-            </div>
+          <h3 class="text-lg font-semibold text-gray-800">Ingredients (BOM)</h3>
+          <div class="flex items-center gap-2">
+            <a v-if="recipeForItem" :href="`#/homeportal/recipes/${recipeForItem.id}`" class="text-sm text-[#284b44] hover:underline">Open in Recipes</a>
+            <button v-if="recipeForItem" @click="openAddIngredientsModal" class="px-4 py-2 text-white rounded-lg text-sm font-medium" style="background-color: #284b44;">
+              <i class="fas fa-plus mr-1"></i> Add ingredient
+            </button>
+            <button v-else @click="ensureRecipeAndOpenAddModal" class="px-4 py-2 text-white rounded-lg text-sm font-medium" style="background-color: #284b44;">
+              <i class="fas fa-plus mr-1"></i> Create recipe & add ingredients
+            </button>
           </div>
+        </div>
+        <p class="text-sm text-gray-600 mb-4">
+          <template v-if="recipeForItem">
+            Ingredients needed to produce <strong>{{ recipeForItem.base_quantity ?? 1 }} {{ recipeForItem.base_unit || 'Pcs' }}</strong> of this item. You can set quantity, unit, and conversion factor per ingredient.
+          </template>
+          <template v-else>
+            No recipe (BOM) for this item yet. Click &quot;Create recipe & add ingredients&quot; to define ingredients with quantity, unit, and unit conversion.
+          </template>
+        </p>
+        <div v-if="ingredientsLoading" class="py-4 text-center text-gray-500">Loading ingredients...</div>
+        <div v-else class="mt-4 border rounded-lg overflow-hidden">
+          <table v-if="recipeForItem && itemIngredients.length > 0" class="w-full">
+            <thead class="bg-gray-50">
+              <tr>
+                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Item</th>
+                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Quantity</th>
+                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Unit</th>
+                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Conversion</th>
+                <th class="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Actions</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-200">
+              <tr v-for="ing in itemIngredients" :key="ing.id">
+                <td class="px-4 py-3 font-medium text-gray-900">{{ ing.itemName || ing.name }}</td>
+                <td class="px-4 py-3 text-gray-700">{{ ing.quantity ?? ing.quantity_required }}</td>
+                <td class="px-4 py-3 text-gray-600">{{ ing.unit || 'Pcs' }}</td>
+                <td class="px-4 py-3 text-gray-600">{{ ing.conversion_factor ?? 1 }}</td>
+                <td class="px-4 py-3 text-right">
+                  <button @click="openEditIngredient(ing)" class="text-blue-600 hover:text-blue-800 mr-3 text-sm">Edit</button>
+                  <button @click="removeIngredient(ing)" class="text-red-600 hover:text-red-800 text-sm">Delete</button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+          <p v-else class="p-4 text-center text-gray-500">
+            {{ recipeForItem ? 'No ingredients yet. Add ingredients to define the BOM.' : 'Create a recipe above to add ingredients.' }}
+          </p>
         </div>
       </div>
 
@@ -489,73 +511,67 @@
       </div>
     </div>
 
-    <!-- Add Ingredients Modal -->
+    <!-- Add/Edit Ingredient Modal (Recipe BOM style: quantity, unit, conversion) -->
     <div 
       v-if="showAddIngredientsModal"
       class="fixed inset-0 bg-black bg-opacity-60 z-50 flex items-center justify-center p-4"
       @click.self="closeAddIngredientsModal"
     >
-      <div class="bg-white rounded-xl shadow-2xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-        <div class="flex justify-between items-center mb-6">
-          <h2 class="text-2xl font-bold text-gray-800">Add Items</h2>
+      <div class="bg-white rounded-xl shadow-2xl p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto">
+        <div class="flex justify-between items-center mb-4">
+          <h2 class="text-xl font-bold text-gray-800">{{ editingIngredient ? 'Edit ingredient' : 'Add ingredient' }}</h2>
           <button @click="closeAddIngredientsModal" class="text-gray-500 hover:text-gray-700 text-2xl">
             <i class="fas fa-times"></i>
           </button>
         </div>
-
         <div class="space-y-4">
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">
-              Items
-              <i class="fas fa-info-circle text-gray-400 ml-1" title="Select items to add as ingredients"></i>
-            </label>
-            <select 
-              v-model="selectedIngredientItemId" 
-              @change="handleIngredientItemSelect"
-              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 mb-2"
-            >
-              <option value="">Choose...</option>
-              <option v-for="ingItem in availableItems" :key="ingItem.id" :value="ingItem.id">
-                {{ ingItem.name || ingItem.nameLocalized || `Item ${ingItem.id}` }}
-              </option>
-            </select>
-            <input 
-              v-model="ingredientSearchQuery"
-              @input="loadAvailableItems"
-              @focus="loadAvailableItems"
-              type="text" 
-              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" 
-              placeholder="Type something to start searching"
-            >
-          </div>
-
-          <!-- Items List -->
-          <div class="border border-gray-300 rounded-lg max-h-64 overflow-y-auto bg-white">
-            <div v-if="filteredItems.length === 0" class="p-4 text-center text-gray-500">
-              No items available
-            </div>
-            <div 
-              v-for="ingItem in filteredItems" 
-              :key="ingItem.id"
-              @click="selectItemAsIngredient(ingItem.id)"
-              class="p-3 hover:bg-gray-100 cursor-pointer flex justify-between items-center border-b border-gray-100"
-            >
-              <div class="flex-1">
-                <div class="font-medium text-gray-900">{{ ingItem.name || ingItem.nameLocalized || `Item ${ingItem.id}` }}</div>
-                <div v-if="ingItem.sku" class="text-sm text-gray-600">SKU: {{ ingItem.sku }}</div>
+          <div v-if="!editingIngredient">
+            <label class="block text-sm font-medium text-gray-700 mb-1">Ingredient item *</label>
+            <p v-if="ingredientForm.ingredient_item_id" class="text-sm text-[#284b44] font-medium mb-2">Selected: {{ selectedIngredientItemName }}</p>
+            <input
+              v-model="ingredientSearch"
+              type="text"
+              class="w-full px-3 py-2 border border-gray-300 rounded-lg mb-2"
+              placeholder="Search by name or SKU..."
+            />
+            <div class="border rounded-lg max-h-48 overflow-y-auto">
+              <div
+                v-for="invItem in filteredInventoryItemsForRecipe"
+                :key="invItem.id"
+                @click="selectIngredientItem(invItem)"
+                class="p-3 hover:bg-gray-100 cursor-pointer border-b border-gray-100 last:border-0"
+              >
+                <div class="font-medium text-gray-900">{{ invItem.name }}</div>
+                <div v-if="invItem.sku" class="text-sm text-gray-600">SKU: {{ invItem.sku }}</div>
               </div>
+              <div v-if="filteredInventoryItemsForRecipe.length === 0" class="p-4 text-center text-gray-500">No items match</div>
             </div>
+          </div>
+          <div v-else>
+            <p class="text-gray-700"><strong>Item:</strong> {{ editingIngredient.itemName || editingIngredient.name }}</p>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Quantity *</label>
+            <input v-model.number="ingredientForm.quantity" type="number" step="0.0001" min="0" class="w-full px-3 py-2 border border-gray-300 rounded-lg" />
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Unit</label>
+            <select v-model="ingredientForm.unit" class="w-full px-3 py-2 border border-gray-300 rounded-lg">
+              <option v-for="u in COMMON_UNITS" :key="u" :value="u">{{ u }}</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Storage unit</label>
+            <input v-model="ingredientForm.storage_unit" type="text" class="w-full px-3 py-2 border border-gray-300 rounded-lg" placeholder="Optional" />
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Conversion factor</label>
+            <input v-model.number="ingredientForm.conversion_factor" type="number" step="0.000001" min="0" class="w-full px-3 py-2 border border-gray-300 rounded-lg" />
           </div>
         </div>
-
         <div class="flex justify-end gap-3 pt-4 border-t border-gray-200 mt-6">
-          <button 
-            type="button" 
-            @click="closeAddIngredientsModal" 
-            class="px-6 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
-          >
-            Close
-          </button>
+          <button type="button" @click="closeAddIngredientsModal" class="px-6 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">Cancel</button>
+          <button type="button" @click="saveIngredient" class="px-6 py-2 rounded-lg text-white font-medium" style="background-color: #284b44;">{{ editingIngredient ? 'Update' : 'Add' }}</button>
         </div>
       </div>
     </div>
@@ -628,6 +644,16 @@ import { ref, onMounted, onUnmounted, computed, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { supabaseClient, USE_SUPABASE } from '@/services/supabase';
 import { inventoryService } from '@/services/inventory';
+import {
+  fetchRecipeByItemId,
+  fetchRecipeIngredients,
+  addRecipeIngredient,
+  updateRecipeIngredient,
+  deleteRecipeIngredient,
+  createRecipe,
+  fetchInventoryItemsForRecipe,
+  COMMON_UNITS
+} from '@/services/recipeService';
 
 const props = defineProps({
   itemId: {
@@ -646,6 +672,8 @@ const saving = ref(false);
 const itemTags = ref([]);
 const itemIngredients = ref([]);
 const itemSuppliers = ref([]);
+const recipeForItem = ref(null);
+const ingredientsLoading = ref(false);
 const categories = ref([]);
 
 // Modals
@@ -677,10 +705,20 @@ const tagSearchQuery = ref('');
 const selectedTagId = ref('');
 const linkedTagIds = ref([]);
 
-// Ingredients
+// Ingredients (Recipe/BOM)
 const availableItems = ref([]);
 const ingredientSearchQuery = ref('');
 const selectedIngredientItemId = ref('');
+const editingIngredient = ref(null);
+const ingredientForm = ref({
+  ingredient_item_id: '',
+  quantity: 1,
+  unit: 'Pcs',
+  storage_unit: '',
+  conversion_factor: 1
+});
+const inventoryItemsForRecipe = ref([]);
+const ingredientSearch = ref('');
 
 // Suppliers
 const availableSuppliers = ref([]);
@@ -762,6 +800,26 @@ const filteredSuppliers = computed(() => {
   );
 });
 
+const selectedIngredientItemName = computed(() => {
+  if (!ingredientForm.value.ingredient_item_id) return '';
+  const item = inventoryItemsForRecipe.value.find((i) => i.id === ingredientForm.value.ingredient_item_id);
+  return item ? (item.name || item.sku || item.id) : '';
+});
+
+const filteredInventoryItemsForRecipe = computed(() => {
+  const q = (ingredientSearch.value || '').toLowerCase();
+  const itemId = props.itemId || route.params.id;
+  let list = inventoryItemsForRecipe.value.filter((i) => i.id !== itemId);
+  const existingIds = itemIngredients.value.map((ing) => ing.ingredient_item_id || ing.item_id).filter(Boolean);
+  list = list.filter((i) => !existingIds.includes(i.id));
+  if (!q) return list.slice(0, 50);
+  return list.filter(
+    (i) =>
+      (i.name && i.name.toLowerCase().includes(q)) ||
+      (i.sku && i.sku.toLowerCase().includes(q))
+  ).slice(0, 50);
+});
+
 const loadItem = async () => {
   const itemId = props.itemId || route.params.id;
   
@@ -792,15 +850,18 @@ const loadItem = async () => {
 
       item.value = data;
       
-      // Load related data
+      // Load related data (including recipe/BOM for this item)
       await loadItemTags();
-      await loadItemIngredients();
+      await loadRecipeAndIngredients();
       await loadItemSuppliers();
       
     } else {
       // Fallback to API
       const response = await inventoryService.getItemById(itemId);
       item.value = response.data;
+      await loadItemTags();
+      await loadRecipeAndIngredients();
+      await loadItemSuppliers();
     }
   } catch (err) {
     console.error('Error loading item:', err);
@@ -837,22 +898,37 @@ const loadItemTags = async () => {
   }
 };
 
-const loadItemIngredients = async () => {
+/** Load recipe for this item (FG) and its ingredients from recipe_ingredients (BOM). */
+const loadRecipeAndIngredients = async () => {
   const itemId = props.itemId || route.params.id;
-  if (!itemId) return;
+  if (!itemId || !item.value) return;
 
+  if (!USE_SUPABASE || !supabaseClient) {
+    itemIngredients.value = item.value.ingredients || [];
+    return;
+  }
+
+  ingredientsLoading.value = true;
   try {
-    if (USE_SUPABASE && supabaseClient && item.value) {
-      itemIngredients.value = item.value.ingredients || [];
+    const recipe = await fetchRecipeByItemId(itemId);
+    recipeForItem.value = recipe;
+    if (recipe) {
+      const ings = await fetchRecipeIngredients(recipe.id);
+      itemIngredients.value = ings || [];
     } else {
-      // Fallback to localStorage
-      const items = JSON.parse(localStorage.getItem('inventory_items') || '[]');
-      const currentItem = items.find(i => i.id === itemId);
-      itemIngredients.value = currentItem?.ingredients || [];
+      itemIngredients.value = [];
     }
   } catch (err) {
-    console.error('Error loading item ingredients:', err);
+    console.error('Error loading recipe/ingredients:', err);
+    recipeForItem.value = null;
+    itemIngredients.value = item.value.ingredients || [];
+  } finally {
+    ingredientsLoading.value = false;
   }
+};
+
+const loadItemIngredients = async () => {
+  await loadRecipeAndIngredients();
 };
 
 const loadItemSuppliers = async () => {
@@ -1238,8 +1314,42 @@ const removeTag = async (tagId) => {
   await toggleTagLink(tagId);
 };
 
-const openAddIngredientsModal = () => {
-  loadAvailableItems();
+const ensureRecipeAndOpenAddModal = async () => {
+  const itemId = props.itemId || route.params.id;
+  if (!itemId || !item.value) return;
+  try {
+    if (!recipeForItem.value) {
+      const name = item.value.name || item.value.name_localized || 'Recipe';
+      const created = await createRecipe({
+        name: `${name} (BOM)`,
+        item_id: itemId,
+        output_item_id: itemId,
+        base_quantity: 1,
+        base_unit: item.value.ingredient_unit || item.value.storage_unit || 'Pcs',
+        status: 'draft'
+      });
+      recipeForItem.value = created;
+      await loadRecipeAndIngredients();
+    }
+    openAddIngredientsModal();
+  } catch (err) {
+    console.error('Error creating recipe:', err);
+    showNotification(err.message || 'Failed to create recipe', 'error');
+  }
+};
+
+const openAddIngredientsModal = async () => {
+  if (!recipeForItem.value) return;
+  editingIngredient.value = null;
+  ingredientForm.value = { ingredient_item_id: '', quantity: 1, unit: 'Pcs', storage_unit: '', conversion_factor: 1 };
+  ingredientSearch.value = '';
+  try {
+    const items = await fetchInventoryItemsForRecipe();
+    const existingIds = itemIngredients.value.map((i) => i.ingredient_item_id || i.item_id).filter(Boolean);
+    inventoryItemsForRecipe.value = (items || []).filter((i) => !existingIds.includes(i.id));
+  } catch (err) {
+    inventoryItemsForRecipe.value = [];
+  }
   showAddIngredientsModal.value = true;
 };
 
@@ -1247,133 +1357,89 @@ const closeAddIngredientsModal = () => {
   showAddIngredientsModal.value = false;
   ingredientSearchQuery.value = '';
   selectedIngredientItemId.value = '';
+  editingIngredient.value = null;
+  ingredientSearch.value = '';
 };
 
-const loadAvailableItems = async () => {
+const openEditIngredient = (ing) => {
+  editingIngredient.value = ing;
+  ingredientForm.value = {
+    ingredient_item_id: ing.ingredient_item_id || ing.item_id,
+    quantity: ing.quantity ?? ing.quantity_required ?? 1,
+    unit: ing.unit || 'Pcs',
+    storage_unit: ing.storage_unit || '',
+    conversion_factor: ing.conversion_factor ?? 1
+  };
+  inventoryItemsForRecipe.value = [];
+  showAddIngredientsModal.value = true;
+};
+
+const selectIngredientItem = (invItem) => {
+  ingredientForm.value.ingredient_item_id = invItem.id;
+  ingredientSearch.value = invItem.name || invItem.sku || '';
+};
+
+const saveIngredient = async () => {
+  if (!recipeForItem.value) return;
   try {
-    const itemId = props.itemId || route.params.id;
-    const response = await inventoryService.getItems();
-    const allItems = response.data?.items || response.data || [];
-    
-    // Filter out current item and already added ingredients
-    const currentIngredientIds = itemIngredients.value.map(ing => ing.itemId || ing.id);
-    availableItems.value = allItems.filter(item => 
-      item.id !== itemId && !currentIngredientIds.includes(item.id)
-    );
-  } catch (err) {
-    console.error('Error loading available items:', err);
-    availableItems.value = [];
-  }
-};
-
-const handleIngredientItemSelect = () => {
-  if (selectedIngredientItemId.value) {
-    selectItemAsIngredient(selectedIngredientItemId.value);
-    selectedIngredientItemId.value = '';
-  }
-};
-
-const selectItemAsIngredient = async (ingredientItemId) => {
-  const itemId = props.itemId || route.params.id;
-  if (!itemId) return;
-
-  try {
-    const response = await inventoryService.getItems();
-    const allItems = response.data?.items || response.data || [];
-    const ingredientItem = allItems.find(i => i.id === ingredientItemId);
-    
-    if (!ingredientItem) return;
-
-    const newIngredient = {
-      itemId: ingredientItemId,
-      itemName: ingredientItem.name || ingredientItem.nameLocalized || `Item ${ingredientItemId}`,
-      quantity: 1,
-      unit: 'Pcs'
-    };
-
-    if (USE_SUPABASE && supabaseClient) {
-      let ingredients = item.value.ingredients || [];
-      
-      // Check if already added
-      if (ingredients.some(ing => (ing.itemId || ing.id) === ingredientItemId)) {
-        showNotification('This item is already added as an ingredient', 'warning');
+    if (editingIngredient.value) {
+      await updateRecipeIngredient(editingIngredient.value.id, {
+        quantity: ingredientForm.value.quantity,
+        unit: ingredientForm.value.unit,
+        storage_unit: ingredientForm.value.storage_unit || null,
+        conversion_factor: ingredientForm.value.conversion_factor ?? 1
+      });
+      showNotification('Ingredient updated.', 'success');
+    } else {
+      if (!ingredientForm.value.ingredient_item_id) {
+        showNotification('Select an ingredient item', 'warning');
         return;
       }
-
-      ingredients.push(newIngredient);
-
-      const { error: supabaseError } = await supabaseClient
-        .from('inventory_items')
-        .update({ ingredients })
-        .eq('id', itemId);
-
-      if (supabaseError) {
-        throw new Error(supabaseError.message || 'Failed to add ingredient');
-      }
-
-      await loadItemIngredients();
-      closeAddIngredientsModal();
-      showNotification('Ingredient added successfully!', 'success');
-    } else {
-      // Fallback to localStorage
-      const items = JSON.parse(localStorage.getItem('inventory_items') || '[]');
-      const currentItem = items.find(i => i.id === itemId);
-      if (currentItem) {
-        if (!currentItem.ingredients) currentItem.ingredients = [];
-        if (currentItem.ingredients.some(ing => (ing.itemId || ing.id) === ingredientItemId)) {
-          showNotification('This item is already added as an ingredient', 'warning');
-          return;
-        }
-        currentItem.ingredients.push(newIngredient);
-        const itemIndex = items.findIndex(i => i.id === itemId);
-        items[itemIndex] = currentItem;
-        localStorage.setItem('inventory_items', JSON.stringify(items));
-        await loadItemIngredients();
-        closeAddIngredientsModal();
-        showNotification('Ingredient added successfully!', 'success');
-      }
+      await addRecipeIngredient(recipeForItem.value.id, {
+        ingredient_item_id: ingredientForm.value.ingredient_item_id,
+        quantity: ingredientForm.value.quantity,
+        unit: ingredientForm.value.unit,
+        storage_unit: ingredientForm.value.storage_unit || null,
+        conversion_factor: ingredientForm.value.conversion_factor ?? 1
+      });
+      showNotification('Ingredient added.', 'success');
     }
+    await loadRecipeAndIngredients();
+    closeAddIngredientsModal();
   } catch (err) {
-    console.error('Error adding ingredient:', err);
-    showNotification(err.message || 'Error adding ingredient', 'error');
+    console.error('Error saving ingredient:', err);
+    showNotification(err.message || 'Failed to save ingredient', 'error');
   }
 };
 
-const removeIngredient = async (ingredientItemId) => {
+const removeIngredient = async (ing) => {
+  if (recipeForItem.value && ing.id) {
+    if (!confirm('Remove this ingredient from the recipe (BOM)?')) return;
+    try {
+      await deleteRecipeIngredient(ing.id);
+      await loadRecipeAndIngredients();
+      showNotification('Ingredient removed.', 'success');
+    } catch (err) {
+      showNotification(err.message || 'Failed to remove ingredient', 'error');
+    }
+    return;
+  }
+  const ingredientItemId = ing.itemId || ing.id;
   const itemId = props.itemId || route.params.id;
   if (!itemId) return;
-
   try {
     if (USE_SUPABASE && supabaseClient) {
       let ingredients = item.value.ingredients || [];
-      ingredients = ingredients.filter(ing => (ing.itemId || ing.id) !== ingredientItemId);
-
+      ingredients = ingredients.filter((i) => (i.itemId || i.id) !== ingredientItemId);
       const { error: supabaseError } = await supabaseClient
         .from('inventory_items')
         .update({ ingredients })
         .eq('id', itemId);
-
-      if (supabaseError) {
-        throw new Error(supabaseError.message || 'Failed to remove ingredient');
-      }
-
-      await loadItemIngredients();
-      showNotification('Ingredient removed successfully!', 'success');
-    } else {
-      // Fallback to localStorage
-      const items = JSON.parse(localStorage.getItem('inventory_items') || '[]');
-      const currentItem = items.find(i => i.id === itemId);
-      if (currentItem && currentItem.ingredients) {
-        currentItem.ingredients = currentItem.ingredients.filter(ing => (ing.itemId || ing.id) !== ingredientItemId);
-        const itemIndex = items.findIndex(i => i.id === itemId);
-        items[itemIndex] = currentItem;
-        localStorage.setItem('inventory_items', JSON.stringify(items));
-        await loadItemIngredients();
-        showNotification('Ingredient removed successfully!', 'success');
-      }
+      if (supabaseError) throw new Error(supabaseError.message);
+      await loadRecipeAndIngredients();
+      showNotification('Ingredient removed.', 'success');
     }
   } catch (err) {
-    console.error('Error removing ingredient:', err);
     showNotification(err.message || 'Error removing ingredient', 'error');
   }
 };
