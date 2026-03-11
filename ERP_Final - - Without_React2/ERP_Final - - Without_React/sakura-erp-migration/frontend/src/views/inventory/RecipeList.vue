@@ -89,6 +89,18 @@
     </div>
 
     <div v-else class="bg-white rounded-xl shadow-md overflow-hidden">
+      <div class="p-4 border-b border-gray-200 bg-gray-50 flex items-center gap-3">
+        <label for="recipe-list-search" class="text-sm font-medium text-gray-700 whitespace-nowrap">Search recipes</label>
+        <input
+          id="recipe-list-search"
+          v-model="listSearchQuery"
+          type="text"
+          class="flex-1 max-w-md px-3 py-2 border border-gray-300 rounded-lg"
+          placeholder="Type to filter by recipe name, output item or status..."
+          autocomplete="off"
+        />
+        <span v-if="listSearchQuery" class="text-sm text-gray-500">{{ filteredRecipes.length }} of {{ recipes.length }}</span>
+      </div>
       <table class="w-full">
         <thead class="bg-gray-50">
           <tr>
@@ -102,7 +114,7 @@
           </tr>
         </thead>
         <tbody class="divide-y divide-gray-200">
-          <tr v-for="r in recipes" :key="r.id" class="hover:bg-gray-50">
+          <tr v-for="r in filteredRecipes" :key="r.id" class="hover:bg-gray-50">
             <td class="px-6 py-3 font-medium text-gray-900">{{ r.name || r.code }}</td>
             <td class="px-6 py-3 text-gray-700">{{ r.output_item_name || '—' }}</td>
             <td class="px-6 py-3 text-gray-600">v{{ r.recipe_version ?? 1 }}</td>
@@ -115,8 +127,10 @@
               <router-link :to="`/homeportal/recipes/${r.id}`" class="text-[#284b44] hover:text-[#1e3a36] font-medium">Open</router-link>
             </td>
           </tr>
-          <tr v-if="!recipes.length">
-            <td colspan="7" class="px-6 py-12 text-center text-gray-500">No recipes. Create a recipe to define BOM for an item.</td>
+          <tr v-if="!filteredRecipes.length">
+            <td colspan="7" class="px-6 py-12 text-center text-gray-500">
+              {{ listSearchQuery ? 'No recipes match your search.' : 'No recipes. Create a recipe to define BOM for an item.' }}
+            </td>
           </tr>
         </tbody>
       </table>
@@ -137,8 +151,22 @@ const showNewModal = ref(false);
 const createSuccess = ref(false);
 const inventoryItems = ref([]);
 const outputItemSearch = ref('');
+const listSearchQuery = ref('');
 const validationErrors = ref({ name: '', output_item: '' });
 const newForm = ref({ name: '', output_item_id: '', base_quantity: 1, base_unit: 'Pcs' });
+
+const filteredRecipes = computed(() => {
+  const q = (listSearchQuery.value || '').toLowerCase().trim();
+  if (!q) return recipes.value;
+  return recipes.value.filter(
+    (r) =>
+      (r.name && r.name.toLowerCase().includes(q)) ||
+      (r.code && r.code.toLowerCase().includes(q)) ||
+      (r.output_item_name && r.output_item_name.toLowerCase().includes(q)) ||
+      (r.output_item_sku && r.output_item_sku.toLowerCase().includes(q)) ||
+      (r.status && r.status.toLowerCase().includes(q))
+  );
+});
 
 const selectedOutputItem = computed(() => {
   if (!newForm.value.output_item_id) return null;

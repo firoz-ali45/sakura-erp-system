@@ -24,14 +24,39 @@ export async function fetchRecipes() {
 
 export async function fetchRecipeById(id) {
   await ensureSupabaseReady();
-  if (!supabaseClient) return null;
+  if (!supabaseClient || !id) return null;
   const { data, error } = await supabaseClient
     .from('v_recipes_bom')
     .select('*')
     .eq('id', id)
     .single();
-  if (error) throw error;
-  return data;
+  if (!error && data) return data;
+  const { data: row, error: err2 } = await supabaseClient
+    .from('recipes')
+    .select('*')
+    .eq('id', id)
+    .single();
+  if (err2 || !row) return null;
+  const itemId = row.output_item_id || row.item_id;
+  let output_item_name = '—';
+  let output_item_sku = '';
+  if (itemId) {
+    const { data: item } = await supabaseClient
+      .from('inventory_items')
+      .select('name, sku')
+      .eq('id', itemId)
+      .single();
+    if (item) {
+      output_item_name = item.name ?? '—';
+      output_item_sku = item.sku ?? '';
+    }
+  }
+  return {
+    ...row,
+    output_item_name,
+    output_item_sku,
+    ingredient_count: 0
+  };
 }
 
 /** Get the recipe for an inventory item (FG). Prefers active, then highest version. */

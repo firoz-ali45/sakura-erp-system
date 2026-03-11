@@ -12,7 +12,10 @@
     </div>
 
     <div v-else-if="!recipe" class="bg-white rounded-xl shadow-md p-6">
-      <p class="text-gray-600">Recipe not found.</p>
+      <p class="text-gray-600 mb-4">Recipe not found.</p>
+      <router-link to="/homeportal/recipes" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-white font-medium" style="background-color: #284b44;">
+        <i class="fas fa-arrow-left"></i> Back to Recipes list
+      </router-link>
     </div>
 
     <div v-else>
