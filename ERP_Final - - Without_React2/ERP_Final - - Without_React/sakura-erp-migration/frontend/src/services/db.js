@@ -26,7 +26,8 @@ const SKIP_COMPANY_TABLES = new Set([
   'purchase_order_items', 'purchasing_invoice_items', 'purchase_orders', 'purchase_requests', 'pr_po_linkage',
   'purchasing_invoices', 'finance_atms', 'finance_banks', 'finance_payments',
   'inventory_locations', 'roles', 'role_location_access',
-  'transfer_orders', 'transfer_order_items'
+  'transfer_orders', 'transfer_order_items',
+  'production_items', 'wip_lots', 'fg_batches', 'recipe_ingredients'
 ]);
 /**
  * Schema alignment: tables that have NO created_by column (do not inject — avoid schema cache error).
@@ -34,7 +35,8 @@ const SKIP_COMPANY_TABLES = new Set([
 const SKIP_CREATED_BY_TABLES = new Set([
   'grn_inspection_items', 'grn_inspection_item', 'purchase_order_items', 'purchasing_invoice_items',
   'finance_atms', 'finance_banks', 'inventory_locations', 'pr_po_linkage',
-  'roles', 'role_location_access', 'transfer_orders', 'transfer_order_items'
+  'roles', 'role_location_access', 'transfer_orders', 'transfer_order_items',
+  'production_items', 'production_consumption', 'wip_lots', 'fg_batches', 'recipe_ingredients'
 ]);
 
 /** If value is a valid UUID return it, else null. Re-export from uuidUtils for DB layer. */

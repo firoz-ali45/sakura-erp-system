@@ -227,6 +227,14 @@
               <i class="fas fa-industry w-5 text-center"></i>
               <span>{{ $t('homePortal.inventoryProduction') }}</span>
             </router-link>
+            <router-link
+              to="/homeportal/recipes"
+              class="nav-link nav-sub-item flex items-center p-3 my-1 rounded-lg"
+              active-class="active"
+            >
+              <i class="fas fa-list-ol w-5 text-center"></i>
+              <span>Recipes / BOM</span>
+            </router-link>
             <router-link 
               to="/homeportal/more" 
               class="nav-link nav-sub-item flex items-center p-3 my-1 rounded-lg"

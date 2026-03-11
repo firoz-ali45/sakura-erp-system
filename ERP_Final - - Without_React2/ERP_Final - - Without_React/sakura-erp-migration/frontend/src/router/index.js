@@ -149,6 +149,18 @@ const routes = [
     meta: { requiresAuth: true }
   },
   {
+        path: 'recipes',
+    name: 'RecipeList',
+        component: () => import('../views/inventory/RecipeList.vue'),
+    meta: { requiresAuth: true }
+  },
+  {
+        path: 'recipes/:id',
+    name: 'RecipeDetail',
+        component: () => import('../views/inventory/RecipeDetail.vue'),
+    meta: { requiresAuth: true }
+  },
+  {
         path: 'reports/inventory-levels',
     name: 'InventoryLevels',
         component: () => import('../views/inventory/reports/InventoryLevels.vue'),

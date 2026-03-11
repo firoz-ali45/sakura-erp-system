@@ -123,6 +123,12 @@ export const sidebarConfig = [
         i18nKey: 'homePortal.inventoryProduction'
       },
       {
+        id: 'recipes',
+        route: '/homeportal/recipes',
+        icon: 'fas fa-list-ol',
+        i18nKey: 'Recipes / BOM'
+      },
+      {
         id: 'more',
         route: '/homeportal/more',
         icon: 'fas fa-ellipsis-h',
