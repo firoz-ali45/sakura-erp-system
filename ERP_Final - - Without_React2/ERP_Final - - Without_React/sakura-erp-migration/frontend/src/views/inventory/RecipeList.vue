@@ -218,7 +218,12 @@ async function createRecipeSubmit(addAnother = false) {
       router.push(`/homeportal/recipes/${r.id}`);
     }
   } catch (e) {
-    alert(e?.message || 'Failed to create recipe');
+    const msg = e?.message || '';
+    if (msg.includes('Version conflict') || msg.includes('duplicate')) {
+      alert('Recipe already exists or version conflict detected. Try a different output item or refresh the list.');
+    } else {
+      alert(msg || 'Failed to create recipe');
+    }
   }
 }
 

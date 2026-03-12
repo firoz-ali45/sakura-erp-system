@@ -11,6 +11,14 @@
       <p class="text-gray-600">Loading...</p>
     </div>
 
+    <div v-else-if="loadError" class="bg-white rounded-xl shadow-md p-6">
+      <p class="text-red-600 font-medium mb-2">{{ loadError }}</p>
+      <p class="text-gray-600 text-sm mb-4">You can go back to the list and try again.</p>
+      <router-link to="/homeportal/recipes" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-white font-medium" style="background-color: #284b44;">
+        <i class="fas fa-arrow-left"></i> Back to Recipes list
+      </router-link>
+    </div>
+
     <div v-else-if="!recipe" class="bg-white rounded-xl shadow-md p-6">
       <p class="text-gray-600 mb-4">Recipe not found.</p>
       <router-link to="/homeportal/recipes" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-white font-medium" style="background-color: #284b44;">
@@ -20,6 +28,10 @@
 
     <div v-else>
       <!-- Used in production warning -->
+      <div v-if="ingredientsLoadError" class="bg-red-50 border border-red-200 rounded-xl p-4 mb-6">
+        <p class="text-red-800 font-medium">Ingredient loading failed.</p>
+        <p class="text-sm text-red-700 mt-1">Ingredients may not display correctly. Try refreshing the page.</p>
+      </div>
       <div v-if="usedInProduction" class="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-6">
         <p class="text-amber-800 font-medium">This recipe is already used in production. Editing will affect costing and consumption.</p>
         <p class="text-sm text-amber-700 mt-1">Consider creating a new version instead of editing.</p>
@@ -159,6 +171,8 @@ import {
 
 const route = useRoute();
 const loading = ref(true);
+const loadError = ref('');
+const ingredientsLoadError = ref(false);
 const recipe = ref(null);
 const ingredients = ref([]);
 const usedInProduction = ref(false);
@@ -199,19 +213,33 @@ function statusClass(s) {
 async function load() {
   const id = route.params.id;
   if (!id) return;
+  loadError.value = '';
+  ingredientsLoadError.value = false;
   try {
     loading.value = true;
-    const [r, ings, used] = await Promise.all([
-      fetchRecipeById(id),
-      fetchRecipeIngredients(id),
-      checkRecipeUsedInProduction(id)
-    ]);
+    const r = await fetchRecipeById(id);
     recipe.value = r;
+    if (!r) {
+      ingredients.value = [];
+      usedInProduction.value = false;
+      return;
+    }
+    let ings = [];
+    try {
+      ings = await fetchRecipeIngredients(id);
+    } catch {
+      ingredientsLoadError.value = true;
+    }
     ingredients.value = ings || [];
-    usedInProduction.value = !!used;
+    try {
+      usedInProduction.value = !!(await checkRecipeUsedInProduction(id));
+    } catch {
+      usedInProduction.value = false;
+    }
   } catch (e) {
     recipe.value = null;
     ingredients.value = [];
+    loadError.value = e?.message || 'Failed to load recipe.';
   } finally {
     loading.value = false;
   }
@@ -279,9 +307,11 @@ async function saveIngredient() {
 }
 
 function confirmDeleteIngredient(ing) {
-  if (!confirm('Remove this ingredient from the recipe?')) return;
+  if (!confirm('Remove this ingredient from the recipe? This cannot be undone.')) return;
   if (usedInProduction.value && !confirm('This recipe is used in production. Removing will affect future runs. Confirm again?')) return;
-  deleteRecipeIngredient(ing.id).then(() => load());
+  deleteRecipeIngredient(ing.id)
+    .then(() => load())
+    .catch((e) => alert(e?.message || 'Failed to delete ingredient.'));
 }
 
 async function createNewVersion() {
@@ -290,7 +320,12 @@ async function createNewVersion() {
     const newR = await createRecipeVersion(recipe.value.id);
     window.location.href = `#/homeportal/recipes/${newR.id}`;
   } catch (e) {
-    alert(e?.message || 'Failed to create version');
+    const msg = e?.message || '';
+    if (msg.includes('Version conflict') || msg.includes('duplicate')) {
+      alert('Version conflict detected. A recipe with this item and version may already exist.');
+    } else {
+      alert(msg || 'Failed to create version');
+    }
   }
 }
 
