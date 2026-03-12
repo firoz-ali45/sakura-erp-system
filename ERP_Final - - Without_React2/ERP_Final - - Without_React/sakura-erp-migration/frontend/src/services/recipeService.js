@@ -74,15 +74,55 @@ export async function fetchRecipeByItemId(itemId) {
   return active || list[0] || null;
 }
 
+/**
+ * Load ingredients with explicit FK to avoid "more than one relationship" error.
+ * Uses ingredient_item_id → inventory_items only (recipe_ingredients_ingredient_item_id_fkey).
+ */
 export async function fetchRecipeIngredients(recipeId) {
   await ensureSupabaseReady();
   if (!supabaseClient) return [];
-  const { data, error } = await supabaseClient
+  const selectWithFk = '*, inventory_items!recipe_ingredients_ingredient_item_id_fkey(name, sku, storage_unit)';
+  let data;
+  let error;
+  const { data: d, error: e } = await supabaseClient
     .from('recipe_ingredients')
-    .select('*, inventory_items(name, sku, storage_unit)')
+    .select(selectWithFk)
     .eq('recipe_id', recipeId)
     .order('created_at');
-  if (error) throw error;
+  data = d;
+  error = e;
+  if (error) {
+    if (error.code === 'PGRST301' || (error.message && error.message.includes('relationship'))) {
+      const { data: rows, error: e2 } = await supabaseClient
+        .from('recipe_ingredients')
+        .select('*')
+        .eq('recipe_id', recipeId)
+        .order('created_at');
+      if (e2) throw new Error('Ingredient loading failed.');
+      const ids = [...new Set((rows || []).map((r) => r.ingredient_item_id || r.item_id).filter(Boolean))];
+      let items = [];
+      if (ids.length > 0) {
+        const { data: itemRows } = await supabaseClient
+          .from('inventory_items')
+          .select('id, name, sku, storage_unit')
+          .in('id', ids);
+        items = itemRows || [];
+      }
+      const byId = Object.fromEntries(items.map((i) => [i.id, i]));
+      return (rows || []).map((row) => {
+        const item = byId[row.ingredient_item_id || row.item_id];
+        return {
+          ...row,
+          ingredient_item_id: row.ingredient_item_id || row.item_id,
+          quantity: row.quantity ?? row.quantity_required,
+          itemName: item?.name,
+          sku: item?.sku,
+          storage_unit: row.storage_unit ?? item?.storage_unit
+        };
+      });
+    }
+    throw new Error(error.message || 'Ingredient loading failed.');
+  }
   return (data || []).map((row) => ({
     ...row,
     ingredient_item_id: row.ingredient_item_id || row.item_id,
@@ -124,6 +164,20 @@ export function convertQuantity(qty, fromUnit, toUnit, conversions = []) {
   return n;
 }
 
+/** Get next recipe_version for an item (MAX(recipe_version)+1 or 1). Never allow duplicate version. */
+export async function getNextRecipeVersion(itemId) {
+  await ensureSupabaseReady();
+  if (!supabaseClient || !itemId) return 1;
+  const { data, error } = await supabaseClient
+    .from('recipes')
+    .select('recipe_version')
+    .or(`item_id.eq.${itemId},output_item_id.eq.${itemId}`);
+  if (error) return 1;
+  const versions = (data || []).map((r) => Number(r.recipe_version)).filter((n) => !Number.isNaN(n));
+  const max = versions.length ? Math.max(...versions) : 0;
+  return max + 1;
+}
+
 /** Check if recipe is used in any production (for edit warning) */
 export async function checkRecipeUsedInProduction(recipeId) {
   await ensureSupabaseReady();
@@ -142,22 +196,32 @@ export async function createRecipe(payload) {
   const tenantId = (companyId && companyId !== FALLBACK_COMPANY_UUID) ? companyId : null;
   const createdBy = getCurrentUserUUID();
   const itemId = payload.item_id || payload.output_item_id;
+  if (!itemId) throw new Error('Recipe requires an output item (item_id or output_item_id).');
   const name = (payload.name != null && String(payload.name).trim()) ? String(payload.name).trim() : 'Unnamed Recipe';
-  const row = await dbInsert(supabaseClient, 'recipes', {
-    code: payload.code || `RCP-${Date.now()}`,
-    name,
-    output_item_id: itemId,
-    item_id: itemId,
-    output_qty_per_batch: payload.base_quantity ?? payload.output_qty_per_batch ?? 1,
-    base_quantity: payload.base_quantity ?? 1,
-    base_unit: payload.base_unit || 'Pcs',
-    recipe_version: payload.recipe_version ?? 1,
-    status: payload.status || 'draft',
-    company_id: companyId,
-    tenant_id: tenantId,
-    created_by: createdBy
-  });
-  return row;
+  const version = payload.recipe_version != null ? Number(payload.recipe_version) : await getNextRecipeVersion(itemId);
+  try {
+    const row = await dbInsert(supabaseClient, 'recipes', {
+      code: payload.code || `RCP-${Date.now()}`,
+      name,
+      output_item_id: itemId,
+      item_id: itemId,
+      output_qty_per_batch: payload.base_quantity ?? payload.output_qty_per_batch ?? 1,
+      base_quantity: payload.base_quantity ?? 1,
+      base_unit: payload.base_unit || 'Pcs',
+      recipe_version: version,
+      status: payload.status || 'draft',
+      company_id: companyId,
+      tenant_id: tenantId,
+      created_by: createdBy
+    });
+    return row;
+  } catch (err) {
+    const msg = err?.message || '';
+    if (msg.includes('duplicate key') || msg.includes('idx_recipes_item_version') || msg.includes('unique constraint')) {
+      throw new Error('Version conflict detected. A recipe with this item and version may already exist.');
+    }
+    throw err;
+  }
 }
 
 export async function updateRecipe(recipeId, payload) {

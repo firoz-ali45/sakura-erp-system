@@ -26,6 +26,8 @@ See [ARCHITECTURE.md](./ARCHITECTURE.md) for design and data flow.
    ```
    Or run SQL files in `migrations/` manually in Supabase Dashboard → SQL Editor.
 
+   **Recipe BOM fix:** After the main manufacturing/recipe migrations, run `migrations/20260328000004_recipe_bom_relationship_and_version_fix.sql` to fix the "more than one relationship" and duplicate recipe-version errors (unique index on recipes, backfill of `ingredient_item_id`).
+
 3. **Backend / Edge Functions**  
    Implement repository adapters (e.g. Supabase client) and wire them into the services. Deploy with:
    ```bash
