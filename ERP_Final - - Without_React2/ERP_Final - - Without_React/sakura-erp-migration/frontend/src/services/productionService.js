@@ -1,10 +1,12 @@
 /**
  * Enterprise Manufacturing Module — Production Orders, Items, Consumption, FG Batches.
  * Uses Supabase + db.js for inserts; RPC for execute.
+ * When recipe exists, consumption is auto-calculated from BOM on execute.
  */
 import { ensureSupabaseReady, supabaseClient } from '@/services/supabase';
 import { dbInsert, getCurrentCompanyId } from '@/services/db';
 import { getCurrentUserUUID } from '@/utils/uuidUtils';
+import { fetchRecipeByItemId, fetchRecipeIngredients } from '@/services/recipeService';
 
 const FALLBACK_COMPANY_UUID = '00000000-0000-0000-0000-000000000000';
 
@@ -113,6 +115,71 @@ export async function addProductionConsumption(productionId, payload) {
     tenant_id: companyId
   });
   return row;
+}
+
+/**
+ * Preview what will be consumed when producing: RM from recipes + existing manual consumption.
+ * Returns { rmLines: [{ item_name, sku, unit, required_qty, source }], fgLines, allItemsCovered }.
+ */
+export async function getProductionConsumptionPreview(order) {
+  await ensureSupabaseReady();
+  if (!order?.items?.length) return { rmLines: [], fgLines: [], allItemsCovered: false };
+  const rmLines = [];
+  const fgLines = order.items.map((pi) => ({
+    item_name: pi.inventory_items?.name || pi.item_id,
+    sku: pi.inventory_items?.sku || '',
+    unit: pi.inventory_items?.storage_unit || '',
+    quantity_planned: Number(pi.quantity_planned) || 0
+  }));
+  let allItemsCovered = true;
+
+  for (const pi of order.items) {
+    const qtyPlanned = Number(pi.quantity_planned) || 0;
+    if (qtyPlanned <= 0) continue;
+
+    let recipe = null;
+    if (pi.recipe_id) {
+      const { data: r } = await supabaseClient.from('recipes').select('id, base_quantity').eq('id', pi.recipe_id).single();
+      if (r) recipe = r;
+    }
+    if (!recipe) recipe = await fetchRecipeByItemId(pi.item_id);
+
+    if (recipe) {
+      const baseQty = Number(recipe.base_quantity) || 1;
+      const ingredients = await fetchRecipeIngredients(recipe.id);
+      for (const ing of ingredients) {
+        const ingQty = Number(ing.quantity ?? ing.quantity_required) || 0;
+        const requiredQty = (ingQty / baseQty) * qtyPlanned;
+        if (requiredQty <= 0) continue;
+        rmLines.push({
+          item_name: ing.itemName || ing.inventory_items?.name || ing.ingredient_item_id,
+          sku: ing.sku || ing.inventory_items?.sku || '',
+          unit: ing.storage_unit || ing.unit || '',
+          required_qty: requiredQty,
+          source: 'recipe',
+          for_fg: pi.inventory_items?.name || pi.item_id
+        });
+      }
+    } else {
+      const manualForItem = (order.consumption || []).filter((c) => c.production_item_id === pi.id);
+      if (manualForItem.length) {
+        manualForItem.forEach((c) => {
+          rmLines.push({
+            item_name: c.inventory_items?.name || c.item_id,
+            sku: c.inventory_items?.sku || '',
+            unit: '',
+            required_qty: Number(c.quantity) || 0,
+            source: 'manual',
+            for_fg: pi.inventory_items?.name || pi.item_id
+          });
+        });
+      } else {
+        allItemsCovered = false;
+      }
+    }
+  }
+
+  return { rmLines, fgLines, allItemsCovered };
 }
 
 export async function executeProduction(productionId) {

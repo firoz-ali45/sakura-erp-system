@@ -68,8 +68,9 @@
       <div class="bg-white rounded-xl shadow-md p-6 mb-6">
         <div class="flex justify-between items-center mb-4">
           <h2 class="text-lg font-semibold text-gray-800">Raw material consumption</h2>
-          <button v-if="order.status === 'draft' && order.items?.length" @click="openAddConsumption" class="px-4 py-2 rounded-lg border border-gray-300 hover:bg-gray-50 text-sm">Add consumption</button>
+          <button v-if="order.status === 'draft' && order.items?.length" @click="openAddConsumption" class="px-4 py-2 rounded-lg border border-gray-300 hover:bg-gray-50 text-sm">Add consumption (manual)</button>
         </div>
+        <p class="text-sm text-gray-500 mb-3">When a recipe (BOM) exists for an item, consumption is calculated automatically on Produce. Add consumption only for items without a recipe.</p>
         <div class="overflow-x-auto">
           <table class="w-full">
             <thead class="bg-gray-50">
@@ -88,7 +89,7 @@
                 <td class="px-4 py-2 text-sm text-right">{{ formatCost(c.cost) }}</td>
               </tr>
               <tr v-if="!order.consumption?.length">
-                <td colspan="4" class="px-4 py-8 text-center text-gray-500">No consumption lines. Add consumption before producing.</td>
+                <td colspan="4" class="px-4 py-8 text-center text-gray-500">No manual consumption. Use recipes for auto consumption, or add lines here for items without a recipe.</td>
               </tr>
             </tbody>
           </table>
@@ -110,9 +111,10 @@
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-1">Recipe (optional)</label>
               <select v-model="addItemForm.recipe_id" class="w-full px-3 py-2 border border-gray-300 rounded-lg">
-                <option value="">None</option>
+                <option value="">None (manual consumption)</option>
                 <option v-for="r in recipes" :key="r.id" :value="r.id">{{ r.name }} ({{ r.code }})</option>
               </select>
+              <p v-if="addItemForm.item_id && addItemRecipeHint" class="text-xs text-gray-500 mt-1">{{ addItemRecipeHint }}</p>
             </div>
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-1">Quantity planned *</label>
@@ -122,6 +124,47 @@
           <div class="flex justify-end gap-2 mt-6">
             <button type="button" @click="showAddItemModal = false" class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">Close</button>
             <button type="button" @click="saveAddItem" class="px-4 py-2 rounded-lg text-white" style="background-color: #284b44;">Save</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Produce preview & confirm modal -->
+      <div v-if="showProducePreviewModal" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50" @click.self="showProducePreviewModal = false">
+        <div class="bg-white rounded-xl shadow-xl p-6 w-full max-w-2xl max-h-[90vh] overflow-auto">
+          <h3 class="text-lg font-bold mb-4">Confirm production</h3>
+          <p class="text-sm text-gray-600 mb-4">The following raw materials will be consumed and finished goods will be added to inventory.</p>
+          <div class="mb-4">
+            <h4 class="text-sm font-semibold text-gray-700 mb-2">Finished goods</h4>
+            <table class="w-full text-sm">
+              <thead class="bg-gray-50"><tr><th class="px-2 py-1 text-left">Item</th><th class="px-2 py-1 text-right">Quantity</th><th class="px-2 py-1 text-left">Unit</th></tr></thead>
+              <tbody class="divide-y">
+                <tr v-for="(fg, i) in producePreview?.fgLines" :key="i">
+                  <td class="px-2 py-1">{{ fg.item_name }}</td>
+                  <td class="px-2 py-1 text-right">{{ fg.quantity_planned }}</td>
+                  <td class="px-2 py-1">{{ fg.unit }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="mb-4">
+            <h4 class="text-sm font-semibold text-gray-700 mb-2">Raw materials to consume</h4>
+            <table class="w-full text-sm">
+              <thead class="bg-gray-50"><tr><th class="px-2 py-1 text-left">Item</th><th class="px-2 py-1 text-right">Quantity</th><th class="px-2 py-1 text-left">Unit</th><th class="px-2 py-1 text-left">Source</th></tr></thead>
+              <tbody class="divide-y">
+                <tr v-for="(rm, i) in producePreview?.rmLines" :key="i">
+                  <td class="px-2 py-1">{{ rm.item_name }}</td>
+                  <td class="px-2 py-1 text-right">{{ formatQty(rm.required_qty) }}</td>
+                  <td class="px-2 py-1">{{ rm.unit }}</td>
+                  <td class="px-2 py-1"><span :class="rm.source === 'recipe' ? 'text-green-600' : 'text-gray-500'">{{ rm.source === 'recipe' ? 'Recipe' : 'Manual' }}</span></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="flex justify-end gap-2">
+            <button type="button" @click="showProducePreviewModal = false" class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">Cancel</button>
+            <button type="button" @click="confirmProduce" :disabled="produceExecuting" class="px-4 py-2 rounded-lg text-white disabled:opacity-50" style="background-color: #284b44;">
+              {{ produceExecuting ? 'Executing...' : 'Confirm & produce' }}
+            </button>
           </div>
         </div>
       </div>
@@ -176,11 +219,13 @@ import {
   addProductionItem,
   addProductionConsumption,
   executeProduction,
+  getProductionConsumptionPreview,
   fetchRecipes,
   fetchInventoryItems,
   fetchBatchBalances,
   fetchBranches
 } from '@/services/productionService';
+import { fetchRecipeByItemId } from '@/services/recipeService';
 
 const route = useRoute();
 const loading = ref(true);
@@ -191,7 +236,11 @@ const inventoryItems = ref([]);
 const batchOptions = ref([]);
 const showAddItemModal = ref(false);
 const showAddConsumptionModal = ref(false);
+const showProducePreviewModal = ref(false);
+const producePreview = ref(null);
+const produceExecuting = ref(false);
 const addItemForm = ref({ item_id: '', recipe_id: '', quantity_planned: 0 });
+const addItemRecipeHint = ref('');
 const consumptionForm = ref({ item_id: '', batch_id: '', quantity: 0, cost: 0, production_item_id: null });
 
 const branchName = computed(() => {
@@ -209,9 +258,7 @@ const totalCost = computed(() => {
 const canProduce = computed(() => {
   const o = order.value;
   if (!o || o.status !== 'draft' && o.status !== 'released') return false;
-  const hasItems = o.items?.length > 0;
-  const hasConsumption = o.consumption?.length > 0;
-  return hasItems && hasConsumption;
+  return (o.items?.length || 0) > 0;
 });
 
 function statusClass(s) {
@@ -228,6 +275,12 @@ function formatDate(d) {
 function formatCost(v) {
   if (v == null) return '—';
   return new Intl.NumberFormat(undefined, { minimumFractionDigits: 2 }).format(v);
+}
+
+function formatQty(v) {
+  if (v == null) return '—';
+  const n = Number(v);
+  return Number.isNaN(n) ? '—' : (n % 1 === 0 ? n : n.toFixed(4));
 }
 
 async function loadOrder() {
@@ -294,12 +347,35 @@ async function saveConsumption() {
 
 async function runProduce() {
   if (!canProduce.value) return;
-  if (!confirm('Execute production? This will deduct raw materials and create finished goods batches.')) return;
+  try {
+    const preview = await getProductionConsumptionPreview(order.value);
+    producePreview.value = preview;
+    if (!preview.allItemsCovered) {
+      alert('Every item must have a recipe (BOM) or manual consumption. Add consumption for items without a recipe.');
+      return;
+    }
+    if (!preview.rmLines?.length && !order.value.consumption?.length) {
+      alert('No raw materials to consume. Ensure items have a recipe with ingredients or add consumption manually.');
+      return;
+    }
+    showProducePreviewModal.value = true;
+  } catch (e) {
+    alert(e?.message || 'Failed to load preview');
+  }
+}
+
+async function confirmProduce() {
+  if (!order.value?.id || produceExecuting.value) return;
+  produceExecuting.value = true;
   try {
     await executeProduction(order.value.id);
+    showProducePreviewModal.value = false;
+    producePreview.value = null;
     await loadOrder();
   } catch (e) {
     alert(e?.message || 'Execute failed');
+  } finally {
+    produceExecuting.value = false;
   }
 }
 
@@ -317,4 +393,22 @@ onMounted(async () => {
 });
 
 watch(() => route.params.id, () => { if (route.params.id) loadOrder(); });
+
+watch(() => addItemForm.value.item_id, async (itemId) => {
+  addItemRecipeHint.value = '';
+  if (!itemId) { addItemForm.value.recipe_id = ''; return; }
+  try {
+    const recipe = await fetchRecipeByItemId(itemId);
+    if (recipe) {
+      addItemForm.value.recipe_id = recipe.id;
+      addItemRecipeHint.value = 'Auto-selected: ' + (recipe.name || recipe.output_item_name || 'Recipe');
+    } else {
+      addItemForm.value.recipe_id = '';
+      addItemRecipeHint.value = 'No recipe for this item – add consumption manually.';
+    }
+  } catch {
+    addItemForm.value.recipe_id = '';
+    addItemRecipeHint.value = 'Could not load recipe.';
+  }
+});
 </script>
