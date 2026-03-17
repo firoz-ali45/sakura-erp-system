@@ -1190,25 +1190,26 @@
         
         async function loadFreshData() {
             try {
-                // Load all data in parallel for maximum speed
-                await Promise.all([
-                    loadDataFromGoogleSheet(),
-                    loadInvoicesData(),
-                    loadPurchasesData()
-                ]);
-                
-                // Cache the data
+                // World-class: try fast API (CDN-cached) first; fallback to direct Sheets
+                try {
+                    await loadAllDataFromAPI();
+                    console.log('✅ Data loaded via API (fast path)');
+                } catch (apiErr) {
+                    console.warn('⚠️ API unavailable, using direct Sheets:', apiErr.message);
+                    await Promise.all([
+                        loadDataFromGoogleSheet(),
+                        loadInvoicesData(),
+                        loadPurchasesData()
+                    ]);
+                }
                 setCachedData({
                     allData: allData,
                     allInvoicesData: allInvoicesData,
                     allPurchasesData: allPurchasesData
                 });
-                
-                // Update UI with fresh data
                 enrichAndRenderInvoices();
                 applyFiltersAndRedraw();
                 sendDataToParent();
-                
                 console.log('✅ Fresh data loaded and cached');
             } catch (error) {
                 console.error('❌ Error loading fresh data:', error);
@@ -1346,77 +1347,46 @@
             }
         }
 
-        async function loadDataFromGoogleSheet() {
-            console.log('📡 Loading data...');
-            const dataStatus = document.getElementById('dataStatus');
-            if (dataStatus) {
-            dataStatus.className = 'mt-4 p-4 bg-blue-50 border-blue-200 rounded-lg';
-            dataStatus.innerHTML = `<div class="loading mr-2"></div> ${translate('loadingData')}`;
-            dataStatus.classList.remove('hidden');
-            }
-            
-            const url = `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/${encodeURIComponent('Copy of Balance Sheet Database')}?key=${API_KEY}`;
-            console.log('🔗 URL:', url.substring(0, 100) + '...');
-            
-            try {
-                const response = await fetch(url);
-                console.log('📥 Response status:', response.status, response.statusText);
-                
-                if (!response.ok) {
-                    let errorText = await response.text();
-                    console.error('❌ Response error:', errorText);
-                    
-                    // Try to parse JSON error
-                    try {
-                        const errorJson = JSON.parse(errorText);
-                        if (errorJson.error && errorJson.error.message) {
-                            errorText = errorJson.error.message;
-                        }
-                    } catch (e) {
-                        // Not JSON, use as is
-                    }
-                    
-                    throw new Error(`Network Error (${response.status}): ${errorText}`);
-                }
-                
-                const json = await response.json();
-                console.log('📊 JSON received, rows:', json.values?.length || 0);
-                
-                if (!json.values || json.values.length < 2) {
-                    throw new Error("No data found.");
-                }
-                
-                const headers = json.values.shift().map(h => h.trim());
-                console.log('📋 Headers:', headers.slice(0, 5));
-                
-                allData = json.values.map(row => {
-                    const obj = headers.reduce((acc, h, i) => ({ ...acc, [h]: row[i] }), {});
-                    return { supplier: obj['supplier'] || '', date: obj['Date'] || '', description: obj['Description\n(الوصف)'] || obj['Description'] || '', transactionId: obj['Transaction ID\n(معرّف المعاملة)'] || '', documentLink: obj['Document Link'] || '', dueDate: obj['Due Date'] || '', amount: cleanAmount(obj['Amount']), dueStatus: obj['Due Status According to Supplier Type'] || '', payStatus: obj['Invoice Pay Status'] || null, outstandingBalance: cleanAmount(obj['Outstanding \nBalance'] || obj['Outstanding Balance']), amountWithMinus: cleanAmount(obj['Amount with Minus']), agreementDuration: obj['Agreement Duration'] || '', rawDate: parseDate(obj['Date']), rawDueDate: parseDate(obj['Due Date']), isPayment: cleanAmount(obj['Amount with Minus']) < 0 };
-                }).filter(t => t.supplier);
+        function processBalanceSheetValues(values) {
+            if (!values || values.length < 2) return [];
+            const headers = values[0].map(h => (h || '').trim());
+            const rows = values.slice(1);
+            return rows.map(row => {
+                const obj = headers.reduce((acc, h, i) => ({ ...acc, [h]: row[i] }), {});
+                return { supplier: obj['supplier'] || '', date: obj['Date'] || '', description: obj['Description\n(الوصف)'] || obj['Description'] || '', transactionId: obj['Transaction ID\n(معرّف المعاملة)'] || '', documentLink: obj['Document Link'] || '', dueDate: obj['Due Date'] || '', amount: cleanAmount(obj['Amount']), dueStatus: obj['Due Status According to Supplier Type'] || '', payStatus: obj['Invoice Pay Status'] || null, outstandingBalance: cleanAmount(obj['Outstanding \nBalance'] || obj['Outstanding Balance']), amountWithMinus: cleanAmount(obj['Amount with Minus']), agreementDuration: obj['Agreement Duration'] || '', rawDate: parseDate(obj['Date']), rawDueDate: parseDate(obj['Due Date']), isPayment: cleanAmount(obj['Amount with Minus']) < 0 };
+            }).filter(t => t.supplier);
+        }
 
-                console.log('✅ Data processed, transactions:', allData.length);
-                
+        async function loadDataFromGoogleSheet(prefetchedValues) {
+            const dataStatus = document.getElementById('dataStatus');
+            if (!prefetchedValues && dataStatus) {
+                dataStatus.className = 'mt-4 p-4 bg-blue-50 border-blue-200 rounded-lg';
+                dataStatus.innerHTML = `<div class="loading mr-2"></div> ${translate('loadingData')}`;
+                dataStatus.classList.remove('hidden');
+            }
+            try {
+                let values = prefetchedValues;
+                if (!values) {
+                    const url = `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/${encodeURIComponent('Copy of Balance Sheet Database')}?key=${API_KEY}`;
+                    const response = await fetch(url);
+                    if (!response.ok) throw new Error(`Network Error (${response.status})`);
+                    const json = await response.json();
+                    values = json.values;
+                }
+                allData = processBalanceSheetValues(values || []);
                 if (dataStatus) {
-                dataStatus.className = 'mt-4 p-4 bg-green-50 border-green-200 text-green-800 rounded-lg';
-                dataStatus.innerHTML = `<i class="fas fa-check-circle mr-2"></i>${translate('dataUpdated')} ${allData.length} ${translate('transactions')}`;
-                setTimeout(() => dataStatus.classList.add('hidden'), 3000);
+                    dataStatus.className = 'mt-4 p-4 bg-green-50 border-green-200 text-green-800 rounded-lg';
+                    dataStatus.innerHTML = `<i class="fas fa-check-circle mr-2"></i>${translate('dataUpdated')} ${allData.length} ${translate('transactions')}`;
+                    setTimeout(() => dataStatus.classList.add('hidden'), 3000);
                 }
             } catch (error) {
-                console.error('❌ Error fetching data:', error);
+                console.error('❌ Error loading balance sheet:', error);
                 if (dataStatus) {
-                    let errorMessage = error.message;
-                    if (errorMessage.includes('403') || errorMessage.includes('PERMISSION_DENIED')) {
-                        errorMessage = 'Unable to load data. Please try again later.';
-                    } else if (errorMessage.includes('CORS') || errorMessage.includes('Cross-Origin')) {
-                        errorMessage = 'CORS error: Please use a local server instead of opening file directly.';
-                    }
-                dataStatus.className = 'mt-4 p-4 bg-red-50 border-red-200 text-red-800 rounded-lg';
-                    dataStatus.innerHTML = `<i class="fas fa-exclamation-circle mr-2"></i><strong>${translate('dataFailed')}</strong><br>${errorMessage}<br><small>Check console for details.</small>`;
+                    dataStatus.className = 'mt-4 p-4 bg-red-50 border-red-200 text-red-800 rounded-lg';
+                    dataStatus.innerHTML = `<i class="fas fa-exclamation-circle mr-2"></i><strong>${translate('dataFailed')}</strong><br>${error.message || ''}`;
                     dataStatus.classList.remove('hidden');
                 }
-                // Don't throw error, allow app to continue with empty data
                 allData = [];
-                console.warn('⚠️ Continuing with empty data array');
             }
         }
         
@@ -1431,61 +1401,64 @@
             return '';
         }
 
-        async function loadInvoicesData() {
-            const statusDiv = document.getElementById('invoicesStatus');
-            statusDiv.className = 'mt-4 p-4 bg-blue-50 border-blue-200 rounded-lg';
-            statusDiv.innerHTML = `<div class="loading mr-2"></div>${translate('loadingData')}`;
-            statusDiv.classList.remove('hidden');
-
-            const SHEET_NAME = 'Invoices (Data Base)';
-            const url = `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/${encodeURIComponent(SHEET_NAME)}?key=${API_KEY}`;
-            try {
-                const response = await fetch(url);
-                if (!response.ok) throw new Error(`Network Error: ${response.statusText}`);
-                const json = await response.json();
-                if (!json.values || json.values.length < 2) {
-                    allInvoicesData = [];
-                    throw new Error("No invoice data found.");
+        function processInvoicesValues(values) {
+            if (!values || values.length < 2) return [];
+            const headers = values[0].map(h => (h || '').trim());
+            const headerMap = {};
+            headers.forEach((header, index) => {
+                const sanitizedHeader = header.toLowerCase().replace(/[^a-z0-9\u0600-\u06FF]/g, '');
+                if (sanitizedHeader) headerMap[sanitizedHeader] = index;
+            });
+            const rows = values.slice(1);
+            return rows.map(row => {
+                const dateStr = getValueByAliases(row, headerMap, ['date']);
+                const invoiceNumber = getValueByAliases(row, headerMap, ['invoice_number', 'invoicenumber']);
+                return {
+                    invoice_number: invoiceNumber,
+                    supplier: getValueByAliases(row, headerMap, ['supplier']),
+                    destination: getValueByAliases(row, headerMap, ['destination']),
+                    company: getValueByAliases(row, headerMap, ['company']),
+                    tax: cleanAmount(getValueByAliases(row, headerMap, ['tax'])),
+                    sub_total: cleanAmount(getValueByAliases(row, headerMap, ['sub_total', 'subtotal'])),
+                    amount: cleanAmount(getValueByAliases(row, headerMap, ['amount', 'totalamount(tlorsr)', 'totalamount'])),
+                    date: dateStr,
+                    paymentType: getValueByAliases(row, headerMap, ['paymenttypeoninvoice', 'paymenttype', 'payment']),
+                    invoiceCategory: getValueByAliases(row, headerMap, ['invoicecategory']),
+                    supplierCategory: getValueByAliases(row, headerMap, ['suppliercategoryforbalancesheet', 'suppliercategory']),
+                    dueDate: getValueByAliases(row, headerMap, ['due_date', 'duedate']),
+                    agreementDuration: getValueByAliases(row, headerMap, ['agreementduration', 'duration']),
+                    physicalPORef: getValueByAliases(row, headerMap, ['physicalporeference', 'physicalporef', 'ponumber', 'poref']),
+                    foodicsPORef: getValueByAliases(row, headerMap, ['foodicsporeference', 'foodicsporef', 'foodicspo']),
+                    atmCard: getValueByAliases(row, headerMap, ['atmcard']),
+                    rawDate: parseDate(dateStr),
+                    rawBusinessDate: parseDate(getValueByAliases(row, headerMap, ['business date', 'businessdate', 'bdate', 'تاريخ العمل'])),
+                    invoiceType: getValueByAliases(row, headerMap, ['invoicetype', 'نوعالفاتورة']),
+                    receiptStatus: getValueByAliases(row, headerMap, ['receiptstatus', 'حالةاستلام']),
                 };
+            }).filter(inv => inv.supplier && inv.invoice_number && inv.invoice_number.trim() !== '""');
+        }
 
-                const headers = json.values.shift().map(h => h.trim());
-                const headerMap = {};
-                headers.forEach((header, index) => {
-                    const sanitizedHeader = header.toLowerCase().replace(/[^a-z0-9\u0600-\u06FF]/g, '');
-                    if (sanitizedHeader) headerMap[sanitizedHeader] = index;
-                });
-                
-                allInvoicesData = json.values.map(row => {
-                    const dateStr = getValueByAliases(row, headerMap, ['date']);
-                    const invoiceNumber = getValueByAliases(row, headerMap, ['invoice_number', 'invoicenumber']);
-                    return {
-                        invoice_number: invoiceNumber,
-                        supplier: getValueByAliases(row, headerMap, ['supplier']),
-                        destination: getValueByAliases(row, headerMap, ['destination']),
-                        company: getValueByAliases(row, headerMap, ['company']),
-                        tax: cleanAmount(getValueByAliases(row, headerMap, ['tax'])),
-                        sub_total: cleanAmount(getValueByAliases(row, headerMap, ['sub_total', 'subtotal'])),
-                        amount: cleanAmount(getValueByAliases(row, headerMap, ['amount', 'totalamount(tlorsr)', 'totalamount'])),
-                        date: dateStr,
-                        paymentType: getValueByAliases(row, headerMap, ['paymenttypeoninvoice', 'paymenttype', 'payment']),
-                        invoiceCategory: getValueByAliases(row, headerMap, ['invoicecategory']),
-                        supplierCategory: getValueByAliases(row, headerMap, ['suppliercategoryforbalancesheet', 'suppliercategory']),
-                        dueDate: getValueByAliases(row, headerMap, ['due_date', 'duedate']),
-                        agreementDuration: getValueByAliases(row, headerMap, ['agreementduration', 'duration']),
-                        physicalPORef: getValueByAliases(row, headerMap, ['physicalporeference', 'physicalporef', 'ponumber', 'poref']),
-                        foodicsPORef: getValueByAliases(row, headerMap, ['foodicsporeference', 'foodicsporef', 'foodicspo']),
-                        atmCard: getValueByAliases(row, headerMap, ['atmcard']),
-                        rawDate: parseDate(dateStr),
-                        rawBusinessDate: parseDate(getValueByAliases(row, headerMap, ['business date', 'businessdate', 'bdate', 'تاريخ العمل'])),
-                        invoiceType: getValueByAliases(row, headerMap, ['invoicetype', 'نوعالفاتورة']),
-                        receiptStatus: getValueByAliases(row, headerMap, ['receiptstatus', 'حالةاستلام']),
-                    };
-                }).filter(inv => inv.supplier && inv.invoice_number && inv.invoice_number.trim() !== '""');
-
+        async function loadInvoicesData(prefetchedValues) {
+            const statusDiv = document.getElementById('invoicesStatus');
+            if (!prefetchedValues) {
+                statusDiv.className = 'mt-4 p-4 bg-blue-50 border-blue-200 rounded-lg';
+                statusDiv.innerHTML = `<div class="loading mr-2"></div>${translate('loadingData')}`;
+                statusDiv.classList.remove('hidden');
+            }
+            try {
+                let values = prefetchedValues;
+                if (!values) {
+                    const url = `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/${encodeURIComponent('Invoices (Data Base)')}?key=${API_KEY}`;
+                    const response = await fetch(url);
+                    if (!response.ok) throw new Error(`Network Error: ${response.statusText}`);
+                    const json = await response.json();
+                    values = json.values;
+                }
+                allInvoicesData = processInvoicesValues(values || []);
                 populateInvoiceFilters();
-                statusDiv.classList.add('hidden');
+                if (statusDiv) statusDiv.classList.add('hidden');
             } catch (error) {
-                console.error('Error fetching invoices data:', error);
+                console.error('Error loading invoices:', error);
                 if (statusDiv) {
                     statusDiv.className = 'mt-4 p-4 bg-red-50 border-red-200 text-red-800 rounded-lg';
                     statusDiv.innerHTML = `<i class="fas fa-exclamation-circle mr-2"></i>${translate('dataFailed')} ${error.message || 'Unknown error'}`;
@@ -1926,58 +1899,95 @@ function updateStats(transactions, summaries) {
             `).join('');
         }
         
-        async function loadPurchasesData() {
+        function processPurchasesValues(values) {
+            if (!values || values.length < 2) return [];
+            const headers = values[0].map(h => (h || '').trim());
+            const headerMap = {};
+            headers.forEach((header, index) => {
+                const sanitizedHeader = header.toLowerCase().replace(/[^a-z0-9\u0600-\u06FF]/g, '');
+                if (sanitizedHeader) headerMap[sanitizedHeader] = index;
+            });
+            let itemNameIndex = headers.findIndex(h => (h || '').toLowerCase().trim().includes('item name'));
+            if (itemNameIndex === -1) itemNameIndex = 1;
+            const rows = values.slice(1);
+            return rows.map(row => {
+                const dateStr = getValueByAliases(row, headerMap, ['date']);
+                return {
+                    itemName: row[itemNameIndex] || '',
+                    itemNameAr: row[itemNameIndex + 1] || '',
+                    code: getValueByAliases(row, headerMap, ['icssku', 'sku', 'code']),
+                    unit: getValueByAliases(row, headerMap, ['unit', 'itemunit']),
+                    itemType: getValueByAliases(row, headerMap, ['catagory', 'category', 'itemcategory', 'item type']),
+                    quantity: cleanAmount(getValueByAliases(row, headerMap, ['qty', 'quantity'])),
+                    unitCost: cleanAmount(getValueByAliases(row, headerMap, ['unitprice', 'price', 'unitcost'])),
+                    additionalCost: cleanAmount(getValueByAliases(row, headerMap, ['additionalcost'])),
+                    totalBeforeTax: cleanAmount(getValueByAliases(row, headerMap, ['subtotal', 'sub_total', 'totalbeforetax'])),
+                    tax: cleanAmount(getValueByAliases(row, headerMap, ['tax'])),
+                    totalAfterTax: cleanAmount(getValueByAliases(row, headerMap, ['amount', 'totalamount', 'totalaftertax'])),
+                    supplier: getValueByAliases(row, headerMap, ['supplier']),
+                    atmCard: getValueByAliases(row, headerMap, ['atm card', 'atmcard']),
+                    rawDate: parseDate(dateStr),
+                    rawBusinessDate: parseDate(getValueByAliases(row, headerMap, ['business date', 'businessdate', 'bdate', 'تاريخ العمل']))
+                };
+            }).filter(p => (p.itemName && p.itemName.trim() !== '') || (p.itemNameAr && p.itemNameAr.trim() !== ''));
+        }
+
+        async function loadPurchasesData(prefetchedValues) {
             const statusDiv = document.getElementById('purchasesStatus');
-            statusDiv.classList.remove('hidden');
-            statusDiv.innerHTML = `<div class="loading mr-2"></div> ${translate('loadingData')}`;
-            const SHEET_NAME = "Daily Purchases (for Report) Net";
-            const url = `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/${encodeURIComponent(SHEET_NAME)}?key=${API_KEY}`;
+            if (!prefetchedValues) {
+                statusDiv.classList.remove('hidden');
+                statusDiv.innerHTML = `<div class="loading mr-2"></div> ${translate('loadingData')}`;
+            }
             try {
-                const response = await fetch(url);
-                if (!response.ok) throw new Error(`Network Error: ${response.statusText}`);
-                const json = await response.json();
-                if (!json.values || json.values.length < 2) { allPurchasesData = []; throw new Error("No purchase data found in sheet."); }
-
-                const headers = json.values.shift().map(h => h.trim());
-                const headerMap = {};
-                headers.forEach((header, index) => { 
-                    const sanitizedHeader = header.toLowerCase().replace(/[^a-z0-9\u0600-\u06FF]/g, '');
-                    if (sanitizedHeader) headerMap[sanitizedHeader] = index; 
-                });
-                
-                let itemNameIndex = headers.findIndex(h => (h || '').toLowerCase().trim().includes('item name'));
-                if (itemNameIndex === -1) itemNameIndex = 1;
-
-                allPurchasesData = json.values.map(row => {
-                    const dateStr = getValueByAliases(row, headerMap, ['date']);
-                    return {
-                        itemName: row[itemNameIndex] || '',
-                        itemNameAr: row[itemNameIndex + 1] || '',
-                        code: getValueByAliases(row, headerMap, ['icssku', 'sku', 'code']),
-                        unit: getValueByAliases(row, headerMap, ['unit', 'itemunit']),
-                        itemType: getValueByAliases(row, headerMap, ['catagory', 'category', 'itemcategory', 'item type']),
-                        quantity: cleanAmount(getValueByAliases(row, headerMap, ['qty', 'quantity'])),
-                        unitCost: cleanAmount(getValueByAliases(row, headerMap, ['unitprice', 'price', 'unitcost'])),
-                        additionalCost: cleanAmount(getValueByAliases(row, headerMap, ['additionalcost'])),
-                        totalBeforeTax: cleanAmount(getValueByAliases(row, headerMap, ['subtotal', 'sub_total', 'totalbeforetax'])),
-                        tax: cleanAmount(getValueByAliases(row, headerMap, ['tax'])),
-                        totalAfterTax: cleanAmount(getValueByAliases(row, headerMap, ['amount', 'totalamount', 'totalaftertax'])),
-                        supplier: getValueByAliases(row, headerMap, ['supplier']),
-                        atmCard: getValueByAliases(row, headerMap, ['atm card', 'atmcard']),
-                        rawDate: parseDate(dateStr),
-                        rawBusinessDate: parseDate(getValueByAliases(row, headerMap, ['business date', 'businessdate', 'bdate', 'تاريخ العمل']))
-                    };
-                }).filter(p => (p.itemName && p.itemName.trim() !== '') || (p.itemNameAr && p.itemNameAr.trim() !== ''));
-
+                let values = prefetchedValues;
+                if (!values) {
+                    const url = `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/${encodeURIComponent('Daily Purchases (for Report) Net')}?key=${API_KEY}`;
+                    const response = await fetch(url);
+                    if (!response.ok) throw new Error(`Network Error: ${response.statusText}`);
+                    const json = await response.json();
+                    values = json.values;
+                }
+                allPurchasesData = processPurchasesValues(values || []);
                 populatePurchaseFilters();
                 populatePurchaseTypeFilter();
-                statusDiv.classList.add('hidden');
+                if (statusDiv) statusDiv.classList.add('hidden');
             } catch (error) {
-                console.error('Error fetching purchases data:', error);
+                console.error('Error loading purchases:', error);
                 allPurchasesData = [];
-                statusDiv.className = 'mt-4 p-4 bg-red-50 border-red-200 text-red-800 rounded-lg';
-                statusDiv.innerHTML = `<i class="fas fa-exclamation-circle mr-2"></i> ${translate('dataFailed')}`;
+                if (statusDiv) {
+                    statusDiv.className = 'mt-4 p-4 bg-red-50 border-red-200 text-red-800 rounded-lg';
+                    statusDiv.innerHTML = `<i class="fas fa-exclamation-circle mr-2"></i> ${translate('dataFailed')}`;
+                }
             }
+        }
+
+        /** World-class: single API call with CDN cache → sub-second repeat loads */
+        async function loadAllDataFromAPI() {
+            const dataStatus = document.getElementById('dataStatus');
+            if (dataStatus) {
+                dataStatus.className = 'mt-4 p-4 bg-blue-50 border-blue-200 rounded-lg';
+                dataStatus.innerHTML = `<div class="loading mr-2"></div> ${translate('loadingData')}`;
+                dataStatus.classList.remove('hidden');
+            }
+            const apiUrl = (typeof window !== 'undefined' && window.location && window.location.origin)
+                ? `${window.location.origin}/api/accounts-payable-data`
+                : '/api/accounts-payable-data';
+            const res = await fetch(apiUrl);
+            if (!res.ok) throw new Error(`API ${res.status}`);
+            const body = await res.json();
+            allData = processBalanceSheetValues(body.balanceSheet && body.balanceSheet.values || []);
+            allInvoicesData = processInvoicesValues(body.invoices && body.invoices.values || []);
+            allPurchasesData = processPurchasesValues(body.purchases && body.purchases.values || []);
+            if (dataStatus) {
+                dataStatus.className = 'mt-4 p-4 bg-green-50 border-green-200 text-green-800 rounded-lg';
+                dataStatus.innerHTML = `<i class="fas fa-check-circle mr-2"></i>${translate('dataUpdated')} ${allData.length} ${translate('transactions')}`;
+                setTimeout(() => dataStatus.classList.add('hidden'), 3000);
+            }
+            document.getElementById('invoicesStatus') && document.getElementById('invoicesStatus').classList.add('hidden');
+            document.getElementById('purchasesStatus') && document.getElementById('purchasesStatus').classList.add('hidden');
+            populateInvoiceFilters();
+            populatePurchaseFilters();
+            populatePurchaseTypeFilter();
         }
 
         function populatePurchaseFilters() {

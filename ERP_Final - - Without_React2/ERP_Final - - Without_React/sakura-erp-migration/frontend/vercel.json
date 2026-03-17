@@ -5,7 +5,7 @@
   "framework": "vite",
   "rewrites": [
     {
-      "source": "/((?!assets/|favicon|apple-touch).*)",
+      "source": "/((?!api/|assets/|favicon|apple-touch).*)",
       "destination": "/index.html"
     }
   ],
