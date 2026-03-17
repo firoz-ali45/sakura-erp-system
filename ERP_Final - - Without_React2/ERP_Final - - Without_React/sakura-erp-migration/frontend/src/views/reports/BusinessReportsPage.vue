@@ -1,5 +1,5 @@
 <template>
-  <div class="p-6 bg-[#f0e1cd] min-h-screen">
+  <div class="p-6 bg-[#f0e1cd] min-h-screen relative">
     <h1 class="text-2xl font-bold text-gray-800 mb-6">{{ $t('homePortal.businessReports') }}</h1>
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
       <router-link
@@ -17,6 +17,15 @@
         <i class="fas fa-chevron-right text-gray-400"></i>
       </router-link>
     </div>
+
+    <!-- Hidden prefetch iframe to warm Accounts Payable cache -->
+    <iframe
+      src="/sakura-accounts-payable-dashboard/payable.html"
+      aria-hidden="true"
+      tabindex="-1"
+      class="absolute opacity-0 pointer-events-none"
+      style="width:0;height:0;border:0;"
+    ></iframe>
   </div>
 </template>
 
