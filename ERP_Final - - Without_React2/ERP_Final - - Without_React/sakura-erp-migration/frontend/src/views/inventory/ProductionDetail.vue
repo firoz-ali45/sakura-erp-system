@@ -132,7 +132,8 @@
       <div v-if="showProducePreviewModal" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50" @click.self="showProducePreviewModal = false">
         <div class="bg-white rounded-xl shadow-xl p-6 w-full max-w-2xl max-h-[90vh] overflow-auto">
           <h3 class="text-lg font-bold mb-4">Confirm production</h3>
-          <p class="text-sm text-gray-600 mb-4">The following raw materials will be consumed and finished goods will be added to inventory.</p>
+          <p class="text-sm font-medium text-gray-800 mb-1">You are producing <strong>{{ producePreview?.totalFgQty ?? 0 }}</strong> quantity (total FG).</p>
+          <p class="text-sm text-gray-600 mb-4">System will consume the following materials. After confirmation, raw materials will be deducted and finished goods added to inventory.</p>
           <div class="mb-4">
             <h4 class="text-sm font-semibold text-gray-700 mb-2">Finished goods</h4>
             <table class="w-full text-sm">
@@ -147,7 +148,7 @@
             </table>
           </div>
           <div class="mb-4">
-            <h4 class="text-sm font-semibold text-gray-700 mb-2">Raw materials to consume</h4>
+            <h4 class="text-sm font-semibold text-gray-700 mb-2">Raw materials to consume (from recipe / manual)</h4>
             <table class="w-full text-sm">
               <thead class="bg-gray-50"><tr><th class="px-2 py-1 text-left">Item</th><th class="px-2 py-1 text-right">Quantity</th><th class="px-2 py-1 text-left">Unit</th><th class="px-2 py-1 text-left">Source</th></tr></thead>
               <tbody class="divide-y">

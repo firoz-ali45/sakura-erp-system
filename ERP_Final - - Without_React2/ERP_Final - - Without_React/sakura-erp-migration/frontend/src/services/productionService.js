@@ -118,31 +118,38 @@ export async function addProductionConsumption(productionId, payload) {
 }
 
 /**
- * Preview what will be consumed when producing: RM from recipes + existing manual consumption.
- * Returns { rmLines: [{ item_name, sku, unit, required_qty, source }], fgLines, allItemsCovered }.
+ * Preview what will be consumed when producing.
+ * Always fetches recipe by item_id (production linked to recipes table).
+ * required_qty = ingredient.quantity × (production_quantity / recipe.base_quantity).
+ * Returns { rmLines, fgLines, allItemsCovered, totalFgQty }.
  */
 export async function getProductionConsumptionPreview(order) {
   await ensureSupabaseReady();
-  if (!order?.items?.length) return { rmLines: [], fgLines: [], allItemsCovered: false };
+  if (!order?.items?.length) return { rmLines: [], fgLines: [], allItemsCovered: false, totalFgQty: 0 };
   const rmLines = [];
-  const fgLines = order.items.map((pi) => ({
-    item_name: pi.inventory_items?.name || pi.item_id,
-    sku: pi.inventory_items?.sku || '',
-    unit: pi.inventory_items?.storage_unit || '',
-    quantity_planned: Number(pi.quantity_planned) || 0
-  }));
+  let totalFgQty = 0;
+  const fgLines = order.items.map((pi) => {
+    const q = Number(pi.quantity_planned) || 0;
+    totalFgQty += q;
+    return {
+      item_name: pi.inventory_items?.name || pi.item_id,
+      sku: pi.inventory_items?.sku || '',
+      unit: pi.inventory_items?.storage_unit || '',
+      quantity_planned: q
+    };
+  });
   let allItemsCovered = true;
 
   for (const pi of order.items) {
     const qtyPlanned = Number(pi.quantity_planned) || 0;
     if (qtyPlanned <= 0) continue;
 
-    let recipe = null;
-    if (pi.recipe_id) {
+    // 1) Always try recipe by item_id first (production directly linked to recipes)
+    let recipe = await fetchRecipeByItemId(pi.item_id);
+    if (!recipe && pi.recipe_id) {
       const { data: r } = await supabaseClient.from('recipes').select('id, base_quantity').eq('id', pi.recipe_id).single();
       if (r) recipe = r;
     }
-    if (!recipe) recipe = await fetchRecipeByItemId(pi.item_id);
 
     if (recipe) {
       const baseQty = Number(recipe.base_quantity) || 1;
@@ -179,7 +186,7 @@ export async function getProductionConsumptionPreview(order) {
     }
   }
 
-  return { rmLines, fgLines, allItemsCovered };
+  return { rmLines, fgLines, allItemsCovered, totalFgQty };
 }
 
 export async function executeProduction(productionId) {
