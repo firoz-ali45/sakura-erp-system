@@ -6,15 +6,15 @@
     </div>
 
     <template v-else-if="order">
-      <div class="flex items-center justify-between mb-6">
+      <div class="flex items-center justify-between mb-6 flex-wrap gap-3">
         <div class="flex items-center gap-3">
           <router-link to="/homeportal/production" class="text-gray-600 hover:text-[#284b44]"><i class="fas fa-arrow-left"></i></router-link>
-          <h1 class="text-2xl font-bold text-gray-800">Production ({{ order.production_number }})</h1>
+          <h1 class="text-2xl font-bold text-gray-800">Production ({{ displayProductionNumber }})</h1>
           <span :class="['px-2 py-1 rounded text-xs font-medium', statusClass(order.status)]">{{ order.status }}</span>
         </div>
         <div class="flex gap-2">
-          <button v-if="canProduce" @click="runProduce" class="px-4 py-2 rounded-lg text-white font-medium" style="background-color: #284b44;">
-            <i class="fas fa-play mr-2"></i>Produce Items
+          <button v-if="canProduce" @click="runProduce" class="px-5 py-2.5 rounded-lg text-white font-semibold shadow-md hover:opacity-90" style="background-color: #284b44;">
+            <i class="fas fa-play mr-2"></i>Produce
           </button>
         </div>
       </div>
@@ -63,12 +63,19 @@
             </tbody>
           </table>
         </div>
+        <!-- Produce CTA: visible when draft/released and has items -->
+        <div v-if="canProduce" class="mt-4 pt-4 border-t border-gray-200">
+          <p class="text-sm text-gray-600 mb-2">When items have a recipe (BOM), consumption is calculated automatically. Click Produce to confirm and run.</p>
+          <button @click="runProduce" class="px-5 py-2.5 rounded-lg text-white font-semibold" style="background-color: #284b44;">
+            <i class="fas fa-play mr-2"></i>Produce
+          </button>
+        </div>
       </div>
 
       <div class="bg-white rounded-xl shadow-md p-6 mb-6">
         <div class="flex justify-between items-center mb-4">
           <h2 class="text-lg font-semibold text-gray-800">Raw material consumption</h2>
-          <button v-if="order.status === 'draft' && order.items?.length" @click="openAddConsumption" class="px-4 py-2 rounded-lg border border-gray-300 hover:bg-gray-50 text-sm">Add consumption (manual)</button>
+          <button v-if="order.status === 'draft' && order.items?.length && showManualConsumptionButton" @click="openAddConsumption" class="px-4 py-2 rounded-lg border border-gray-300 hover:bg-gray-50 text-sm">Add consumption (manual)</button>
         </div>
         <p class="text-sm text-gray-500 mb-3">When a recipe (BOM) exists for an item, consumption is calculated automatically on Produce. Add consumption only for items without a recipe.</p>
         <div class="overflow-x-auto">
@@ -240,6 +247,7 @@ const showAddConsumptionModal = ref(false);
 const showProducePreviewModal = ref(false);
 const producePreview = ref(null);
 const produceExecuting = ref(false);
+const showManualConsumptionButton = ref(true);
 const addItemForm = ref({ item_id: '', recipe_id: '', quantity_planned: 0 });
 const addItemRecipeHint = ref('');
 const consumptionForm = ref({ item_id: '', batch_id: '', quantity: 0, cost: 0, production_item_id: null });
@@ -248,6 +256,13 @@ const branchName = computed(() => {
   if (!order.value?.branch_id) return '—';
   const b = branches.value.find((x) => x.id === order.value.branch_id);
   return b ? `${b.branch_name || b.branch_code} (${b.branch_code || ''})` : '—';
+});
+
+/** Show Draft until produced; then show real PRD number */
+const displayProductionNumber = computed(() => {
+  const num = order.value?.production_number;
+  if (!num || (typeof num === 'string' && num.startsWith('Draft'))) return 'Draft';
+  return num;
 });
 
 const totalCost = computed(() => {
@@ -291,6 +306,15 @@ async function loadOrder() {
     order.value = await fetchProductionOrderById(id);
     const br = await fetchBranches();
     branches.value = br || [];
+    showManualConsumptionButton.value = true;
+    if (order.value?.items?.length) {
+      let anyWithoutRecipe = false;
+      for (const pi of order.value.items) {
+        const recipe = await fetchRecipeByItemId(pi.item_id);
+        if (!recipe) { anyWithoutRecipe = true; break; }
+      }
+      showManualConsumptionButton.value = anyWithoutRecipe;
+    }
   } catch (e) {
     order.value = null;
   }

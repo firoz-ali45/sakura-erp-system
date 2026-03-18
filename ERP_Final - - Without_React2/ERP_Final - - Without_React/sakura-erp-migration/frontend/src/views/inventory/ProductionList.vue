@@ -49,7 +49,7 @@
           </thead>
           <tbody class="divide-y divide-gray-200">
             <tr v-for="row in filteredOrders" :key="row.id" class="hover:bg-gray-50">
-              <td class="px-6 py-3 text-sm font-medium text-gray-900">{{ row.production_number || '—' }}</td>
+              <td class="px-6 py-3 text-sm font-medium text-gray-900">{{ (row.production_number && !String(row.production_number).startsWith('Draft')) ? row.production_number : 'Draft' }}</td>
               <td class="px-6 py-3 text-sm text-gray-700">{{ row.branch_name ?? row.branch_code ?? '—' }}</td>
               <td class="px-6 py-3">
                 <span :class="['px-2 py-1 rounded text-xs font-medium', statusClass(row.status)]">{{ row.status }}</span>

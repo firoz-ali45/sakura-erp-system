@@ -59,7 +59,7 @@ export async function createProductionOrder(payload) {
   await ensureSupabaseReady();
   const companyId = getCurrentCompanyId();
   const createdBy = getCurrentUserUUID();
-  const productionNumber = payload.production_number || await getNextProductionNumber();
+  const productionNumber = payload.production_number || 'Draft-' + (typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : Date.now() + '-' + Math.random().toString(36).slice(2, 9));
   const tenantId = (companyId && companyId !== FALLBACK_COMPANY_UUID) ? companyId : null;
   const row = await dbInsert(supabaseClient, 'production_orders', {
     production_number: productionNumber,
