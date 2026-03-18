@@ -27,7 +27,6 @@ const SKIP_COMPANY_TABLES = new Set([
   'purchasing_invoices', 'finance_atms', 'finance_banks', 'finance_payments',
   'inventory_locations', 'roles', 'role_location_access',
   'transfer_orders', 'transfer_order_items',
-  'production_items', 'wip_lots', 'fg_batches', 'recipe_ingredients'
 ]);
 /**
  * Schema alignment: tables that have NO created_by column (do not inject — avoid schema cache error).

@@ -414,6 +414,10 @@
           <h1 id="header-title" class="text-xl md:text-2xl font-bold text-white whitespace-nowrap">
             <span>{{ $t('homePortal.hubTitle') }}</span>
           </h1>
+          <div v-if="companyName" class="hidden sm:flex items-center text-xs text-white/85 border border-white/20 px-2 py-1 rounded-full">
+            <i class="fas fa-building mr-2 text-white/80"></i>
+            <span>{{ companyName }}</span>
+          </div>
           <div v-if="dataConsistent" id="data-consistency-indicator" class="ml-2 flex items-center gap-1 text-xs text-white/80">
             <i class="fas fa-shield-alt text-green-400"></i>
             <span>{{ $t('homePortal.consistent') }}</span>
@@ -673,6 +677,7 @@ import { usePermissions } from '@/composables/usePermissions';
 import { formatDateTime } from '@/utils/dateFormat';
 import { formatNumber } from '@/utils/numberFormat';
 import { updateUserInSupabase, initSupabase, USE_SUPABASE, supabaseClient, getUsers } from '@/services/supabase';
+import { getCurrentCompanyId } from '@/services/db';
 import SakuraAIAssistant from '@/components/SakuraAIAssistant.vue';
 // Advanced ERP Features - lazy loaded for performance
 // import { 
@@ -729,6 +734,7 @@ const reportsGroupOpen = ref(false);
 const pendingUsersCount = ref(0);
 const dataConsistent = ref(true);
 const currentDateTime = ref('');
+const companyName = ref('');
 
 // Permissions (RBAC)
 const { permissions, hasPermission, loadPermissions } = usePermissions();
@@ -1242,6 +1248,22 @@ onMounted(async () => {
   
   updateDateTime();
   setInterval(updateDateTime, 1000);
+
+  // SaaS: show current company name in header (company_id stored after login)
+  try {
+    await initSupabase();
+    const cid = getCurrentCompanyId();
+    if (USE_SUPABASE && supabaseClient && cid) {
+      const { data } = await supabaseClient
+        .from('companies')
+        .select('name, company_name')
+        .eq('id', cid)
+        .single();
+      companyName.value = data?.name || data?.company_name || '';
+    }
+  } catch (_) {
+    companyName.value = '';
+  }
   
   // Load user data (non-blocking)
   if (!authStore.user) {

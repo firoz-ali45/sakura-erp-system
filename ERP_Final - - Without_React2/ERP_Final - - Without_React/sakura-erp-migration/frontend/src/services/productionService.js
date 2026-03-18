@@ -215,7 +215,8 @@ export async function fetchRecipes() {
   return data || [];
 }
 
-export async function fetchRecipeIngredients(recipeId) {
+// Legacy helper (kept for older callers). Prefer recipeService.fetchRecipeIngredients for BOM.
+export async function fetchRecipeIngredientsLegacy(recipeId) {
   await ensureSupabaseReady();
   if (!supabaseClient) return [];
   const { data, error } = await supabaseClient
