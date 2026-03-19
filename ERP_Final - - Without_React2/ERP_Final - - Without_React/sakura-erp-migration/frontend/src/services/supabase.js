@@ -266,21 +266,18 @@ export async function loginWithSupabase(email, password) {
     console.log('  - Email:', emailToCheck);
     console.log('  - Password length:', passwordToCheck.length);
 
-    // Get user from users table first
-    const { data: userData, error: userError } = await supabaseClient
-      .from('users')
-      .select('*')
-      .eq('email', emailToCheck)
-      .single();
+    // Pre-auth: cannot SELECT public.users as anon under SaaS RLS — use SECURITY DEFINER RPC
+    const { data: loginJson, error: userError } = await supabaseClient.rpc(
+      'fn_login_fetch_user_by_email',
+      { p_email: emailToCheck }
+    );
 
-    // Handle network errors
+    // Handle RPC / transport errors (do not treat PGRST116 as network — that was .single() with 0 rows)
     if (userError) {
-      console.error('❌ Supabase query error:', userError);
+      console.error('❌ Supabase login RPC error:', userError);
 
-      // Check for network errors
       if (userError.message?.includes('Failed to fetch') ||
         userError.message?.includes('NetworkError') ||
-        userError.code === 'PGRST116' ||
         userError.message?.includes('fetch')) {
         return {
           success: false,
@@ -288,21 +285,18 @@ export async function loginWithSupabase(email, password) {
         };
       }
 
-      // Check for user not found
-      if (userError.code === 'PGRST116' || userError.message?.includes('No rows')) {
-        try {
-          await supabaseClient.rpc('fn_log_login_attempt', {
-            p_email: emailToCheck,
-            p_success: false,
-            p_failure_reason: 'User not found',
-            p_user_agent: typeof navigator !== 'undefined' ? navigator.userAgent?.slice(0, 500) : null
-          });
-        } catch (_) { }
-        return { success: false, error: 'User not found. Please check your email address.' };
+      // Undefined function / permission after deploy — clearer than generic network
+      if (userError.code === 'PGRST202' || userError.message?.includes('fn_login_fetch_user_by_email')) {
+        return {
+          success: false,
+          error: 'Login service not ready. Apply latest database migration (fn_login_fetch_user_by_email) or contact support.'
+        };
       }
 
-      return { success: false, error: userError.message || 'User not found' };
+      return { success: false, error: userError.message || 'Login failed. Please try again.' };
     }
+
+    const userData = loginJson && typeof loginJson === 'object' ? loginJson : null;
 
     if (!userData) {
       console.error('❌ User not found in Supabase');

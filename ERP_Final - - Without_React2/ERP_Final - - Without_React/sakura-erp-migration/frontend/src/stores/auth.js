@@ -238,21 +238,23 @@ export const useAuthStore = defineStore('auth', () => {
   async function ensureUserStillExists() {
     if (!user.value?.email) return true;
 
-    // Try Supabase first
+    // Try Supabase first (use RPC because direct users SELECT is blocked by RLS for anon sessions)
     try {
       await initSupabase();
       if (USE_SUPABASE && supabaseClient) {
-        const { data, error } = await supabaseClient
-          .from('users')
-          .select('status')
-          .eq('email', user.value.email.toLowerCase())
-          .single();
+        const { data, error } = await supabaseClient.rpc('fn_login_fetch_user_by_email', {
+          p_email: user.value.email.toLowerCase()
+        });
 
-        const notFound = error?.code === 'PGRST116' || error?.details?.includes('Results contain 0 rows');
-        if (error && !notFound) {
+        // If login lookup RPC is unavailable, skip forced logout to avoid auth loops.
+        if (error) {
+          const rpcMissing = error.code === 'PGRST202' || error.message?.includes('fn_login_fetch_user_by_email');
+          if (rpcMissing) return true;
           throw error;
         }
-        if (!data || notFound || (data.status && data.status !== 'active')) {
+
+        const profile = data && typeof data === 'object' ? data : null;
+        if (!profile || (profile.status && profile.status !== 'active')) {
           await logout();
           return false;
         }
