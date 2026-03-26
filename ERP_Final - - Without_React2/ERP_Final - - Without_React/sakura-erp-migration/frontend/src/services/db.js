@@ -48,14 +48,32 @@ const _safeUUID = (v) => {
 };
 
 /**
- * Get current company/tenant ID for multi-tenant. Never returns null when enforced.
- * Source: localStorage sakura_company_id → VITE_COMPANY_ID → fallback UUID.
+ * Current tenant for inserts/queries (custom Supabase auth = anon key, no JWT).
+ * Order:
+ * 1) sakura_company_id (explicit context)
+ * 2) sakura_current_user.company_id (from login payload)
+ * 3) If a user session exists but company_id is missing (legacy), use default tenant UUID
+ *    (matches DB backfill where users.company_id = 00000000-... — do NOT jump to VITE_COMPANY_ID here
+ *    or User Management / RPC lists return empty on Vercel)
+ * 4) VITE_COMPANY_ID (only when no logged-in user hint in localStorage)
+ * 5) Fallback UUID
  */
 export function getCurrentCompanyId() {
   try {
     if (typeof window !== 'undefined' && window.localStorage) {
       const stored = localStorage.getItem(STORAGE_KEY_COMPANY);
       if (stored && _safeUUID(stored)) return _safeUUID(stored);
+
+      const rawUser = localStorage.getItem('sakura_current_user');
+      if (rawUser) {
+        try {
+          const u = JSON.parse(rawUser);
+          const fromProfile = u?.company_id;
+          if (fromProfile && _safeUUID(fromProfile)) return _safeUUID(fromProfile);
+          const uid = u?.id;
+          if (uid && _safeUUID(uid)) return FALLBACK_COMPANY_UUID;
+        } catch (_) { /* ignore */ }
+      }
     }
     const envId = typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_COMPANY_ID;
     const id = (envId && typeof envId === 'string' && envId.trim()) ? envId.trim() : null;
