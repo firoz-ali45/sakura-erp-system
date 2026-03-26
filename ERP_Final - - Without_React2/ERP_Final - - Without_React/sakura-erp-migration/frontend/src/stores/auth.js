@@ -96,21 +96,12 @@ export const useAuthStore = defineStore('auth', () => {
         const token = `supabase_${supabaseResult.user.id}`;
         setToken(token);
         setUser(supabaseResult.user);
-        // SaaS multi-tenant: fetch company_id from public.users (RLS isolation uses this)
-        let companyId = null;
-        try {
-          await initSupabase();
-          if (USE_SUPABASE && supabaseClient) {
-            const { data: profile } = await supabaseClient
-              .from('users')
-              .select('company_id, role')
-              .eq('id', supabaseResult.user.id)
-              .single();
-            companyId = profile?.company_id || null;
-          }
-        } catch (_) {}
-        // Fallback to metadata/localStorage only if profile missing
-        companyId = companyId || supabaseResult.user?.user_metadata?.company_id || supabaseResult.user?.app_metadata?.company_id || getCurrentCompanyId();
+        // SaaS: company_id comes from login RPC payload (anon cannot SELECT users under RLS)
+        let companyId =
+          supabaseResult.user?.company_id ??
+          supabaseResult.user?.user_metadata?.company_id ??
+          supabaseResult.user?.app_metadata?.company_id ??
+          getCurrentCompanyId();
         setCurrentCompanyId(companyId);
         // Set session persistence flags
         localStorage.setItem('sakura_logged_in', 'true');

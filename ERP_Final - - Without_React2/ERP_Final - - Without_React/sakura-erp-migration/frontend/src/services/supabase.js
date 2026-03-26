@@ -412,6 +412,7 @@ export async function loginWithSupabase(email, password) {
         email: userData.email,
         role: userData.role,
         status: userData.status,
+        company_id: userData.company_id ?? null,
         permissions: userData.permissions || {},
         profilePhotoUrl: userData.profile_photo_url,
         phone: userData.phone,
