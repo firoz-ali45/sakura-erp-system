@@ -50,21 +50,31 @@ if (typeof window !== 'undefined') {
  * Get all users from Supabase or localStorage (with caching)
  */
 export async function getUsers() {
-  return cachedFetch(cacheKeys.users(), async () => {
+  const companyId = getCurrentCompanyId();
+  const cacheKey = `users:company:${companyId}`;
+  return cachedFetch(cacheKey, async () => {
     if (USE_SUPABASE && supabaseClient) {
       try {
-        // Select only needed columns for performance
-        const { data, error } = await supabaseClient
-          .from('users')
-          .select('id,name,email,phone,role,status,profile_photo_url,permissions,notes,created_at,updated_at,last_login,last_activity')
-          .order('created_at', { ascending: false });
+        const { data, error } = await supabaseClient.rpc('fn_list_company_users', {
+          p_company_id: companyId
+        });
 
         if (error) {
-          console.error('Error fetching users from Supabase:', error);
+          console.error('Error fetching users from Supabase (fn_list_company_users):', error);
           return getUsersFromLocalStorage();
         }
 
-        return data || [];
+        if (data == null) return [];
+        if (Array.isArray(data)) return data;
+        if (typeof data === 'string') {
+          try {
+            const parsed = JSON.parse(data);
+            return Array.isArray(parsed) ? parsed : [];
+          } catch (_) {
+            return [];
+          }
+        }
+        return [];
       } catch (error) {
         console.error('Exception fetching users from Supabase:', error);
         return getUsersFromLocalStorage();
@@ -121,7 +131,7 @@ export async function createUserInSupabase(userData) {
         return { success: false, error: updateError.message };
       }
 
-      invalidateCache(cacheKeys.users());
+      invalidateCache('users:company:*');
       return { success: true, data: updatedData, updated: true };
     }
 
@@ -172,7 +182,7 @@ export async function createUserInSupabase(userData) {
     }
 
     // Invalidate cache after create
-    invalidateCache(cacheKeys.users());
+    invalidateCache('users:company:*');
     return { success: true, data };
   } catch (error) {
     console.error('❌ Exception creating user in Supabase:', error);
@@ -212,7 +222,7 @@ export async function updateUserInSupabase(userId, updates) {
     }
 
     // Invalidate cache after update
-    invalidateCache(cacheKeys.users());
+    invalidateCache('users:company:*');
     return { success: true, data };
   } catch (error) {
     console.error('❌ Exception updating user in Supabase:', error);
@@ -240,7 +250,7 @@ export async function deleteUserFromSupabase(userId) {
     }
 
     // Invalidate cache after delete
-    invalidateCache(cacheKeys.users());
+    invalidateCache('users:company:*');
     return { success: true };
   } catch (error) {
     console.error('❌ Exception deleting user from Supabase:', error);
