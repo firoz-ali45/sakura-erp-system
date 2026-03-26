@@ -4,6 +4,7 @@
  * NO hardcoded roles. All DB-driven.
  */
 import { supabaseClient, ensureSupabaseReady } from '@/services/supabase.js';
+import { getCurrentCompanyId } from '@/services/db.js';
 
 function _currentUserId() {
   try {
@@ -256,8 +257,27 @@ export async function getUserLocationAccess(userId) {
 export async function getUsersEnriched() {
   const client = await sb();
   if (!client) return [];
-  const { data: users, error } = await client.from('users').select('*').order('created_at', { ascending: false });
-  if (error) return [];
+  const companyId = getCurrentCompanyId();
+  const { data: rawUsers, error } = await client.rpc('fn_list_company_users', { p_company_id: companyId });
+  if (error) {
+    console.error('getUsersEnriched fn_list_company_users:', error);
+    return [];
+  }
+  let users = [];
+  if (Array.isArray(rawUsers)) users = rawUsers;
+  else if (rawUsers != null && typeof rawUsers === 'string') {
+    try {
+      const parsed = JSON.parse(rawUsers);
+      users = Array.isArray(parsed) ? parsed : [];
+    } catch {
+      users = [];
+    }
+  }
+  users = (users || []).slice().sort((a, b) => {
+    const ta = a.created_at ? new Date(a.created_at).getTime() : 0;
+    const tb = b.created_at ? new Date(b.created_at).getTime() : 0;
+    return tb - ta;
+  });
   const { data: roles } = await client.from('roles').select('id, role_name, role_code, access_all_locations');
   const roleMap = (roles || []).reduce((m, r) => { m[r.id] = r; return m; }, {});
   const { data: userRoles } = await client.from('user_roles').select('user_id, role_id, is_primary');
