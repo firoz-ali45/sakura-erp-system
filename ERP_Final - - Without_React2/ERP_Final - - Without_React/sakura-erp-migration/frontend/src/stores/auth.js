@@ -3,24 +3,63 @@ import { ref, computed } from 'vue';
 import api from '../services/api';
 import { loginWithSupabase, initSupabase, supabaseClient, USE_SUPABASE } from '../services/supabase';
 import { setCurrentCompanyId, getCurrentCompanyId } from '../services/db';
+import { APP_CLIENT_ID } from '../config/brand';
+
+const CLIENT_ID_KEY = 'nexora_app_client_id';
+const LS_KEYS_TO_CLEAR_ON_CLIENT_SWITCH = [
+  // New keys
+  'nexora_logged_in',
+  'nexora_current_user',
+  'token',
+  'nexora_session_id',
+  'nexora_company_id',
+  'nexora_users',
+  // Legacy keys (in case migrateLegacyStorage ran earlier or older sessions exist)
+  'sakura_logged_in',
+  'sakura_current_user',
+  'sakura_session_id',
+  'sakura_company_id',
+];
+
+function clearAuthStorage() {
+  try {
+    LS_KEYS_TO_CLEAR_ON_CLIENT_SWITCH.forEach((k) => localStorage.removeItem(k));
+    // Keep tab-specific keys consistent too
+    try {
+      sessionStorage.removeItem('nexora_tab_login');
+      sessionStorage.removeItem('nexora_tab_id');
+      sessionStorage.removeItem('sakura_tab_login');
+      sessionStorage.removeItem('sakura_tab_id');
+    } catch (_) {}
+  } catch (_) {}
+}
 
 export const useAuthStore = defineStore('auth', () => {
   // Restore user from localStorage on initialization - safe check
   let savedUser = null;
   let initialUser = null;
   let savedToken = null;
-  let sakuraLoggedIn = false;
+  let persistLoginFlag = false;
   let tabLogin = null;
+
+  // White-label safety: if APP_CLIENT_ID changed, clear saved login state.
+  // This prevents "Sakura auto-login" when user switches deployments/clients.
+  try {
+    const storedClientId = localStorage.getItem(CLIENT_ID_KEY);
+    if (storedClientId && storedClientId !== APP_CLIENT_ID) {
+      clearAuthStorage();
+    }
+  } catch (_) {}
   
   try {
     if (typeof window !== 'undefined' && window.localStorage) {
-      savedUser = localStorage.getItem('sakura_current_user');
+      savedUser = localStorage.getItem('nexora_current_user');
       initialUser = savedUser ? JSON.parse(savedUser) : null;
       savedToken = localStorage.getItem('token') || null;
-      sakuraLoggedIn = localStorage.getItem('sakura_logged_in') === 'true';
+      persistLoginFlag = localStorage.getItem('nexora_logged_in') === 'true';
     }
     if (typeof window !== 'undefined' && window.sessionStorage) {
-      tabLogin = sessionStorage.getItem('sakura_tab_login');
+      tabLogin = sessionStorage.getItem('nexora_tab_login');
     }
   } catch (e) {
     console.warn('⚠️ Error reading from storage:', e);
@@ -31,10 +70,10 @@ export const useAuthStore = defineStore('auth', () => {
 
   // User is authenticated if:
   // 1. Token exists AND user exists, OR
-  // 2. sakura_logged_in is true (for Supabase/localStorage auth)
+  // 2. nexora_logged_in is true (for Supabase/localStorage auth)
   const isAuthenticated = computed(() => {
     if (token.value && user.value) return true;
-    if (sakuraLoggedIn && (tabLogin || user.value)) return true;
+    if (persistLoginFlag && (tabLogin || user.value)) return true;
     return false;
   });
 
@@ -67,9 +106,9 @@ export const useAuthStore = defineStore('auth', () => {
     try {
       if (typeof window !== 'undefined' && window.localStorage) {
         if (userData) {
-          localStorage.setItem('sakura_current_user', JSON.stringify(userData));
+          localStorage.setItem('nexora_current_user', JSON.stringify(userData));
         } else {
-          localStorage.removeItem('sakura_current_user');
+          localStorage.removeItem('nexora_current_user');
         }
       }
     } catch (e) {
@@ -104,12 +143,13 @@ export const useAuthStore = defineStore('auth', () => {
           getCurrentCompanyId();
         setCurrentCompanyId(companyId);
         // Set session persistence flags
-        localStorage.setItem('sakura_logged_in', 'true');
-        const tabId = sessionStorage.getItem('sakura_tab_id') || `tab_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-        if (!sessionStorage.getItem('sakura_tab_id')) {
-          sessionStorage.setItem('sakura_tab_id', tabId);
+        localStorage.setItem('nexora_logged_in', 'true');
+        localStorage.setItem(CLIENT_ID_KEY, APP_CLIENT_ID);
+        const tabId = sessionStorage.getItem('nexora_tab_id') || `tab_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        if (!sessionStorage.getItem('nexora_tab_id')) {
+          sessionStorage.setItem('nexora_tab_id', tabId);
         }
-        sessionStorage.setItem('sakura_tab_login', tabId);
+        sessionStorage.setItem('nexora_tab_login', tabId);
         return { success: true };
       } else if (supabaseResult.error) {
         // In production, only use Supabase - don't try API
@@ -155,12 +195,12 @@ export const useAuthStore = defineStore('auth', () => {
         const companyId = userData?.company_id ?? getCurrentCompanyId();
         setCurrentCompanyId(companyId);
         // Set session persistence flags
-        localStorage.setItem('sakura_logged_in', 'true');
-        const tabId = sessionStorage.getItem('sakura_tab_id') || `tab_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-        if (!sessionStorage.getItem('sakura_tab_id')) {
-          sessionStorage.setItem('sakura_tab_id', tabId);
+        localStorage.setItem('nexora_logged_in', 'true');
+        const tabId = sessionStorage.getItem('nexora_tab_id') || `tab_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        if (!sessionStorage.getItem('nexora_tab_id')) {
+          sessionStorage.setItem('nexora_tab_id', tabId);
         }
-        sessionStorage.setItem('sakura_tab_login', tabId);
+        sessionStorage.setItem('nexora_tab_login', tabId);
         
         return { success: true };
       } else {
@@ -195,22 +235,23 @@ export const useAuthStore = defineStore('auth', () => {
     setToken(null);
     setUser(null);
     // Clear login state
-    localStorage.removeItem('sakura_logged_in');
-    localStorage.removeItem('sakura_current_user');
+    localStorage.removeItem('nexora_logged_in');
+    localStorage.removeItem('nexora_current_user');
     localStorage.removeItem('token');
-    sessionStorage.removeItem('sakura_tab_login');
-    sessionStorage.removeItem('sakura_tab_id');
+    // Leave CLIENT_ID_KEY as-is; it represents which deployment the browser state belongs to.
+    sessionStorage.removeItem('nexora_tab_login');
+    sessionStorage.removeItem('nexora_tab_id');
 
     // Best-effort: close login session in DB, then Supabase sign-out
     try {
       await initSupabase();
       if (USE_SUPABASE && supabaseClient) {
-        const sessionId = localStorage.getItem('sakura_session_id');
+        const sessionId = localStorage.getItem('nexora_session_id');
         if (sessionId) {
           try {
             await supabaseClient.rpc('fn_close_login_session', { p_session_id: sessionId, p_forced: false });
           } catch (_) {}
-          localStorage.removeItem('sakura_session_id');
+          localStorage.removeItem('nexora_session_id');
         }
         if (supabaseClient.auth?.signOut) await supabaseClient.auth.signOut();
         if (uid) {
@@ -257,7 +298,7 @@ export const useAuthStore = defineStore('auth', () => {
 
     // Fallback: if we rely on localStorage users, ensure user is still present
     try {
-      const users = JSON.parse(localStorage.getItem('sakura_users') || '[]');
+      const users = JSON.parse(localStorage.getItem('nexora_users') || '[]');
       const exists = users.some(
         (u) => u.email?.toLowerCase() === user.value.email.toLowerCase() && (u.status || 'active') === 'active'
       );
@@ -292,10 +333,14 @@ export const useAuthStore = defineStore('auth', () => {
       fetchCurrentUser();
     }
   }
-  if (sakuraLoggedIn && user.value) {
+  if (persistLoginFlag && user.value) {
     // Multi-tenant: ensure company context is set for restored session
     const companyId = user.value.company_id ?? getCurrentCompanyId();
     setCurrentCompanyId(companyId);
+    // Ensure client id is saved for future checks
+    try {
+      localStorage.setItem(CLIENT_ID_KEY, APP_CLIENT_ID);
+    } catch (_) {}
   }
 
   return {
