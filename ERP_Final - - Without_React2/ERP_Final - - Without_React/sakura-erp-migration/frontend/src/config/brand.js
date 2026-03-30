@@ -21,7 +21,9 @@ function _subdomain(hostname) {
 function _runtimeBrandFromHost() {
   const h = _host();
   const sub = _subdomain(h);
-  const looksSakura = sub === 'sakura' || h.includes('sakura');
+  // IMPORTANT: Do NOT infer tenant by generic hostname substring like "sakura-erp-system-new.vercel.app".
+  // Tenant branding must be explicit via subdomain convention (e.g. sakura.nexoraerp.com) or env vars.
+  const looksSakura = sub === 'sakura';
   const looksAdmin = sub === 'admin' || sub === 'platform';
   if (looksAdmin) {
     return {
