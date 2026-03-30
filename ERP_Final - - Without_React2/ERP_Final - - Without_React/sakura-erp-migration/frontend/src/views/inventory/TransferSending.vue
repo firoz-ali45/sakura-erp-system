@@ -588,7 +588,9 @@ import {
 import { showNotification } from '@/utils/notifications';
 import { printStockTransfer } from '@/services/pdfPrintService.js';
 import { getCurrentUserUUID } from '@/utils/uuidUtils';
+import { useUserDisplay } from '@/composables/useUserDisplay';
 
+const { loadUserMap, getUserDisplayName } = useUserDisplay();
 const route = useRoute();
 const router = useRouter();
 const transfer = ref(null);
@@ -775,9 +777,10 @@ function isExpired(it) {
 function getActorDisplayName(value) {
   const raw = String(value || '').trim();
   if (!raw) return 'Not available';
-  // Hide raw UUIDs from UI and prefer human-readable names.
   const looksLikeUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(raw);
-  return looksLikeUuid ? 'Not available' : raw;
+  if (!looksLikeUuid) return raw;
+  const n = getUserDisplayName(raw);
+  return n !== '—' ? n : 'Not available';
 }
 
 async function load() {
@@ -790,6 +793,12 @@ async function load() {
     if (!transfer.value) { error.value = 'Transfer not found'; loading.value = false; return; }
     items.value = await fetchStockTransferItems(id);
     audit.value = await fetchStockTransferAudit(id);
+    const actorIds = [];
+    if (transfer.value?.created_by) actorIds.push(transfer.value.created_by);
+    (audit.value || []).forEach((a) => {
+      if (a.performed_by) actorIds.push(a.performed_by);
+    });
+    if (actorIds.length) await loadUserMap(actorIds);
     const itemIds = items.value.map((it) => it.item_id).filter(Boolean);
     if (itemIds.length && transfer.value?.from_location_id) {
       stockMap.value = await fetchStockMapForItems(transfer.value.from_location_id, itemIds);

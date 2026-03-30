@@ -8,7 +8,7 @@ import { getCurrentCompanyId } from '@/services/db.js';
 
 function _currentUserId() {
   try {
-    const u = localStorage.getItem('sakura_current_user');
+    const u = localStorage.getItem('nexora_current_user');
     if (!u) return null;
     const parsed = JSON.parse(u);
     return parsed?.id || null;
@@ -18,6 +18,23 @@ function _currentUserId() {
 async function sb() {
   await ensureSupabaseReady();
   return supabaseClient;
+}
+
+/** Normalize fn_list_company_users RPC result (jsonb array or legacy shapes). */
+export function parseFnListCompanyUsers(rawUsers) {
+  let users = [];
+  if (Array.isArray(rawUsers)) users = rawUsers;
+  else if (rawUsers != null && typeof rawUsers === 'object' && Array.isArray(rawUsers.users)) {
+    users = rawUsers.users;
+  } else if (rawUsers != null && typeof rawUsers === 'string') {
+    try {
+      const parsed = JSON.parse(rawUsers);
+      users = Array.isArray(parsed) ? parsed : [];
+    } catch {
+      users = [];
+    }
+  }
+  return users || [];
 }
 
 // --- ROLES (DB-driven) ---
@@ -223,10 +240,16 @@ export async function setRoleLocationAccess(roleId, locationIds, accessAllLocati
 // --- USER PROFILE (single user with roles, locations, etc.) ---
 export async function getUserById(userId) {
   const client = await sb();
-  if (!client) return null;
-  const { data, error } = await client.from('users').select('*').eq('id', userId).single();
-  if (error) return null;
-  return data;
+  if (!client || !userId) return null;
+  const companyId = getCurrentCompanyId();
+  if (!companyId) return null;
+  const { data: rawUsers, error } = await client.rpc('fn_list_company_users', { p_company_id: companyId });
+  if (error) {
+    console.error('getUserById fn_list_company_users:', error);
+    return null;
+  }
+  const users = parseFnListCompanyUsers(rawUsers);
+  return users.find((u) => u.id === userId) || null;
 }
 
 export async function getUserRoles(userId) {
@@ -263,16 +286,7 @@ export async function getUsersEnriched() {
     console.error('getUsersEnriched fn_list_company_users:', error);
     return [];
   }
-  let users = [];
-  if (Array.isArray(rawUsers)) users = rawUsers;
-  else if (rawUsers != null && typeof rawUsers === 'string') {
-    try {
-      const parsed = JSON.parse(rawUsers);
-      users = Array.isArray(parsed) ? parsed : [];
-    } catch {
-      users = [];
-    }
-  }
+  let users = parseFnListCompanyUsers(rawUsers);
   users = (users || []).slice().sort((a, b) => {
     const ta = a.created_at ? new Date(a.created_at).getTime() : 0;
     const tb = b.created_at ? new Date(b.created_at).getTime() : 0;
@@ -365,7 +379,7 @@ export async function logErpAudit(userId, action, entityType, entityId, module, 
   if (!client) return;
   try {
     const ua = typeof navigator !== 'undefined' ? navigator.userAgent?.slice(0, 500) : null;
-    const sid = sessionId || (typeof localStorage !== 'undefined' ? localStorage.getItem('sakura_session_id') : null);
+    const sid = sessionId || (typeof localStorage !== 'undefined' ? localStorage.getItem('nexora_session_id') : null);
     await client.rpc('fn_log_erp_audit', {
       p_user_id: userId,
       p_action: action,
