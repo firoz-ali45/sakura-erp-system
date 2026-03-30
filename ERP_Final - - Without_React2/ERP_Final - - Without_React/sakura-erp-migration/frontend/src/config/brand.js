@@ -15,7 +15,10 @@ export const APP_MANAGEMENT_SYSTEM = import.meta.env.VITE_APP_MANAGEMENT_SYSTEM 
 export const APP_CLIENT_ID =
   import.meta.env.VITE_APP_CLIENT_ID ||
   import.meta.env.VITE_APP_CLIENT_SLUG ||
-  'nexora';
+  String(import.meta.env.VITE_APP_DISPLAY_NAME || 'Nexora ERP')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/(^-|-$)/g, '');
 /** Default logo assets (replace files in /public or set VITE_APP_LOGO_PATH). */
 export const APP_LOGO_PATH = import.meta.env.VITE_APP_LOGO_PATH || '/nexora-brand-logo.png';
 export const APP_LOGO_FALLBACK = import.meta.env.VITE_APP_LOGO_FALLBACK || '/nexora-logo-fallback.png';
