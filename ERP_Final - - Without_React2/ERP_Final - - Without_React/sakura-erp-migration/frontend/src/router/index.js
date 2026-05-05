@@ -373,6 +373,12 @@ const routes = [
         name: 'FoodQualityTraceability',
         component: () => import('../views/reports/FoodQualityTraceability.vue'),
         meta: { requiresAuth: true }
+      },
+      {
+        path: 'platform/tenants',
+        name: 'ProviderConsole',
+        component: () => import('../views/platform/ProviderConsole.vue'),
+        meta: { requiresAuth: true }
       }
     ]
   },
