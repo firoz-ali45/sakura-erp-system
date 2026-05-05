@@ -45,7 +45,8 @@
               <td class="py-2 pr-3 text-gray-600">{{ c.company_code || '—' }}</td>
               <td class="py-2 pr-3">
                 <select
-                  v-model="edits[c.id].subscription_plan"
+                  :value="getEdit(c.id).subscription_plan"
+                  @change="onFieldChange(c.id, 'subscription_plan', $event.target.value)"
                   class="px-2 py-1 border rounded"
                 >
                   <option value="free">free</option>
@@ -56,7 +57,8 @@
               </td>
               <td class="py-2 pr-3">
                 <select
-                  v-model="edits[c.id].subscription_status"
+                  :value="getEdit(c.id).subscription_status"
+                  @change="onFieldChange(c.id, 'subscription_status', $event.target.value)"
                   class="px-2 py-1 border rounded"
                 >
                   <option value="trial">trial</option>
@@ -113,6 +115,19 @@ function initEdits(rows) {
     };
   });
   edits.value = map;
+}
+
+function getEdit(companyId) {
+  if (!companyId) return { subscription_plan: 'free', subscription_status: 'trial' };
+  if (!edits.value[companyId]) {
+    edits.value[companyId] = { subscription_plan: 'free', subscription_status: 'trial' };
+  }
+  return edits.value[companyId];
+}
+
+function onFieldChange(companyId, field, value) {
+  const row = getEdit(companyId);
+  row[field] = value;
 }
 
 async function loadCompanies() {
