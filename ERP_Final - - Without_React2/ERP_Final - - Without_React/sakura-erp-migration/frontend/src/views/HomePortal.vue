@@ -323,6 +323,16 @@
           </div>
         </div>
 
+        <router-link
+          v-if="isProviderConsoleEnabled"
+          to="/homeportal/platform/tenants"
+          class="nav-link flex items-center p-4 my-2 rounded-lg"
+          active-class="active"
+        >
+          <i class="fas fa-building w-6 text-center"></i>
+          <span>Nexora Control Center</span>
+        </router-link>
+
         <!-- Manage Expandable Section -->
         <div class="nav-group">
           <a 
@@ -406,10 +416,10 @@
 
         <div class="flex items-center justify-center gap-3">
           <img 
-            src="/Sakura_Pink_Logo.png" 
-            alt="Sakura Logo" 
+            :src="APP_LOGO_PATH" 
+            :alt="`${APP_DISPLAY_NAME} logo`" 
             class="h-10 w-10 rounded-full"
-            onerror="this.src='/sakura-logo.png'"
+            @error="onHeaderLogoError"
           >
           <h1 id="header-title" class="text-xl md:text-2xl font-bold text-white whitespace-nowrap">
             <span>{{ $t('homePortal.hubTitle') }}</span>
@@ -441,8 +451,8 @@
       </div>
     </main>
 
-    <!-- Sakura AI Assistant Chatbot -->
-    <SakuraAIAssistant />
+    <!-- Nexora AI Assistant -->
+    <NexoraAIAssistant />
 
     <!-- Settings Modal (Complete - Original Structure) -->
     <div 
@@ -678,7 +688,13 @@ import { formatDateTime } from '@/utils/dateFormat';
 import { formatNumber } from '@/utils/numberFormat';
 import { updateUserInSupabase, initSupabase, USE_SUPABASE, supabaseClient, getUsers } from '@/services/supabase';
 import { getCurrentCompanyId } from '@/services/db';
-import SakuraAIAssistant from '@/components/SakuraAIAssistant.vue';
+import { APP_LOGO_PATH, APP_LOGO_FALLBACK, APP_DISPLAY_NAME, APP_CLIENT_ID } from '@/config/brand.js';
+import NexoraAIAssistant from '@/components/NexoraAIAssistant.vue';
+
+function onHeaderLogoError(e) {
+  const el = e?.target;
+  if (el && !String(el.src || '').endsWith(APP_LOGO_FALLBACK)) el.src = APP_LOGO_FALLBACK;
+}
 // Advanced ERP Features - lazy loaded for performance
 // import { 
 //   AuditLogger, 
@@ -755,6 +771,10 @@ const canSecurity = computed(() => { const p = permissions.value; return p.has('
 
 // Computed
 const user = computed(() => authStore.user);
+const isProviderConsoleEnabled = computed(() => {
+  const id = String(APP_CLIENT_ID || '').toLowerCase();
+  return id.startsWith('nexora') || id.includes('admin') || id.includes('platform');
+});
 
 // Methods
 const toggleSidebar = () => {
@@ -797,16 +817,16 @@ const loadDashboard = (dashboardUrl) => {
         
         // External HTML files are in project root (outside frontend folder)
         // We need to use relative path from frontend to project root
-        // Path structure: ../../sakura-accounts-payable-dashboard/payable.html
+        // Path structure: public/nexora-embedded-dashboard/payable.html
         const pathParts = dashboardUrl.split('/');
         const fileName = pathParts[pathParts.length - 1];
         const folderName = pathParts.length > 1 ? pathParts[pathParts.length - 2] : '';
         
         // Files are now in public folder, so use absolute path from root
-        // e.g., /sakura-accounts-payable-dashboard/payable.html
+        // e.g., /nexora-embedded-dashboard/payable.html
         let iframePath = '';
         if (folderName) {
-          // e.g., sakura-accounts-payable-dashboard/payable.html
+          // e.g., nexora-embedded-dashboard/payable.html
           iframePath = `/${folderName}/${fileName}`;
         } else {
           // e.g., inventory/items.html
@@ -904,7 +924,7 @@ const openSettings = async () => {
       profilePhotoPreview.value = user.value.profilePhotoUrl;
     } else {
       // Try localStorage
-      const savedPhoto = localStorage.getItem('sakura_profile_photo');
+      const savedPhoto = localStorage.getItem('nexora_profile_photo');
       if (savedPhoto) {
         profilePhotoPreview.value = savedPhoto;
       }
@@ -960,7 +980,7 @@ const handlePhotoUpload = async (event) => {
     
     // Save to localStorage (backup)
     try {
-      localStorage.setItem('sakura_profile_photo', base64Image);
+      localStorage.setItem('nexora_profile_photo', base64Image);
     } catch (error) {
       console.error('Error saving photo to localStorage:', error);
     }
@@ -997,7 +1017,7 @@ const removeProfilePhoto = async () => {
   });
   if (confirmed) {
     profilePhotoPreview.value = null;
-    localStorage.removeItem('sakura_profile_photo');
+    localStorage.removeItem('nexora_profile_photo');
     
     // Reset to default
     const sidebarImage = document.getElementById('sidebar-user-image');
@@ -1083,7 +1103,7 @@ const updateMyProfile = async () => {
     }
     
     // Update localStorage
-    localStorage.setItem('sakura_current_user', JSON.stringify(updatedUser));
+    localStorage.setItem('nexora_current_user', JSON.stringify(updatedUser));
     
     showNotification('Profile updated successfully!', 'success');
     closeSettings();
@@ -1191,13 +1211,13 @@ const loadProfilePhoto = async () => {
         }
         
         // Cache in localStorage
-        localStorage.setItem('sakura_profile_photo', data.profile_photo_url);
+        localStorage.setItem('nexora_profile_photo', data.profile_photo_url);
         return;
       }
         }
         
     // Fallback: try localStorage cache
-    const cachedPhoto = localStorage.getItem('sakura_profile_photo');
+    const cachedPhoto = localStorage.getItem('nexora_profile_photo');
     if (cachedPhoto) {
       user.value.profilePhotoUrl = cachedPhoto;
       authStore.setUser({ ...user.value });
