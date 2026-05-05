@@ -407,6 +407,12 @@ const routes = [
         name: 'FoodQualityTraceability',
         component: () => import('../views/reports/FoodQualityTraceability.vue'),
         meta: { requiresAuth: true }
+      },
+      {
+        path: 'platform/tenants',
+        name: 'ProviderConsole',
+        component: () => import('../views/platform/ProviderConsole.vue'),
+        meta: { requiresAuth: true }
       }
     ]
   },
@@ -432,12 +438,12 @@ router.beforeEach(async (to, from, next) => {
     const isAuth = authStore.isAuthenticated?.value ?? false;
     
     // Also check localStorage for session persistence (for Supabase/localStorage auth) - safe check
-    let sakuraLoggedIn = false;
+    let persistLoginFlag = false;
     let hasUser = false;
     try {
       if (typeof window !== 'undefined' && window.localStorage) {
-        sakuraLoggedIn = localStorage.getItem('sakura_logged_in') === 'true';
-        hasUser = !!localStorage.getItem('sakura_current_user');
+        persistLoginFlag = localStorage.getItem('nexora_logged_in') === 'true';
+        hasUser = !!localStorage.getItem('nexora_current_user');
       }
     } catch (e) {
       console.warn('⚠️ Error reading localStorage in router guard:', e);
@@ -445,8 +451,8 @@ router.beforeEach(async (to, from, next) => {
     
     // User is considered authenticated if:
     // 1. Auth store says authenticated, OR
-    // 2. sakura_logged_in is true AND user exists in localStorage
-    let isAuthenticated = isAuth || (sakuraLoggedIn && hasUser);
+    // 2. nexora_logged_in is true AND user exists in localStorage
+    let isAuthenticated = isAuth || (persistLoginFlag && hasUser);
 
     // If we think we are authenticated, verify the user still exists and is active
     // BUT don't block navigation - do this async
