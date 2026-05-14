@@ -214,9 +214,15 @@ const loadInvoices = async () => {
 
 const loadVendors = async () => {
   try {
-    const { supabaseClient } = await import('@/services/supabase.js');
-    const { data } = await supabaseClient.from('suppliers').select('id, supplier_name, name').eq('deleted', false).order('supplier_name');
-    vendors.value = data || [];
+    const { loadSuppliersFromSupabase } = await import('@/services/supabase.js');
+    const rows = await loadSuppliersFromSupabase({ includeDeleted: false });
+    vendors.value = (rows || []).map((s) => ({
+      id: s.id,
+      supplier_name: s.supplier_name ?? s.name,
+      name: s.name
+    })).sort((a, b) =>
+      String(a.supplier_name || a.name || '').localeCompare(String(b.supplier_name || b.name || ''), undefined, { sensitivity: 'base' })
+    );
   } catch (e) {
     vendors.value = [];
   }

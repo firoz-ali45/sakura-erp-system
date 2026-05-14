@@ -463,12 +463,16 @@ export async function loadItemsFromSupabase(opts = {}) {
 
   const includeDeleted = !!opts.includeDeleted;
   const uid = getCurrentUserUUID();
+  const companyCtx = safeUUID(getCurrentCompanyId());
 
-  if (uid) {
+  // RPC accepts optional p_company_id: used when users.company_id is NULL in DB, or when
+  // getCurrentUserUUID() is null (legacy session) but nexora_company_id / login context exists.
+  if (uid || companyCtx) {
     try {
       const { data: rpcRows, error: rpcError } = await supabaseClient.rpc('fn_app_list_inventory_items', {
-        p_user_id: uid,
-        p_include_deleted: includeDeleted
+        p_user_id: uid || null,
+        p_include_deleted: includeDeleted,
+        p_company_id: companyCtx || null
       });
       if (!rpcError && rpcRows != null) {
         const list = Array.isArray(rpcRows) ? rpcRows : [];
@@ -1153,24 +1157,53 @@ export async function deleteDepartment(id, soft = true) {
 
 /**
  * Load suppliers from Supabase — SINGLE SOURCE OF TRUTH.
- * NO localStorage, NO slice(20), NO fallback. Supabase only.
+ * Custom login uses anon without JWT; RLS on suppliers is TO authenticated only,
+ * so prefer SECURITY DEFINER RPC fn_app_list_suppliers (same pattern as inventory items).
+ * @param {{ includeDeleted?: boolean }} opts
  */
-export async function loadSuppliersFromSupabase() {
+export async function loadSuppliersFromSupabase(opts = {}) {
   const ready = await ensureSupabaseReady();
   if (!ready) return [];
 
+  const includeDeleted = !!opts.includeDeleted;
+  const uid = getCurrentUserUUID();
+  const companyCtx = safeUUID(getCurrentCompanyId());
+
+  if (uid || companyCtx) {
+    try {
+      const { data: rpcRows, error: rpcError } = await supabaseClient.rpc('fn_app_list_suppliers', {
+        p_user_id: uid || null,
+        p_include_deleted: includeDeleted,
+        p_company_id: companyCtx || null
+      });
+      if (!rpcError && rpcRows != null) {
+        const list = Array.isArray(rpcRows) ? rpcRows : [];
+        console.log('✅ Suppliers loaded via fn_app_list_suppliers:', list.length);
+        return list;
+      }
+      const missingFn =
+        rpcError?.code === 'PGRST202' ||
+        (rpcError?.message && rpcError.message.includes('fn_app_list_suppliers'));
+      if (missingFn) {
+        console.warn('RPC fn_app_list_suppliers not available, using direct select:', rpcError?.message);
+      } else if (rpcError) {
+        console.error('❌ RPC fn_app_list_suppliers:', rpcError);
+      }
+    } catch (e) {
+      console.warn('RPC fn_app_list_suppliers threw, using direct select:', e);
+    }
+  }
+
   try {
-    const { data, error } = await supabaseClient
-      .from('suppliers')
-      .select('*')
-      .eq('deleted', false)
-      .order('name', { ascending: true });
+    const q = supabaseClient.from('suppliers').select('*').order('name', { ascending: true });
+    const { data, error } = includeDeleted ? await q : await q.eq('deleted', false);
 
     if (error) {
       console.error('❌ Error loading suppliers from Supabase:', error);
       return [];
     }
 
+    console.log('✅ Suppliers loaded from Supabase:', data?.length || 0);
     return data || [];
   } catch (error) {
     console.error('❌ Exception loading suppliers from Supabase:', error);

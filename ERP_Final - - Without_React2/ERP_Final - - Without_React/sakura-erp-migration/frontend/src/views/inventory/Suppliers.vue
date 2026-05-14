@@ -1420,7 +1420,9 @@ const loadSuppliers = async () => {
     
     // If Supabase is available, use it exclusively (don't fallback to localStorage)
     if (isSupabaseReady) {
-    const supabaseSuppliers = await loadSuppliersFromSupabase();
+    const supabaseSuppliers = await loadSuppliersFromSupabase({
+      includeDeleted: activeTab.value === 'deleted'
+    });
     
       // Map Supabase data to component format
       suppliers.value = (supabaseSuppliers || []).map(s => ({
