@@ -1,5 +1,5 @@
 -- Insert purchase_orders under custom anon auth (RLS is TO authenticated only).
--- Sets company_id / tenant_id from users.company_id or p_company_id fallback.
+-- Sets company_id from user/context; tenant_id from companies.tenant_id (FK to tenants.id).
 
 CREATE OR REPLACE FUNCTION public.fn_app_insert_purchase_order(
   p_user_id uuid,
@@ -25,6 +25,7 @@ SET search_path = public
 AS $fn$
 DECLARE
   v_company uuid;
+  v_tenant uuid;
   v_row public.purchase_orders%ROWTYPE;
 BEGIN
   IF p_user_id IS NOT NULL THEN
@@ -51,6 +52,15 @@ BEGIN
     RAISE EXCEPTION 'subscription inactive for company' USING ERRCODE = '28000';
   END IF;
 
+  SELECT c.tenant_id INTO v_tenant
+  FROM public.companies c
+  WHERE c.id = v_company
+  LIMIT 1;
+
+  IF v_tenant IS NULL THEN
+    RAISE EXCEPTION 'company not found or missing tenant_id' USING ERRCODE = '28000';
+  END IF;
+
   INSERT INTO public.purchase_orders (
     company_id,
     tenant_id,
@@ -73,7 +83,7 @@ BEGIN
     created_by
   ) VALUES (
     v_company,
-    v_company,
+    v_tenant,
     NULLIF(trim(COALESCE(p_po_number, '')), ''),
     p_supplier_id,
     NULLIF(trim(COALESCE(p_supplier_name, '')), ''),
@@ -103,7 +113,7 @@ END;
 $fn$;
 
 COMMENT ON FUNCTION public.fn_app_insert_purchase_order(uuid, uuid, text, bigint, text, uuid, text, date, timestamptz, numeric, numeric, text, numeric, numeric, text) IS
-  'Insert purchase_orders for anon/custom auth; sets company_id and tenant_id.';
+  'Insert purchase_orders for anon/custom auth; company_id from context, tenant_id from companies.tenant_id.';
 
 REVOKE ALL ON FUNCTION public.fn_app_insert_purchase_order(uuid, uuid, text, bigint, text, uuid, text, date, timestamptz, numeric, numeric, text, numeric, numeric, text) FROM PUBLIC;
 
