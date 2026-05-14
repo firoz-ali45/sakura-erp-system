@@ -452,18 +452,45 @@ export async function loginWithSupabase(email, password) {
 // ==================== INVENTORY ITEMS FUNCTIONS ====================
 
 /**
- * Load items from Supabase
+ * Load items from Supabase.
+ * Custom login uses anon key without JWT; RLS on inventory_items is for authenticated only,
+ * so prefer SECURITY DEFINER RPC fn_app_list_inventory_items (same pattern as insert).
+ * @param {{ includeDeleted?: boolean }} opts
  */
-export async function loadItemsFromSupabase() {
+export async function loadItemsFromSupabase(opts = {}) {
   const ready = await ensureSupabaseReady();
   if (!ready) return getItemsFromLocalStorage();
 
+  const includeDeleted = !!opts.includeDeleted;
+  const uid = getCurrentUserUUID();
+
+  if (uid) {
+    try {
+      const { data: rpcRows, error: rpcError } = await supabaseClient.rpc('fn_app_list_inventory_items', {
+        p_user_id: uid,
+        p_include_deleted: includeDeleted
+      });
+      if (!rpcError && rpcRows != null) {
+        const list = Array.isArray(rpcRows) ? rpcRows : [];
+        console.log('✅ Items loaded via fn_app_list_inventory_items:', list.length);
+        return list;
+      }
+      const missingFn =
+        rpcError?.code === 'PGRST202' ||
+        (rpcError?.message && rpcError.message.includes('fn_app_list_inventory_items'));
+      if (missingFn) {
+        console.warn('RPC fn_app_list_inventory_items not available, using direct select:', rpcError?.message);
+      } else if (rpcError) {
+        console.error('❌ RPC fn_app_list_inventory_items:', rpcError);
+      }
+    } catch (e) {
+      console.warn('RPC list threw, using direct select:', e);
+    }
+  }
+
   try {
-    const { data, error } = await supabaseClient
-      .from('inventory_items')
-      .select('*')
-      .eq('deleted', false)
-      .order('created_at', { ascending: false });
+    const q = supabaseClient.from('inventory_items').select('*').order('created_at', { ascending: false });
+    const { data, error } = includeDeleted ? await q : await q.eq('deleted', false);
 
     if (error) {
       console.error('❌ Error loading items from Supabase:', error);

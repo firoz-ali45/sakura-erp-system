@@ -16,9 +16,14 @@ export const inventoryService = {
   // Get all items - Try Supabase first, fallback to API
   async getItems(params = {}) {
     try {
-      // Try Supabase first
-      const items = await loadItemsFromSupabase();
+      // Try Supabase first (RPC list for anon/custom auth; see supabase.js)
+      const includeDeleted = !!(params.deleted === true || params.deleted === 'true');
+      const items = await loadItemsFromSupabase({ includeDeleted });
       if (items && items.length > 0) {
+        return { data: items, success: true };
+      }
+      // Valid empty list from Supabase (no rows for company) — do not hit REST
+      if (Array.isArray(items)) {
         return { data: items, success: true };
       }
     } catch (error) {
