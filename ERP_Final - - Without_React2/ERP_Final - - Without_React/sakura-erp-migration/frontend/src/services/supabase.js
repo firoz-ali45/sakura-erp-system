@@ -1687,24 +1687,60 @@ async function generatePONumber() {
 
 /**
  * Load all purchase orders from Supabase or localStorage
+ * @param {{ includeDeleted?: boolean }} opts — default true (match legacy: no header deleted filter)
  */
-export async function loadPurchaseOrdersFromSupabase() {
+export async function loadPurchaseOrdersFromSupabase(opts = {}) {
   const ready = await ensureSupabaseReady();
   if (!ready) return getPurchaseOrdersFromLocalStorage();
 
   try {
-    const { data, error } = await supabaseClient
-      .from('purchase_orders')
-      .select(`
+    const includeDeleted = opts.includeDeleted === false ? false : true;
+    const uid = getCurrentUserUUID();
+    const companyCtx = safeUUID(getCurrentCompanyId());
+
+    let data = null;
+    if (uid || companyCtx) {
+      try {
+        const { data: rpcRows, error: rpcError } = await supabaseClient.rpc('fn_app_list_purchase_orders', {
+          p_user_id: uid || null,
+          p_include_deleted: includeDeleted,
+          p_company_id: companyCtx || null
+        });
+        if (!rpcError && rpcRows != null) {
+          data = Array.isArray(rpcRows) ? rpcRows : [];
+          console.log('✅ Purchase orders loaded via fn_app_list_purchase_orders:', data.length);
+        } else {
+          const missingFn =
+            rpcError?.code === 'PGRST202' ||
+            (rpcError?.message && String(rpcError.message || '').includes('fn_app_list_purchase_orders'));
+          if (missingFn) {
+            console.warn('RPC fn_app_list_purchase_orders not available, using direct select:', rpcError?.message);
+          } else if (rpcError) {
+            console.error('❌ RPC fn_app_list_purchase_orders:', rpcError);
+          }
+        }
+      } catch (e) {
+        console.warn('RPC fn_app_list_purchase_orders threw, using direct select:', e);
+      }
+    }
+
+    if (data === null) {
+      const { data: d, error } = await supabaseClient
+        .from('purchase_orders')
+        .select(`
         *,
         supplier:suppliers(*)
       `)
-      .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false });
 
-    if (error) {
-      console.error('❌ Error loading purchase orders from Supabase:', error);
-      return getPurchaseOrdersFromLocalStorage();
+      if (error) {
+        console.error('❌ Error loading purchase orders from Supabase:', error);
+        return getPurchaseOrdersFromLocalStorage();
+      }
+      data = d || [];
     }
+
+    const invCatalog = await loadItemsFromSupabase({ includeDeleted: true }).catch(() => []);
 
     // Load items for each order
     // CRITICAL: Convert order.id to string for UUID comparison
@@ -1744,10 +1780,7 @@ export async function loadPurchaseOrdersFromSupabase() {
               .filter(id => id !== null && id !== undefined);
 
             if (itemIds.length > 0) {
-              const { data: inventoryItems } = await supabaseClient
-                .from('inventory_items')
-                .select('*')
-                .in('id', itemIds);
+              const inventoryItems = (invCatalog || []).filter((inv) => itemIds.includes(inv.id));
 
               // Map inventory items to PO items
               items = itemsWithoutRel.map(poItem => ({
@@ -2351,16 +2384,55 @@ export async function getPurchaseOrderById(orderId) {
   }
 
   try {
-    // Load order with supplier (simplified query)
-    // CRITICAL: Include total_received_quantity, remaining_quantity, ordered_quantity for PO tracking
-    const { data: orderData, error: orderError } = await supabaseClient
-      .from('purchase_orders')
-      .select(`
+    const uid = getCurrentUserUUID();
+    const companyCtx = safeUUID(getCurrentCompanyId());
+    const poNumeric = typeof orderId === 'string' ? parseInt(orderId, 10) : Number(orderId);
+
+    let orderData = null;
+    if (!Number.isFinite(poNumeric)) {
+      return { success: false, data: null, error: 'Invalid purchase order id' };
+    }
+
+    if (uid || companyCtx) {
+      try {
+        const { data: rpcRow, error: rpcErr } = await supabaseClient.rpc('fn_app_get_purchase_order', {
+          p_user_id: uid || null,
+          p_po_id: poNumeric,
+          p_company_id: companyCtx || null
+        }).maybeSingle();
+        const row = Array.isArray(rpcRow) ? rpcRow[0] : rpcRow;
+        if (!rpcErr && row) {
+          orderData = row;
+          console.log('✅ PO loaded via fn_app_get_purchase_order:', poNumeric);
+        } else {
+          const missingFn =
+            rpcErr?.code === 'PGRST202' ||
+            (rpcErr?.message && String(rpcErr.message || '').includes('fn_app_get_purchase_order'));
+          if (rpcErr && !missingFn) {
+            console.error('❌ RPC fn_app_get_purchase_order:', rpcErr);
+          }
+        }
+      } catch (e) {
+        console.warn('RPC fn_app_get_purchase_order threw, using direct select:', e);
+      }
+    }
+
+    if (!orderData) {
+      const { data: od, error: orderError } = await supabaseClient
+        .from('purchase_orders')
+        .select(`
         *,
         supplier:suppliers(*)
       `)
-      .eq('id', orderId)
-      .single();
+        .eq('id', orderId)
+        .single();
+
+      if (orderError) {
+        console.error('❌ Error loading purchase order from Supabase:', orderError);
+        return getPurchaseOrderByIdFromLocalStorage(orderId);
+      }
+      orderData = od;
+    }
 
     // If quantities are null or 0, trigger manual calculation
     if (orderData && (!orderData.total_received_quantity && orderData.total_received_quantity !== 0)) {
@@ -2371,12 +2443,23 @@ export async function getPurchaseOrderById(orderId) {
           po_id_param: orderId
         });
         if (!calcError) {
-          // Reload PO data after calculation
-          const { data: recalculatedPO } = await supabaseClient
-            .from('purchase_orders')
-            .select('*')
-            .eq('id', orderId)
-            .single();
+          let recalculatedPO = null;
+          if (uid || companyCtx) {
+            const { data: rr } = await supabaseClient.rpc('fn_app_get_purchase_order', {
+              p_user_id: uid || null,
+              p_po_id: poNumeric,
+              p_company_id: companyCtx || null
+            }).maybeSingle();
+            recalculatedPO = Array.isArray(rr) ? rr[0] : rr;
+          }
+          if (!recalculatedPO) {
+            const { data: r2 } = await supabaseClient
+              .from('purchase_orders')
+              .select('*')
+              .eq('id', orderId)
+              .single();
+            recalculatedPO = r2;
+          }
           if (recalculatedPO) {
             Object.assign(orderData, {
               total_received_quantity: recalculatedPO.total_received_quantity || 0,
@@ -2395,14 +2478,11 @@ export async function getPurchaseOrderById(orderId) {
       }
     }
 
-    if (orderError) {
-      console.error('❌ Error loading purchase order from Supabase:', orderError);
-      return getPurchaseOrderByIdFromLocalStorage(orderId);
-    }
-
     if (!orderData) {
       return { success: false, data: null, error: 'Purchase order not found' };
     }
+
+    const invCatalog = await loadItemsFromSupabase({ includeDeleted: true }).catch(() => []);
 
     // Load items separately - Try with relationship first, fallback to without if it fails
     let itemsData = null;
@@ -2434,10 +2514,7 @@ export async function getPurchaseOrderById(orderId) {
           .filter(id => id !== null && id !== undefined);
 
         if (itemIds.length > 0) {
-          const { data: inventoryItems } = await supabaseClient
-            .from('inventory_items')
-            .select('*')
-            .in('id', itemIds);
+          const inventoryItems = (invCatalog || []).filter((inv) => itemIds.includes(inv.id));
 
           // Map inventory items to PO items
           itemsWithRel = itemsWithoutRel.map(poItem => ({
@@ -2488,12 +2565,9 @@ export async function getPurchaseOrderById(orderId) {
         console.log('🔄 Items missing relationship, loading items manually...');
         const itemIds = itemsData.map(poItem => poItem.item_id).filter(id => id);
         if (itemIds.length > 0) {
-          const { data: inventoryItems, error: invError } = await supabaseClient
-            .from('inventory_items')
-            .select('*')
-            .in('id', itemIds);
+          const inventoryItems = (invCatalog || []).filter((inv) => itemIds.includes(inv.id));
 
-          if (!invError && inventoryItems) {
+          if (inventoryItems.length > 0) {
             // Map items to PO items
             itemsData.forEach(poItem => {
               const inventoryItem = inventoryItems.find(inv => inv.id === poItem.item_id);
@@ -2522,14 +2596,10 @@ export async function getPurchaseOrderById(orderId) {
 
     // If supplier relationship didn't load, try to load it manually
     if (!orderData.supplier && orderData.supplier_id) {
-      const { data: supplierData, error: supplierError } = await supabaseClient
-        .from('suppliers')
-        .select('*')
-        .eq('id', orderData.supplier_id)
-        .single();
-
-      if (!supplierError && supplierData) {
-        orderData.supplier = supplierData;
+      const suppliersList = await loadSuppliersFromSupabase({ includeDeleted: true }).catch(() => []);
+      const supplierRow = (suppliersList || []).find((s) => s.id === orderData.supplier_id);
+      if (supplierRow) {
+        orderData.supplier = supplierRow;
       }
     }
 
