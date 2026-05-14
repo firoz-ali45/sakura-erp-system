@@ -121,6 +121,7 @@
       "nameLocalized": "Name Localized",
       "ingredientUnit": "Ingredient Unit",
       "storageUnit": "Storage Unit",
+      "storageToIngredient": "Storage to ingredient conversion",
       "costingMethod": "Costing Method",
       "cost": "Cost",
       "barcode": "Barcode",

@@ -97,6 +97,7 @@
       "nameLocalized": "الاسم المترجم",
       "ingredientUnit": "وحدة المكون",
       "storageUnit": "وحدة التخزين",
+      "storageToIngredient": "تحويل من وحدة التخزين إلى المكون",
       "costingMethod": "طريقة التكلفة",
       "cost": "التكلفة",
       "barcode": "الباركود",
