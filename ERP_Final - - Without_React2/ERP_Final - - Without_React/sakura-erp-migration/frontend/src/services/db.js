@@ -23,7 +23,7 @@ const BOTH_COMPANY_AND_TENANT_TABLES = new Set(['batches', 'grn_batches']);
  */
 const SKIP_COMPANY_TABLES = new Set([
   'grn_inspections', 'grn_inspection_items', 'grn_inspection_item',
-  'purchase_order_items', 'purchasing_invoice_items', 'purchase_orders', 'purchase_requests', 'pr_po_linkage',
+  'purchase_order_items', 'purchasing_invoice_items', 'purchase_requests', 'pr_po_linkage',
   'purchasing_invoices', 'finance_atms', 'finance_banks', 'finance_payments',
   'inventory_locations', 'roles', 'role_location_access',
   'transfer_orders', 'transfer_order_items',

@@ -278,6 +278,8 @@ import { ref, computed, onMounted, watch } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { getPurchaseRequestById } from '@/services/purchaseRequests';
 import { loadSuppliersFromSupabase } from '@/services/supabase';
+import { getCurrentCompanyId } from '@/services/db';
+import { getCurrentUserUUID, safeUUID } from '@/utils/uuidUtils';
 
 const router = useRouter();
 const route = useRoute();
@@ -418,24 +420,59 @@ const createPO = async () => {
     const timestamp = Date.now().toString().slice(-6);
     const poNumber = `PO-${year}-${timestamp}`;
 
-    // STEP 1: Create PO Header via centralized db layer (tenant_id/company_id skipped for PO; created_by/created_at injected)
+    const poHeader = {
+      po_number: poNumber,
+      supplier_id: selectedSupplier.value.id,
+      supplier_name: selectedSupplier.value.name,
+      source_pr_id: pr.value.id,
+      status: 'pending',
+      business_date: new Date().toISOString().split('T')[0],
+      order_date: new Date().toISOString(),
+      total_amount: totalAmount,
+      vat_amount: vatAmount,
+      notes: poNotes.value || `Converted from PR: ${pr.value.pr_number}`,
+      ordered_quantity: selectedItems.reduce((sum, i) => sum + (i.convertQty || 0), 0),
+      remaining_quantity: selectedItems.reduce((sum, i) => sum + (i.convertQty || 0), 0),
+      receiving_status: 'not_received'
+    };
+
+    // STEP 1: PO header — anon key cannot pass RLS on purchase_orders; use SECURITY DEFINER RPC (sets company_id / tenant_id).
     let newPO;
     try {
-      newPO = await dbInsert(supabaseClient, 'purchase_orders', {
-        po_number: poNumber,
-        supplier_id: selectedSupplier.value.id,
-        supplier_name: selectedSupplier.value.name,
-        source_pr_id: pr.value.id,
-        status: 'pending',
-        business_date: new Date().toISOString().split('T')[0],
-        order_date: new Date().toISOString(),
-        total_amount: totalAmount,
-        vat_amount: vatAmount,
-        notes: poNotes.value || `Converted from PR: ${pr.value.pr_number}`,
-        ordered_quantity: selectedItems.reduce((sum, i) => sum + (i.convertQty || 0), 0),
-        remaining_quantity: selectedItems.reduce((sum, i) => sum + (i.convertQty || 0), 0),
-        receiving_status: 'not_received'
-      });
+      const uid = getCurrentUserUUID();
+      const companyCtx = safeUUID(getCurrentCompanyId());
+      let rpcRow = null;
+      let rpcErr = null;
+      if (uid || companyCtx) {
+        const res = await supabaseClient.rpc('fn_app_insert_purchase_order', {
+          p_user_id: uid || null,
+          p_company_id: companyCtx || null,
+          p_po_number: poHeader.po_number,
+          p_supplier_id: poHeader.supplier_id,
+          p_supplier_name: poHeader.supplier_name,
+          p_source_pr_id: poHeader.source_pr_id,
+          p_status: poHeader.status,
+          p_business_date: poHeader.business_date,
+          p_order_date: poHeader.order_date,
+          p_total_amount: poHeader.total_amount,
+          p_vat_amount: poHeader.vat_amount,
+          p_notes: poHeader.notes,
+          p_ordered_quantity: poHeader.ordered_quantity,
+          p_remaining_quantity: poHeader.remaining_quantity,
+          p_receiving_status: poHeader.receiving_status
+        }).maybeSingle();
+        rpcRow = Array.isArray(res.data) ? res.data[0] : res.data;
+        rpcErr = res.error;
+      }
+      if (!rpcErr && rpcRow) {
+        newPO = rpcRow;
+      } else {
+        const missingFn =
+          rpcErr?.code === 'PGRST202' ||
+          (rpcErr?.message && String(rpcErr.message).includes('fn_app_insert_purchase_order'));
+        if (rpcErr && !missingFn) throw rpcErr;
+        newPO = await dbInsert(supabaseClient, 'purchase_orders', poHeader);
+      }
     } catch (poErr) {
       if (poErr?.code === 'PGRST116' || poErr?.message?.includes('no row returned')) {
         const { data: refetch } = await supabaseClient.from('purchase_orders').select('id, po_number').eq('po_number', poNumber).limit(1);
