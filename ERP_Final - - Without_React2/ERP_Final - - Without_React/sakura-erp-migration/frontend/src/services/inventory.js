@@ -50,15 +50,24 @@ export const inventoryService = {
   // Create item - Try Supabase first, fallback to API
   async createItem(itemData) {
     let supabaseError = null;
+    let supabaseResult = null;
     try {
-      const result = await saveItemToSupabase(itemData);
-      if (result.success) {
-        return { data: result.data, success: true };
+      supabaseResult = await saveItemToSupabase(itemData);
+      if (supabaseResult?.success) {
+        return { data: supabaseResult.data, success: true };
       }
-      supabaseError = result.error || null;
+      supabaseError = supabaseResult?.error || null;
     } catch (error) {
       console.warn('Supabase save failed, trying API:', error);
       supabaseError = error?.message || String(error);
+    }
+
+    // Supabase returned a definitive failure — do not hit missing REST API (404 noise)
+    if (supabaseResult && supabaseResult.success === false) {
+      return {
+        success: false,
+        error: supabaseError || 'Could not create item in database.'
+      };
     }
 
     // Fallback to API (optional in production — often unset / 404)

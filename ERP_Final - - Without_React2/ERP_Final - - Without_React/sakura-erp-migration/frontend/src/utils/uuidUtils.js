@@ -35,9 +35,10 @@ function uuidFromSessionUser(raw) {
 /**
  * Get current user UUID for DB writes. NEVER returns name.
  * Handles Pinia ref: store.user may be ref, use .value to unwrap.
- * Falls back to `sakura_current_user` in localStorage when Pinia is not
- * active yet or the store is empty (common for services called early).
- * Legacy localStorage (id: "Ali") → safeUUID returns null.
+ * Falls back to persisted session in localStorage when Pinia is not active
+ * or the in-memory user is empty. Tries `nexora_current_user` first (current
+ * auth store key), then legacy `sakura_current_user`.
+ * Non-UUID ids (e.g. legacy text names) → safeUUID returns null.
  */
 export function getCurrentUserUUID() {
   try {
@@ -52,10 +53,14 @@ export function getCurrentUserUUID() {
 
   try {
     if (typeof window === 'undefined' || !window.localStorage) return null;
-    const s = localStorage.getItem('sakura_current_user');
-    if (!s) return null;
-    const parsed = JSON.parse(s);
-    return uuidFromSessionUser(parsed);
+    for (const key of ['nexora_current_user', 'sakura_current_user']) {
+      const s = localStorage.getItem(key);
+      if (!s) continue;
+      const parsed = JSON.parse(s);
+      const id = uuidFromSessionUser(parsed);
+      if (id) return id;
+    }
+    return null;
   } catch {
     return null;
   }
