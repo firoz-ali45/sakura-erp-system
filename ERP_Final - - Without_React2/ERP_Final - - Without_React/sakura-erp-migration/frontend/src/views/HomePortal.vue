@@ -219,22 +219,10 @@
               <i class="fas fa-arrows-alt w-5 text-center"></i>
               <span>{{ $t('homePortal.inventoryTransfers') }}</span>
             </router-link>
-            <router-link
-              to="/homeportal/production"
-              class="nav-link nav-sub-item nav-link-production flex items-center p-3 my-1 rounded-lg"
-              active-class="active"
-            >
+            <a href="#" @click.prevent="loadDashboard('inventory/production.html')" class="nav-link nav-sub-item flex items-center p-3 my-1 rounded-lg">
               <i class="fas fa-industry w-5 text-center"></i>
               <span>{{ $t('homePortal.inventoryProduction') }}</span>
-            </router-link>
-            <router-link
-              to="/homeportal/recipes"
-              class="nav-link nav-sub-item flex items-center p-3 my-1 rounded-lg"
-              active-class="active"
-            >
-              <i class="fas fa-list-ol w-5 text-center"></i>
-              <span>Recipes / BOM</span>
-            </router-link>
+            </a>
             <router-link 
               to="/homeportal/more" 
               class="nav-link nav-sub-item flex items-center p-3 my-1 rounded-lg"
@@ -275,10 +263,6 @@
             <router-link to="/homeportal/user-management/roles" class="nav-link nav-sub-item flex items-center p-3 my-1 rounded-lg" active-class="active">
               <i class="fas fa-user-shield w-5 text-center"></i>
               <span>{{ $t('userManagement.roles') }}</span>
-            </router-link>
-            <router-link to="/homeportal/user-management/departments" class="nav-link nav-sub-item flex items-center p-3 my-1 rounded-lg" active-class="active">
-              <i class="fas fa-sitemap w-5 text-center"></i>
-              <span>{{ $t('homePortal.departments') }}</span>
             </router-link>
             <router-link to="/homeportal/user-management/permissions" class="nav-link nav-sub-item flex items-center p-3 my-1 rounded-lg" active-class="active">
               <i class="fas fa-key w-5 text-center"></i>
@@ -323,16 +307,6 @@
           </div>
         </div>
 
-        <router-link
-          v-if="isProviderConsoleEnabled"
-          to="/homeportal/platform/tenants"
-          class="nav-link flex items-center p-4 my-2 rounded-lg"
-          active-class="active"
-        >
-          <i class="fas fa-building w-6 text-center"></i>
-          <span>Nexora Control Center</span>
-        </router-link>
-
         <!-- Manage Expandable Section -->
         <div class="nav-group">
           <a 
@@ -353,14 +327,6 @@
             id="manage-group" 
             :class="['nav-group-content', 'pl-8', { 'hidden': !manageGroupOpen }]"
           >
-            <router-link 
-              to="/homeportal/user-management/departments" 
-              class="nav-link nav-sub-item flex items-center p-3 my-1 rounded-lg"
-              active-class="active"
-            >
-              <i class="fas fa-sitemap w-5 text-center"></i>
-              <span>{{ $t('homePortal.departments') }}</span>
-            </router-link>
             <router-link 
               to="/homeportal/tags" 
               class="nav-link nav-sub-item flex items-center p-3 my-1 rounded-lg"
@@ -416,18 +382,14 @@
 
         <div class="flex items-center justify-center gap-3">
           <img 
-            :src="APP_LOGO_PATH" 
-            :alt="`${APP_DISPLAY_NAME} logo`" 
+            src="/Sakura_Pink_Logo.png" 
+            alt="Sakura Logo" 
             class="h-10 w-10 rounded-full"
-            @error="onHeaderLogoError"
+            onerror="this.src='/sakura-logo.png'"
           >
           <h1 id="header-title" class="text-xl md:text-2xl font-bold text-white whitespace-nowrap">
             <span>{{ $t('homePortal.hubTitle') }}</span>
           </h1>
-          <div v-if="companyName" class="hidden sm:flex items-center text-xs text-white/85 border border-white/20 px-2 py-1 rounded-full">
-            <i class="fas fa-building mr-2 text-white/80"></i>
-            <span>{{ companyName }}</span>
-          </div>
           <div v-if="dataConsistent" id="data-consistency-indicator" class="ml-2 flex items-center gap-1 text-xs text-white/80">
             <i class="fas fa-shield-alt text-green-400"></i>
             <span>{{ $t('homePortal.consistent') }}</span>
@@ -451,7 +413,7 @@
       </div>
     </main>
 
-    <!-- Nexora AI Assistant -->
+    <!-- Sakura AI Assistant Chatbot -->
     <NexoraAIAssistant />
 
     <!-- Settings Modal (Complete - Original Structure) -->
@@ -687,14 +649,7 @@ import { usePermissions } from '@/composables/usePermissions';
 import { formatDateTime } from '@/utils/dateFormat';
 import { formatNumber } from '@/utils/numberFormat';
 import { updateUserInSupabase, initSupabase, USE_SUPABASE, supabaseClient, getUsers } from '@/services/supabase';
-import { getCurrentCompanyId } from '@/services/db';
-import { APP_LOGO_PATH, APP_LOGO_FALLBACK, APP_DISPLAY_NAME, APP_CLIENT_ID } from '@/config/brand.js';
 import NexoraAIAssistant from '@/components/NexoraAIAssistant.vue';
-
-function onHeaderLogoError(e) {
-  const el = e?.target;
-  if (el && !String(el.src || '').endsWith(APP_LOGO_FALLBACK)) el.src = APP_LOGO_FALLBACK;
-}
 // Advanced ERP Features - lazy loaded for performance
 // import { 
 //   AuditLogger, 
@@ -750,7 +705,6 @@ const reportsGroupOpen = ref(false);
 const pendingUsersCount = ref(0);
 const dataConsistent = ref(true);
 const currentDateTime = ref('');
-const companyName = ref('');
 
 // Permissions (RBAC)
 const { permissions, hasPermission, loadPermissions } = usePermissions();
@@ -771,10 +725,6 @@ const canSecurity = computed(() => { const p = permissions.value; return p.has('
 
 // Computed
 const user = computed(() => authStore.user);
-const isProviderConsoleEnabled = computed(() => {
-  const id = String(APP_CLIENT_ID || '').toLowerCase();
-  return id.startsWith('nexora') || id.includes('admin') || id.includes('platform');
-});
 
 // Methods
 const toggleSidebar = () => {
@@ -817,16 +767,16 @@ const loadDashboard = (dashboardUrl) => {
         
         // External HTML files are in project root (outside frontend folder)
         // We need to use relative path from frontend to project root
-        // Path structure: public/nexora-embedded-dashboard/payable.html
+        // Path structure: ../../sakura-accounts-payable-dashboard/payable.html
         const pathParts = dashboardUrl.split('/');
         const fileName = pathParts[pathParts.length - 1];
         const folderName = pathParts.length > 1 ? pathParts[pathParts.length - 2] : '';
         
         // Files are now in public folder, so use absolute path from root
-        // e.g., /nexora-embedded-dashboard/payable.html
+        // e.g., /sakura-accounts-payable-dashboard/payable.html
         let iframePath = '';
         if (folderName) {
-          // e.g., nexora-embedded-dashboard/payable.html
+          // e.g., sakura-accounts-payable-dashboard/payable.html
           iframePath = `/${folderName}/${fileName}`;
         } else {
           // e.g., inventory/items.html
@@ -924,7 +874,7 @@ const openSettings = async () => {
       profilePhotoPreview.value = user.value.profilePhotoUrl;
     } else {
       // Try localStorage
-      const savedPhoto = localStorage.getItem('nexora_profile_photo');
+      const savedPhoto = localStorage.getItem('sakura_profile_photo');
       if (savedPhoto) {
         profilePhotoPreview.value = savedPhoto;
       }
@@ -980,7 +930,7 @@ const handlePhotoUpload = async (event) => {
     
     // Save to localStorage (backup)
     try {
-      localStorage.setItem('nexora_profile_photo', base64Image);
+      localStorage.setItem('sakura_profile_photo', base64Image);
     } catch (error) {
       console.error('Error saving photo to localStorage:', error);
     }
@@ -1017,7 +967,7 @@ const removeProfilePhoto = async () => {
   });
   if (confirmed) {
     profilePhotoPreview.value = null;
-    localStorage.removeItem('nexora_profile_photo');
+    localStorage.removeItem('sakura_profile_photo');
     
     // Reset to default
     const sidebarImage = document.getElementById('sidebar-user-image');
@@ -1103,7 +1053,7 @@ const updateMyProfile = async () => {
     }
     
     // Update localStorage
-    localStorage.setItem('nexora_current_user', JSON.stringify(updatedUser));
+    localStorage.setItem('sakura_current_user', JSON.stringify(updatedUser));
     
     showNotification('Profile updated successfully!', 'success');
     closeSettings();
@@ -1211,13 +1161,13 @@ const loadProfilePhoto = async () => {
         }
         
         // Cache in localStorage
-        localStorage.setItem('nexora_profile_photo', data.profile_photo_url);
+        localStorage.setItem('sakura_profile_photo', data.profile_photo_url);
         return;
       }
         }
         
     // Fallback: try localStorage cache
-    const cachedPhoto = localStorage.getItem('nexora_profile_photo');
+    const cachedPhoto = localStorage.getItem('sakura_profile_photo');
     if (cachedPhoto) {
       user.value.profilePhotoUrl = cachedPhoto;
       authStore.setUser({ ...user.value });
@@ -1268,22 +1218,6 @@ onMounted(async () => {
   
   updateDateTime();
   setInterval(updateDateTime, 1000);
-
-  // SaaS: show current company name in header (company_id stored after login)
-  try {
-    await initSupabase();
-    const cid = getCurrentCompanyId();
-    if (USE_SUPABASE && supabaseClient && cid) {
-      const { data } = await supabaseClient
-        .from('companies')
-        .select('name, company_name')
-        .eq('id', cid)
-        .single();
-      companyName.value = data?.name || data?.company_name || '';
-    }
-  } catch (_) {
-    companyName.value = '';
-  }
   
   // Load user data (non-blocking)
   if (!authStore.user) {
@@ -1592,14 +1526,6 @@ onUnmounted(() => {
 [dir="rtl"] .nav-sub-item.active {
   border-left: none;
   border-right: 3px solid #ea8990;
-}
-
-/* Production link: always clickable, same as Transfers */
-.nav-link-production {
-  cursor: pointer !important;
-  pointer-events: auto !important;
-  opacity: 1 !important;
-  color: inherit !important;
 }
 
 .nav-group-content {

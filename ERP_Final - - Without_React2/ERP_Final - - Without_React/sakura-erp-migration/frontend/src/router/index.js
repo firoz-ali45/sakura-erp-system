@@ -115,22 +115,6 @@ const routes = [
     meta: { requiresAuth: true }
   },
   {
-        path: 'production',
-    name: 'ProductionList',
-        component: () => import('../views/inventory/ProductionList.vue').catch(() => ({
-          default: { template: '<div class="p-6 bg-[#f0e1cd] min-h-screen"><div class="bg-white rounded-xl shadow-md p-6 max-w-md"><h2 class="text-xl font-bold text-gray-800 mb-2">Production</h2><p class="text-gray-600 mb-4">Module could not load. If you just added Manufacturing, run the SQL migrations in Supabase and refresh.</p><a href="#/homeportal/dashboard" class="text-[#284b44] font-medium">← Back to Dashboard</a></div></div>' }
-        })),
-    meta: { requiresAuth: true }
-  },
-  {
-        path: 'production/:id',
-    name: 'ProductionDetail',
-        component: () => import('../views/inventory/ProductionDetail.vue').catch(() => ({
-          default: { template: '<div class="p-6 bg-[#f0e1cd] min-h-screen"><div class="bg-white rounded-xl shadow-md p-6 max-w-md"><p class="text-gray-600 mb-4">Production detail could not load.</p><a href="#/homeportal/production" class="text-[#284b44] font-medium">← Back to Production</a></div></div>' }
-        })),
-    meta: { requiresAuth: true }
-  },
-  {
         path: 'grns',
     name: 'InventoryGRNs',
         component: () => import('../views/inventory/GRNs.vue'),
@@ -146,18 +130,6 @@ const routes = [
         path: 'stock-overview',
     name: 'StockOverview',
         component: () => import('../views/inventory/StockOverview.vue'),
-    meta: { requiresAuth: true }
-  },
-  {
-        path: 'recipes',
-    name: 'RecipeList',
-        component: () => import('../views/inventory/RecipeList.vue'),
-    meta: { requiresAuth: true }
-  },
-  {
-        path: 'recipes/:id',
-    name: 'RecipeDetail',
-        component: () => import('../views/inventory/RecipeDetail.vue'),
     meta: { requiresAuth: true }
   },
   {
@@ -301,12 +273,6 @@ const routes = [
         meta: { requiresAuth: true, requiredPermission: 'user_management_permissions' }
       },
       {
-        path: 'user-management/departments',
-        name: 'UserManagementDepartments',
-        component: () => import('../views/user-management/DepartmentsList.vue'),
-        meta: { requiresAuth: true }
-      },
-      {
         path: 'user-management/access-matrix',
         name: 'UserManagementAccessMatrix',
         component: () => import('../views/user-management/AccessMatrixPage.vue'),
@@ -407,12 +373,6 @@ const routes = [
         name: 'FoodQualityTraceability',
         component: () => import('../views/reports/FoodQualityTraceability.vue'),
         meta: { requiresAuth: true }
-      },
-      {
-        path: 'platform/tenants',
-        name: 'ProviderConsole',
-        component: () => import('../views/platform/ProviderConsole.vue'),
-        meta: { requiresAuth: true }
       }
     ]
   },
@@ -438,12 +398,12 @@ router.beforeEach(async (to, from, next) => {
     const isAuth = authStore.isAuthenticated?.value ?? false;
     
     // Also check localStorage for session persistence (for Supabase/localStorage auth) - safe check
-    let persistLoginFlag = false;
+    let sakuraLoggedIn = false;
     let hasUser = false;
     try {
       if (typeof window !== 'undefined' && window.localStorage) {
-        persistLoginFlag = localStorage.getItem('nexora_logged_in') === 'true';
-        hasUser = !!localStorage.getItem('nexora_current_user');
+        sakuraLoggedIn = localStorage.getItem('sakura_logged_in') === 'true';
+        hasUser = !!localStorage.getItem('sakura_current_user');
       }
     } catch (e) {
       console.warn('⚠️ Error reading localStorage in router guard:', e);
@@ -451,8 +411,8 @@ router.beforeEach(async (to, from, next) => {
     
     // User is considered authenticated if:
     // 1. Auth store says authenticated, OR
-    // 2. nexora_logged_in is true AND user exists in localStorage
-    let isAuthenticated = isAuth || (persistLoginFlag && hasUser);
+    // 2. sakura_logged_in is true AND user exists in localStorage
+    let isAuthenticated = isAuth || (sakuraLoggedIn && hasUser);
 
     // If we think we are authenticated, verify the user still exists and is active
     // BUT don't block navigation - do this async

@@ -1200,7 +1200,19 @@ const loadCategories = async () => {
 
 const handleCreateItem = async () => {
   try {
-    await inventoryService.createItem(newItem.value);
+    const result = await inventoryService.createItem(newItem.value);
+    const ok =
+      result &&
+      (result.success === true ||
+        (result.data != null && result.success !== false));
+    if (!ok) {
+      showNotification(
+        result?.error ||
+          'Could not save the item to the database. Check your connection and permissions.',
+        'error'
+      );
+      return;
+    }
     showNotification('Item created successfully!', 'success');
     closeCreateItemModal();
     await loadItems();
