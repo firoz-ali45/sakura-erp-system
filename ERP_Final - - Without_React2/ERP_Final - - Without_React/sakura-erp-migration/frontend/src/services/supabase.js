@@ -558,6 +558,53 @@ export async function saveItemToSupabase(item) {
     return { success: false, error: built.error };
   }
 
+  const uid = getCurrentUserUUID();
+  if (!uid) {
+    return {
+      success: false,
+      error:
+        'Missing user id for inventory save. Please log out and log in again so your session has a valid user UUID.'
+    };
+  }
+  try {
+      const { data: rpcData, error: rpcError } = await supabaseClient.rpc('fn_app_insert_inventory_item', {
+        p_user_id: uid,
+        p_id: built.payload.id,
+        p_name: built.payload.name,
+        p_sku: built.payload.sku,
+        p_name_localized: built.payload.name_localized ?? built.payload.name,
+        p_category: built.payload.category,
+        p_storage_unit: built.payload.storage_unit,
+        p_ingredient_unit: built.payload.ingredient_unit,
+        p_storage_to_ingredient: built.payload.storage_to_ingredient,
+        p_costing_method: built.payload.costing_method,
+        p_cost: built.payload.cost,
+        p_barcode: built.payload.barcode,
+        p_min_level: built.payload.min_level,
+        p_max_level: built.payload.max_level,
+        p_par_level: built.payload.par_level,
+        p_inventory_item_id: built.payload.inventory_item_id
+      });
+      if (!rpcError && rpcData) {
+        console.log('✅ Item saved via fn_app_insert_inventory_item:', rpcData);
+        return { success: true, data: rpcData };
+      }
+      const missingFn =
+        rpcError?.code === 'PGRST202' ||
+        (rpcError?.message && rpcError.message.includes('fn_app_insert_inventory_item'));
+      if (missingFn) {
+        console.warn('RPC fn_app_insert_inventory_item not available, using dbInsert:', rpcError?.message);
+      } else if (rpcError) {
+        console.error('❌ RPC fn_app_insert_inventory_item:', rpcError);
+        return {
+          success: false,
+          error: rpcError.message || rpcError.details || 'Could not create item (server).'
+        };
+      }
+    } catch (rpcCatch) {
+      console.warn('RPC insert threw, trying dbInsert:', rpcCatch);
+    }
+
   try {
     const data = await dbInsert(supabaseClient, 'inventory_items', built.payload);
     console.log('✅ Item saved to Supabase:', data);
