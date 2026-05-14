@@ -436,7 +436,7 @@ const createPO = async () => {
       receiving_status: 'not_received'
     };
 
-    // STEP 1: PO header — anon key cannot pass RLS on purchase_orders; use SECURITY DEFINER RPC (sets company_id / tenant_id).
+    // STEP 1: PO header — anon key cannot pass RLS on purchase_orders; use SECURITY DEFINER RPC (company_id + tenant_id from companies).
     let newPO;
     try {
       const uid = getCurrentUserUUID();
