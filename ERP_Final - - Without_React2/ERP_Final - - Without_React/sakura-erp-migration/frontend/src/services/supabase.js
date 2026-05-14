@@ -567,6 +567,7 @@ export async function saveItemToSupabase(item) {
     const msg =
       error?.message ||
       error?.details ||
+      error?.hint ||
       (typeof error === 'string' ? error : 'Insert failed (check RLS and company context).');
     return { success: false, error: msg };
   }

@@ -12,7 +12,7 @@
 import { getCurrentUserUUID, safeUUID } from '@/utils/uuidUtils';
 
 const FALLBACK_COMPANY_UUID = '00000000-0000-0000-0000-000000000000';
-const STORAGE_KEY_COMPANY = 'sakura_company_id';
+const STORAGE_KEY_COMPANY = 'nexora_company_id';
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /** Tables that need BOTH company_id and tenant_id (same context value) — production batches has company_id NOT NULL */
@@ -35,7 +35,9 @@ const SKIP_CREATED_BY_TABLES = new Set([
   'grn_inspection_items', 'grn_inspection_item', 'purchase_order_items', 'purchasing_invoice_items',
   'finance_atms', 'finance_banks', 'inventory_locations', 'pr_po_linkage',
   'roles', 'role_location_access', 'transfer_orders', 'transfer_order_items',
-  'production_items', 'production_consumption', 'wip_lots', 'fg_batches', 'recipe_ingredients'
+  'production_items', 'production_consumption', 'wip_lots', 'fg_batches', 'recipe_ingredients',
+  // Schema has no created_by on inventory_items — injecting it caused PostgREST 400 on insert.
+  'inventory_items'
 ]);
 
 /** If value is a valid UUID return it, else null. Re-export from uuidUtils for DB layer. */
@@ -50,8 +52,8 @@ const _safeUUID = (v) => {
 /**
  * Current tenant for inserts/queries (custom Supabase auth = anon key, no JWT).
  * Order:
- * 1) sakura_company_id (explicit context)
- * 2) sakura_current_user.company_id (from login payload)
+ * 1) nexora_company_id (explicit context)
+ * 2) nexora_current_user.company_id (from login payload)
  * 3) If a user session exists but company_id is missing (legacy), use default tenant UUID
  *    (matches DB backfill where users.company_id = 00000000-... — do NOT jump to VITE_COMPANY_ID here
  *    or User Management / RPC lists return empty on Vercel)
@@ -64,7 +66,7 @@ export function getCurrentCompanyId() {
       const stored = localStorage.getItem(STORAGE_KEY_COMPANY);
       if (stored && _safeUUID(stored)) return _safeUUID(stored);
 
-      const rawUser = localStorage.getItem('sakura_current_user');
+      const rawUser = localStorage.getItem('nexora_current_user');
       if (rawUser) {
         try {
           const u = JSON.parse(rawUser);
@@ -129,7 +131,7 @@ function prepareInsertPayload(table, data, options = {}) {
   const companyId = getCurrentCompanyId();
 
   if (options.requireCompanyId !== false && !options.skipCompanyId && companyId == null) {
-    throw new Error('DB insert requires company context. Set sakura_company_id or VITE_COMPANY_ID.');
+    throw new Error('DB insert requires company context. Set nexora_company_id or VITE_COMPANY_ID.');
   }
 
   if (!options.skipCompanyId && companyId != null && !SKIP_COMPANY_TABLES.has(table)) {

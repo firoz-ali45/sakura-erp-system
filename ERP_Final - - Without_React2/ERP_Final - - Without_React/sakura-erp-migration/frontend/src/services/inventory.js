@@ -49,22 +49,38 @@ export const inventoryService = {
 
   // Create item - Try Supabase first, fallback to API
   async createItem(itemData) {
+    let supabaseError = null;
     try {
       const result = await saveItemToSupabase(itemData);
       if (result.success) {
         return { data: result.data, success: true };
       }
+      supabaseError = result.error || null;
     } catch (error) {
       console.warn('Supabase save failed, trying API:', error);
+      supabaseError = error?.message || String(error);
     }
-    
-    // Fallback to API
+
+    // Fallback to API (optional in production — often unset / 404)
     try {
       const response = await api.post('/inventory/items', itemData);
       return response.data;
     } catch (error) {
       console.error('API save failed:', error);
-      return { success: false, error: error.message };
+      const status = error.response?.status;
+      const apiHint =
+        status === 404
+          ? 'Inventory REST API is not deployed or VITE_API_URL is wrong (404). '
+          : '';
+      const apiBody =
+        error.response?.data?.error ||
+        error.response?.data?.message ||
+        error.message ||
+        'Request failed';
+      const combined = [apiHint + apiBody, supabaseError ? `Database: ${supabaseError}` : null]
+        .filter(Boolean)
+        .join(' ');
+      return { success: false, error: combined || 'Could not create item' };
     }
   },
 
