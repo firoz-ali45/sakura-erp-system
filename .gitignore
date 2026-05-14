@@ -28,3 +28,6 @@ Thumbs.db
 *.swo
 .vercel
 .env*.local
+
+# Local clone / deploy helper (not part of app source)
+.main-push/
