@@ -56,7 +56,22 @@
             <div class="node-label">{{ getNodeLabel(node.doc_type) }}</div>
             
             <!-- Document Number -->
-            <div class="node-number" :class="node.doc_id ? 'text-blue-600' : 'text-gray-400'">
+            <button
+              v-if="node.doc_id && !node.is_current"
+              type="button"
+              class="node-number node-link text-blue-600 hover:underline cursor-pointer bg-transparent border-0 p-0"
+              @click.stop="navigateToDocument(node)"
+            >
+              {{ node.doc_number }}
+              <span v-if="node.count > 1" class="text-xs text-gray-500 block">
+                +{{ node.count - 1 }} more
+              </span>
+            </button>
+            <div
+              v-else
+              class="node-number"
+              :class="node.doc_id ? 'text-blue-600' : 'text-gray-400'"
+            >
               {{ node.doc_number || 'Not Created' }}
               <span v-if="node.count > 1" class="text-xs text-gray-500 block">
                 +{{ node.count - 1 }} more
@@ -132,6 +147,22 @@ const props = defineProps({
     type: [String, Number],
     required: false,
     default: null
+  },
+  /** PR id from purchase_orders.source_pr_id */
+  sourcePrId: {
+    type: [String, Number],
+    required: false,
+    default: null
+  },
+  /** PR number for display when DB join is blocked by RLS */
+  linkedPrNumber: {
+    type: String,
+    default: ''
+  },
+  /** PO notes — fallback to parse "PR-2026-00044" */
+  poNotes: {
+    type: String,
+    default: ''
   },
   /** 'purchase' (PR→PO→GRN→PUR) or 'transfer' (TO→TRS→Received) */
   flowType: {
@@ -388,13 +419,51 @@ const buildTransferFlowManually = async (currentType, docId) => {
   flowNodes.value = nodes;
 };
 
+const parsePrNumberFromText = (text) => {
+  if (!text) return null;
+  const m = String(text).match(/PR-\d{4}-\d+/i);
+  return m ? m[0].toUpperCase() : null;
+};
+
+const patchFlowNode = (nodes, type, id, number) => {
+  if (id == null || id === '') return;
+  const n = nodes.find((x) => x.doc_type === type);
+  if (!n) return;
+  if (!n.doc_id) {
+    n.doc_id = String(id);
+    n.doc_number = n.doc_number || number || String(id);
+    n.doc_status = n.doc_status === 'not_created' ? '—' : n.doc_status;
+    n.count = Math.max(n.count || 0, 1);
+  }
+};
+
+const fetchPoHeaderRpc = async (poIdNum) => {
+  const { supabaseClient, getCurrentCompanyId } = await import('@/services/supabase.js');
+  const { getCurrentUserUUID, safeUUID } = await import('@/utils/uuidUtils.js');
+  const uid = getCurrentUserUUID();
+  const companyCtx = safeUUID(getCurrentCompanyId());
+  if (!uid && !companyCtx) return null;
+  const { data: rpcRow, error } = await supabaseClient.rpc('fn_app_get_purchase_order', {
+    p_user_id: uid || null,
+    p_po_id: poIdNum,
+    p_company_id: companyCtx || null
+  }).maybeSingle();
+  if (error) return null;
+  return Array.isArray(rpcRow) ? rpcRow[0] : rpcRow;
+};
+
 // Manual flow building (ultimate fallback)
 const buildFlowManually = async (normalizedType, docId, linkedPrIdFromParent = null) => {
   const { supabaseClient } = await import('@/services/supabase.js');
   
-  let prId = linkedPrIdFromParent ? String(linkedPrIdFromParent) : null;
+  let prId =
+    (props.sourcePrId != null && props.sourcePrId !== '' ? String(props.sourcePrId) : null) ||
+    (props.linkedPrId != null && props.linkedPrId !== '' ? String(props.linkedPrId) : null) ||
+    (linkedPrIdFromParent ? String(linkedPrIdFromParent) : null);
+  const parsedPrNumber = props.linkedPrNumber?.trim() || parsePrNumberFromText(props.poNotes) || null;
   let poId = null, grnId = null, purId = null;
   let paymentId = null;
+  let prDisplayNumber = parsedPrNumber;
   
   // Initialize based on current document type
   if (normalizedType === 'PR') prId = prId || docId;
@@ -447,12 +516,21 @@ const buildFlowManually = async (normalizedType, docId, linkedPrIdFromParent = n
     // If we have PO, find PR — DOCUMENT CHAIN: source_pr_id first (direct FK), then pr_po_linkage. NO item_id.
     if (poId && !prId) {
       const poIdNum = typeof poId === 'number' ? poId : (parseInt(poId, 10) || poId);
-      const { data: poRow } = await supabaseClient.from('purchase_orders').select('source_pr_id, po_number').eq('id', poIdNum).maybeSingle();
-      if (poRow?.source_pr_id) prId = poRow.source_pr_id;
+      const poRowRpc = await fetchPoHeaderRpc(poIdNum);
+      let poHeader = poRowRpc;
+      if (!poHeader) {
+        const { data: poDirect } = await supabaseClient.from('purchase_orders').select('source_pr_id, po_number').eq('id', poIdNum).maybeSingle();
+        poHeader = poDirect;
+        if (poDirect?.source_pr_id) prId = String(poDirect.source_pr_id);
+      } else if (poHeader.source_pr_id) {
+        prId = String(poHeader.source_pr_id);
+      }
       if (!prId) {
         let linkage = await supabaseClient.from('pr_po_linkage').select('pr_id').eq('po_id', poIdNum).limit(1);
-        if (!linkage.data?.length && poRow?.po_number) linkage = await supabaseClient.from('pr_po_linkage').select('pr_id').eq('po_number', (poRow.po_number || '').trim()).limit(1);
-        if (linkage?.data?.[0]?.pr_id) prId = linkage.data[0].pr_id;
+        if (!linkage.data?.length && poHeader?.po_number) {
+          linkage = await supabaseClient.from('pr_po_linkage').select('pr_id').eq('po_number', (poHeader.po_number || '').trim()).limit(1);
+        }
+        if (linkage?.data?.[0]?.pr_id) prId = String(linkage.data[0].pr_id);
       }
     }
     
@@ -513,14 +591,26 @@ const buildFlowManually = async (normalizedType, docId, linkedPrIdFromParent = n
         .from('purchase_requests')
         .select('id, pr_number, status, created_at')
         .eq('id', prId)
-        .single();
+        .maybeSingle();
       if (pr) {
+        prDisplayNumber = pr.pr_number || prDisplayNumber;
         nodes.push({
           doc_type: 'PR',
           doc_id: pr.id,
           doc_number: pr.pr_number,
           doc_status: pr.status,
           doc_date: pr.created_at,
+          is_current: normalizedType === 'PR',
+          sequence_order: 1,
+          count: 1
+        });
+      } else {
+        nodes.push({
+          doc_type: 'PR',
+          doc_id: prId,
+          doc_number: prDisplayNumber || prId,
+          doc_status: '—',
+          doc_date: null,
           is_current: normalizedType === 'PR',
           sequence_order: 1,
           count: 1
@@ -651,6 +741,13 @@ const buildFlowManually = async (normalizedType, docId, linkedPrIdFromParent = n
     nodes[idx].count = 1;
   }
   
+  // Ensure traced ids are clickable even when detail fetch failed (RLS)
+  patchFlowNode(nodes, 'PR', prId, prDisplayNumber);
+  patchFlowNode(nodes, 'PO', poId, null);
+  patchFlowNode(nodes, 'GRN', grnId, null);
+  patchFlowNode(nodes, 'PUR', purId, null);
+  patchFlowNode(nodes, 'PAYMENT', paymentId, null);
+
   // Sort by sequence order
   nodes.sort((a, b) => a.sequence_order - b.sequence_order);
   flowNodes.value = nodes;
@@ -729,6 +826,9 @@ watch(() => props.docId, loadFlow);
 watch(() => props.docType, loadFlow);
 watch(() => props.routeDocId, loadFlow);
 watch(() => props.linkedPrId, loadFlow);
+watch(() => props.sourcePrId, loadFlow);
+watch(() => props.linkedPrNumber, loadFlow);
+watch(() => props.poNotes, loadFlow);
 </script>
 
 <style scoped>

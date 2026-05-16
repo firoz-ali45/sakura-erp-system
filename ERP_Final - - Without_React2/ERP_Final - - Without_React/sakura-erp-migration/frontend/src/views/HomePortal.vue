@@ -307,15 +307,6 @@
           </div>
         </div>
 
-        <router-link 
-          to="/homeportal/platform/tenants" 
-          class="nav-link flex items-center p-4 my-2 rounded-lg"
-          active-class="active"
-        >
-          <i class="fas fa-building w-6 text-center"></i>
-          <span>Nexora Control Center</span>
-        </router-link>
-
         <!-- Manage Expandable Section -->
         <div class="nav-group">
           <a 

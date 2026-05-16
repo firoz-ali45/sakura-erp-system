@@ -495,6 +495,9 @@
         :currentNumber="order.poNumber || order.po_number"
         :routeDocId="route.params.id"
         :linkedPrId="linkedPrId"
+        :sourcePrId="order.source_pr_id"
+        :linkedPrNumber="linkedPrNumber"
+        :poNotes="order.notes"
       />
       
       <!-- Item Transaction Flow (by PR or PO) -->
@@ -951,6 +954,7 @@ const { t, locale, textAlign, isRTL, direction } = useI18n();
 
 const order = ref(null);
 const linkedPrId = ref(null);
+const linkedPrNumber = ref('');
 const loading = ref(true);
 const error = ref(null);
 // CRITICAL: Single source of truth for PO UUID (resolved from numeric route param)
@@ -1147,20 +1151,27 @@ const loadOrder = async () => {
         await updatePOReceivingStatus();
       }
 
-      // Fetch linked PR for ItemFlow
-      try {
-        const { data: linkData } = await supabaseClient
-          .from('pr_po_linkage')
-          .select('pr_id')
-          .eq('po_id', order.value.id)
-          .limit(1);
-        
-        if (linkData && linkData.length > 0) {
-          linkedPrId.value = linkData[0].pr_id;
-          console.log('🔗 Linked PR found:', linkedPrId.value);
+      // Fetch linked PR for Document Flow / ItemFlow
+      if (order.value.source_pr_id) {
+        linkedPrId.value = order.value.source_pr_id;
+      }
+      const notesPr = (order.value.notes || '').match(/PR-\d{4}-\d+/i);
+      if (notesPr) linkedPrNumber.value = notesPr[0].toUpperCase();
+      if (!linkedPrId.value) {
+        try {
+          const { data: linkData } = await supabaseClient
+            .from('pr_po_linkage')
+            .select('pr_id, pr_number')
+            .eq('po_id', order.value.id)
+            .limit(1);
+          if (linkData?.[0]?.pr_id) {
+            linkedPrId.value = linkData[0].pr_id;
+            linkedPrNumber.value = linkData[0].pr_number || linkedPrNumber.value;
+            console.log('🔗 Linked PR found:', linkedPrId.value);
+          }
+        } catch (e) {
+          console.warn('Could not fetch linked PR:', e);
         }
-      } catch (e) {
-        console.warn('Could not fetch linked PR:', e);
       }
     } else {
       throw new Error('Purchase order not found');
@@ -1684,10 +1695,6 @@ const approveOrder = async (e) => {
     // Prepare update data with proper field mapping
     const updateData = {
       status: 'approved',
-      approvedAt: new Date().toISOString(),
-      approved_at: new Date().toISOString(),
-      approver: currentUserName,
-      // Preserve existing order data
       poNumber: order.value.poNumber || order.value.po_number,
       po_number: order.value.poNumber || order.value.po_number,
       supplierId: order.value.supplierId || order.value.supplier_id,
@@ -1698,8 +1705,7 @@ const approveOrder = async (e) => {
       expectedDate: order.value.expectedDate || order.value.expected_date,
       totalAmount: order.value.totalAmount || order.value.total_amount,
       vatAmount: order.value.vatAmount || order.value.vat_amount,
-      notes: order.value.notes,
-      items: order.value.items || []
+      notes: order.value.notes
     };
     
     console.log('📝 Updating purchase order to approved status...');
@@ -3471,83 +3477,6 @@ onMounted(async () => {
     window.removeEventListener('grn-approved', handleGRNApproved);
   });
   
-  // CRITICAL: Force bind click handler to Create GRN button
-  const bindCreateGRNButton = () => {
-    const button = document.getElementById('create-grn-button') ||
-                   document.querySelector('button[id="create-grn-button"]') ||
-                            Array.from(document.querySelectorAll('button')).find(btn => 
-                     btn.textContent && (btn.textContent.includes('Create GRN') || btn.textContent.includes('إنشاء'))
-                            );
-    
-    if (button) {
-      console.log('✅ Create GRN button found, binding click handler');
-      
-      // Remove any existing listeners by cloning
-      const newButton = button.cloneNode(true);
-      button.parentNode.replaceChild(newButton, button);
-      
-      // Add click handler
-      newButton.addEventListener('click', (e) => {
-        console.log('🔥🔥🔥 DIRECT CLICK HANDLER FIRED 🔥🔥🔥');
-        e.stopPropagation();
-        e.preventDefault();
-        onCreateGRN(e);
-      }, { capture: true, once: false });
-      
-      // Also add mousedown/mouseup for debugging
-      newButton.addEventListener('mousedown', () => {
-        console.log('🔥 DIRECT MOUSEDOWN');
-      });
-      
-      newButton.addEventListener('mouseup', () => {
-        console.log('🔥 DIRECT MOUSEUP');
-      });
-      
-      return newButton;
-    } else {
-      console.warn('⚠️ Create GRN button not found');
-      return null;
-    }
-  };
-  
-  // Bind immediately after mount and keep retrying until found
-  const bindButtonWithRetry = async (maxRetries = 10) => {
-    for (let i = 0; i < maxRetries; i++) {
-      await nextTick();
-      const button = bindCreateGRNButton();
-      if (button) {
-        console.log('✅ Button bound successfully on attempt', i + 1);
-        return;
-      }
-      await new Promise(resolve => setTimeout(resolve, 200));
-    }
-    console.error('❌ Failed to bind button after', maxRetries, 'attempts');
-  };
-  
-  await bindButtonWithRetry();
-  
-  // Re-bind after status changes to approved
-  watch(
-    () => poStatus.value,
-    (newStatus) => {
-      if (newStatus === 'approved' || newStatus === 'partially_received') {
-        console.log('[STATUS CHANGE] Re-binding button for status:', newStatus);
-        setTimeout(() => {
-          bindButtonWithRetry(5);
-        }, 200);
-      }
-    }
-  );
-  
-  // Also re-bind after order loads
-  watch(
-    () => order.value?.status,
-    () => {
-      setTimeout(() => {
-        bindButtonWithRetry(3);
-      }, 200);
-    }
-  );
 });
 </script>
 

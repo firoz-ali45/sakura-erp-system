@@ -2113,64 +2113,100 @@ export async function updatePurchaseOrderInSupabase(orderId, orderData) {
 
   try {
     const { items, supplier, ...orderFields } = orderData;
-
-    // Map frontend field names to database column names (snake_case)
-    const updateData = {
-      supplier_id: orderFields.supplierId || orderFields.supplier_id || null,
-      supplier_name: orderFields.supplierName || orderFields.supplier_name || null,
-      destination: orderFields.destination || null,
-      status: orderFields.status || null,
-      business_date: orderFields.businessDate || orderFields.business_date || safeDateOnly(orderFields.orderDate),
-      order_date: safeDateISO(orderFields.orderDate || orderFields.order_date),
-      expected_date: safeDateISO(orderFields.expectedDate || orderFields.expected_date),
-      total_amount: orderFields.totalAmount !== undefined ? parseFloat(orderFields.totalAmount || 0) : null,
-      vat_amount: orderFields.vatAmount !== undefined ? parseFloat(orderFields.vatAmount || 0) : null,
-      notes: orderFields.notes || null,
-      updated_at: new Date().toISOString()
-    };
-
-    // PO number handling - replace DRAFT- prefix with proper PO number if needed
-    if (orderFields.poNumber || orderFields.po_number) {
-      let poNumber = orderFields.poNumber || orderFields.po_number;
-      // If it's a DRAFT- number, generate a proper PO number
-      if (poNumber && poNumber.startsWith('DRAFT-')) {
-        poNumber = await generatePONumber();
-      }
-      updateData.po_number = poNumber;
+    const poNumeric = typeof orderId === 'string' ? parseInt(orderId, 10) : Number(orderId);
+    if (!Number.isFinite(poNumeric)) {
+      return { success: false, error: 'Invalid purchase order id' };
     }
 
-    // Remove undefined values
-    Object.keys(updateData).forEach(key => {
-      if (updateData[key] === undefined) {
-        delete updateData[key];
+    const uid = getCurrentUserUUID();
+    const companyCtx = safeUUID(getCurrentCompanyId());
+
+    let poNumber = orderFields.poNumber || orderFields.po_number || null;
+    if (poNumber && poNumber.startsWith('DRAFT-')) {
+      poNumber = await generatePONumber();
+    }
+
+    let order = null;
+
+    if (uid || companyCtx) {
+      try {
+        const { data: rpcRow, error: rpcErr } = await supabaseClient.rpc('fn_app_update_purchase_order', {
+          p_user_id: uid || null,
+          p_po_id: poNumeric,
+          p_company_id: companyCtx || null,
+          p_status: orderFields.status || null,
+          p_supplier_id: orderFields.supplierId || orderFields.supplier_id || null,
+          p_supplier_name: orderFields.supplierName || orderFields.supplier_name || null,
+          p_destination: orderFields.destination ?? null,
+          p_business_date: orderFields.businessDate || orderFields.business_date || safeDateOnly(orderFields.orderDate) || null,
+          p_order_date: safeDateISO(orderFields.orderDate || orderFields.order_date) || null,
+          p_expected_date: safeDateISO(orderFields.expectedDate || orderFields.expected_date) || null,
+          p_total_amount: orderFields.totalAmount !== undefined ? parseFloat(orderFields.totalAmount || 0) : null,
+          p_vat_amount: orderFields.vatAmount !== undefined ? parseFloat(orderFields.vatAmount || 0) : null,
+          p_notes: orderFields.notes ?? null,
+          p_po_number: poNumber
+        }).maybeSingle();
+        const row = Array.isArray(rpcRow) ? rpcRow[0] : rpcRow;
+        if (!rpcErr && row) {
+          order = row;
+          console.log('✅ PO updated via fn_app_update_purchase_order:', poNumeric);
+        } else {
+          const missingFn =
+            rpcErr?.code === 'PGRST202' ||
+            (rpcErr?.message && String(rpcErr.message || '').includes('fn_app_update_purchase_order'));
+          if (rpcErr && !missingFn) {
+            console.error('❌ RPC fn_app_update_purchase_order:', rpcErr);
+            if (rpcErr.code === 'P0002' || String(rpcErr.message || '').includes('not found')) {
+              return { success: false, error: 'Purchase order not found' };
+            }
+          }
+        }
+      } catch (e) {
+        console.warn('RPC fn_app_update_purchase_order threw, using direct update:', e);
       }
-    });
+    }
 
-    // Log the data being updated for debugging
-    console.log('📝 Updating purchase order data:', JSON.stringify(updateData, null, 2));
-
-    // Update order
-    const { data: order, error: orderError } = await supabaseClient
-      .from('purchase_orders')
-      .update(updateData)
-      .eq('id', orderId)
-      .select()
-      .single();
-
-    if (orderError) {
-      console.error('❌ Error updating purchase order in Supabase:', orderError);
-      console.error('❌ Error details:', {
-        message: orderError.message,
-        details: orderError.details,
-        hint: orderError.hint,
-        code: orderError.code
-      });
-      return {
-        success: false,
-        error: orderError.message || 'Failed to update purchase order',
-        details: orderError.details,
-        hint: orderError.hint
+    if (!order) {
+      const updateData = {
+        supplier_id: orderFields.supplierId || orderFields.supplier_id || null,
+        supplier_name: orderFields.supplierName || orderFields.supplier_name || null,
+        destination: orderFields.destination || null,
+        status: orderFields.status || null,
+        business_date: orderFields.businessDate || orderFields.business_date || safeDateOnly(orderFields.orderDate),
+        order_date: safeDateISO(orderFields.orderDate || orderFields.order_date),
+        expected_date: safeDateISO(orderFields.expectedDate || orderFields.expected_date),
+        total_amount: orderFields.totalAmount !== undefined ? parseFloat(orderFields.totalAmount || 0) : null,
+        vat_amount: orderFields.vatAmount !== undefined ? parseFloat(orderFields.vatAmount || 0) : null,
+        notes: orderFields.notes || null,
+        updated_at: new Date().toISOString()
       };
+      if (poNumber) updateData.po_number = poNumber;
+      Object.keys(updateData).forEach((key) => {
+        if (updateData[key] === undefined) delete updateData[key];
+      });
+
+      console.log('📝 Updating purchase order data (direct):', JSON.stringify(updateData, null, 2));
+
+      const { data: od, error: orderError } = await supabaseClient
+        .from('purchase_orders')
+        .update(updateData)
+        .eq('id', orderId)
+        .select()
+        .maybeSingle();
+
+      if (orderError) {
+        console.error('❌ Error updating purchase order in Supabase:', orderError);
+        return {
+          success: false,
+          error: orderError.message || 'Failed to update purchase order',
+          details: orderError.details,
+          hint: orderError.hint
+        };
+      }
+      if (!od) {
+        return { success: false, error: 'Purchase order not found' };
+      }
+      order = od;
     }
 
     // Update items (delete old, insert new)
@@ -2231,15 +2267,29 @@ export async function updatePurchaseOrderInSupabase(orderId, orderData) {
       }
     }
 
-    // Reload order with supplier (simplified query)
-    const { data: orderWithSupplier, error: supplierReloadError } = await supabaseClient
-      .from('purchase_orders')
-      .select(`
+    let orderWithSupplier = null;
+    if (uid || companyCtx) {
+      const { data: rpcReload } = await supabaseClient.rpc('fn_app_get_purchase_order', {
+        p_user_id: uid || null,
+        p_po_id: poNumeric,
+        p_company_id: companyCtx || null
+      }).maybeSingle();
+      orderWithSupplier = Array.isArray(rpcReload) ? rpcReload[0] : rpcReload;
+    }
+    if (!orderWithSupplier) {
+      const { data: od2, error: reloadErr } = await supabaseClient
+        .from('purchase_orders')
+        .select(`
         *,
         supplier:suppliers(*)
       `)
-      .eq('id', orderId)
-      .single();
+        .eq('id', orderId)
+        .maybeSingle();
+      if (reloadErr) {
+        console.error('❌ Error reloading purchase order with supplier:', reloadErr);
+      }
+      orderWithSupplier = od2;
+    }
 
     // Load items separately WITH item relationship - CRITICAL for displaying item names/SKUs
     const { data: orderItems, error: itemsReloadError } = await supabaseClient
@@ -2249,10 +2299,6 @@ export async function updatePurchaseOrderInSupabase(orderId, orderData) {
         item:inventory_items(*)
       `)
       .eq('purchase_order_id', orderId);
-
-    if (supplierReloadError) {
-      console.error('❌ Error reloading purchase order with supplier:', supplierReloadError);
-    }
 
     if (itemsReloadError) {
       console.error('❌ Error reloading purchase order items:', itemsReloadError);
