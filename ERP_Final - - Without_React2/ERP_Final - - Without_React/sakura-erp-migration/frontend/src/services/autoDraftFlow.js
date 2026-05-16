@@ -284,67 +284,19 @@ export async function createGRNDraftFromPO(purchaseOrder) {
       };
     }
     
-    // CRITICAL FIX: Fetch PO UUID before creating GRN (never send numeric ID)
-    // GRN table requires UUID, not numeric IDs (e.g., 48 → UUID)
-    let poUuid = poId;
-    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-    const isNumericId = typeof poId === 'number' || (typeof poId === 'string' && /^\d+$/.test(poId));
-    
-    if (isNumericId || !uuidRegex.test(poId)) {
-      console.warn('⚠️ PO ID is numeric or not UUID format, looking up UUID from Supabase...', poId);
-      
-      if (USE_SUPABASE && supabaseClient) {
-        try {
-          // Try lookup by po_number first (most reliable)
-          const poNumber = purchaseOrder.poNumber || purchaseOrder.po_number;
-          if (poNumber) {
-            const { data: poRecord, error: poError } = await supabaseClient
-              .from('purchase_orders')
-              .select('id')
-              .eq('po_number', poNumber)
-              .single();
-            
-            if (!poError && poRecord?.id) {
-              poUuid = poRecord.id;
-              console.log('✅ Found PO UUID by po_number:', poUuid);
-            } else {
-              console.warn('⚠️ Could not find PO by po_number:', poError?.message);
-              // Fallback: try lookup by numeric ID as string (if table has numeric id column)
-              // This is unlikely for Supabase (uses UUID), but try anyway
-              const { data: poRecordAlt, error: poErrorAlt } = await supabaseClient
-                .from('purchase_orders')
-                .select('id')
-                .eq('id', String(poId))
-                .single();
-              
-              if (!poErrorAlt && poRecordAlt?.id) {
-                poUuid = poRecordAlt.id;
-                console.log('✅ Found PO UUID by numeric ID:', poUuid);
-              } else {
-                console.error('❌ PO UUID lookup failed:', poErrorAlt?.message || 'No record found');
-                throw new Error(`PO UUID lookup failed: Could not find PO with number "${poNumber}" or ID "${poId}"`);
-              }
-            }
-          } else {
-            console.error('❌ No po_number available for UUID lookup');
-            throw new Error('PO UUID lookup failed: No po_number available');
-          }
-        } catch (lookupError) {
-          console.error('❌ Error looking up PO UUID:', lookupError);
-          throw new Error(`PO UUID lookup failed: ${lookupError.message || 'Unknown error'}`);
-        }
-      } else {
-        console.error('❌ Supabase not available for UUID lookup');
-        throw new Error('PO UUID lookup failed: Supabase not available');
-      }
-    } else {
-      console.log('✅ PO ID is already UUID format:', poUuid);
-    }
-    
-    // Create GRN Draft payload
-    // grn_inspections.purchase_order_id is BIGINT (FK to purchase_orders.id). Send PO id so document_flow trigger gets non-null source_id.
+    // Use PO primary key from caller (BIGINT id on purchase_orders — already loaded on detail page).
     const poNumber = purchaseOrder.poNumber || purchaseOrder.po_number;
-    const poIdForDb = purchaseOrder.id != null ? (typeof purchaseOrder.id === 'number' ? purchaseOrder.id : parseInt(purchaseOrder.id, 10)) : null;
+    const rawPoId = purchaseOrder.id ?? purchaseOrder.purchase_order_id ?? purchaseOrder.purchaseOrderId;
+    if (rawPoId == null || rawPoId === '') {
+      throw new Error('Purchase order id is missing — reload the PO page and try again.');
+    }
+    const poIdForDb =
+      typeof rawPoId === 'number'
+        ? rawPoId
+        : /^\d+$/.test(String(rawPoId))
+          ? parseInt(String(rawPoId), 10)
+          : rawPoId;
+    console.log('✅ Using PO id from loaded record (no re-fetch):', poIdForDb, poNumber || '');
     
     const grnDraft = {
       // GRN Header - Auto-filled from PO

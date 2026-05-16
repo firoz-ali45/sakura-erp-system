@@ -8,7 +8,7 @@ import { getCurrentCompanyId } from '@/services/db.js';
 
 function _currentUserId() {
   try {
-    const u = localStorage.getItem('nexora_current_user');
+    const u = localStorage.getItem('sakura_current_user');
     if (!u) return null;
     const parsed = JSON.parse(u);
     return parsed?.id || null;
@@ -379,7 +379,7 @@ export async function logErpAudit(userId, action, entityType, entityId, module, 
   if (!client) return;
   try {
     const ua = typeof navigator !== 'undefined' ? navigator.userAgent?.slice(0, 500) : null;
-    const sid = sessionId || (typeof localStorage !== 'undefined' ? localStorage.getItem('nexora_session_id') : null);
+    const sid = sessionId || (typeof localStorage !== 'undefined' ? localStorage.getItem('sakura_session_id') : null);
     await client.rpc('fn_log_erp_audit', {
       p_user_id: userId,
       p_action: action,

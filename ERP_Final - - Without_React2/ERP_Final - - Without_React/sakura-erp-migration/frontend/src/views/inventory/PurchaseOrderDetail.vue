@@ -490,6 +490,7 @@
     <div class="px-4 md:px-6 mx-auto max-w-7xl">
       <DocumentFlow 
         v-if="order"
+        :key="documentFlowKey"
         docType="po" 
         :docId="order.id" 
         :currentNumber="order.poNumber || order.po_number"
@@ -955,6 +956,7 @@ const { t, locale, textAlign, isRTL, direction } = useI18n();
 const order = ref(null);
 const linkedPrId = ref(null);
 const linkedPrNumber = ref('');
+const documentFlowKey = ref(0);
 const loading = ref(true);
 const error = ref(null);
 // CRITICAL: Single source of truth for PO UUID (resolved from numeric route param)
@@ -2063,6 +2065,8 @@ const createGRN = async () => {
       }
       
       showNotification('GRN Draft created successfully. Redirecting...', 'success', 2000);
+      documentFlowKey.value += 1;
+      await loadGRNsForPO();
       
       console.log('[REDIRECT START]', { grnId, router: !!router });
       
@@ -3328,96 +3332,13 @@ watch(
 
 onMounted(async () => {
   destinationOptions.value = await loadLocationsForPO();
-  // STEP 1: Resolve PO UUID from numeric route param (SINGLE SOURCE OF TRUTH)
   const routeParamId = route.params?.id;
   if (!routeParamId) {
     error.value = 'No purchase order ID provided';
     loading.value = false;
     return;
   }
-  
-  // Database uses INTEGER IDs, not UUIDs - use route param directly
-  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-  const isNumericId = typeof routeParamId === 'number' || (typeof routeParamId === 'string' && /^\d+$/.test(routeParamId));
-  
-  if (isNumericId) {
-    // Numeric ID: Use directly (database uses integer IDs)
-    console.log('✅ Using numeric route param as PO ID:', routeParamId);
-    poUuid.value = String(routeParamId);
-    console.log('✅ PO ID set:', poUuid.value);
-  } else if (uuidRegex.test(routeParamId)) {
-    // UUID format: Use directly
-    poUuid.value = routeParamId;
-    console.log('✅ Route param is UUID:', poUuid.value);
-  } else {
-    // Try lookup by po_number if route param is not numeric or UUID
-    console.log('🔍 Resolving PO ID from route param:', routeParamId);
-    try {
-      // Strategy 1: Try by po_number (exact match)
-      let poRecord = null;
-      let poError = null;
-      
-      const { data: dataByNumber, error: errorByNumber } = await supabaseClient
-        .from('purchase_orders')
-        .select('id, po_number')
-        .eq('po_number', String(routeParamId))
-        .maybeSingle();
-      
-      if (!errorByNumber && dataByNumber?.id) {
-        poRecord = dataByNumber;
-      } else {
-        // Strategy 2: Try by id (if numeric ID is actually UUID or stored differently)
-        const { data: dataById, error: errorById } = await supabaseClient
-          .from('purchase_orders')
-          .select('id, po_number')
-          .eq('id', routeParamId)
-          .maybeSingle();
-        
-        if (!errorById && dataById?.id) {
-          poRecord = dataById;
-        } else {
-          // Strategy 3: Try numeric po_number patterns (PO-XXX, etc.)
-          const paddedNumber = String(routeParamId).padStart(6, '0');
-          const { data: dataByPattern, error: errorByPattern } = await supabaseClient
-            .from('purchase_orders')
-            .select('id, po_number')
-            .or(`po_number.eq.PO-${paddedNumber},po_number.ilike.%${routeParamId}%`)
-            .limit(1)
-            .maybeSingle();
-          
-          if (!errorByPattern && dataByPattern?.id) {
-            poRecord = dataByPattern;
-          } else {
-            poError = errorByPattern || errorById || errorByNumber;
-          }
-        }
-      }
-      
-      if (poError || !poRecord?.id) {
-        console.error('❌ PO UUID lookup failed after all strategies:', poError?.message);
-        error.value = `Purchase order with number "${routeParamId}" not found`;
-        loading.value = false;
-        return;
-      }
-      
-      // Database uses INTEGER IDs - use directly
-      poUuid.value = String(poRecord.id);
-      console.log('✅ PO ID resolved:', poUuid.value, 'from route param:', routeParamId, 'po_number:', poRecord.po_number);
-    } catch (lookupError) {
-      console.error('❌ Error looking up PO ID:', lookupError);
-      error.value = `Failed to lookup purchase order: ${lookupError.message}`;
-      loading.value = false;
-      return;
-    }
-  }
-  
-  // STEP 2: Load order using UUID (never use numeric ID)
-  if (!poUuid.value) {
-    error.value = 'PO UUID resolution failed';
-    loading.value = false;
-    return;
-  }
-  
+  poUuid.value = String(routeParamId);
   loadOrder();
   loadInventoryItems();
   loadSuppliers();

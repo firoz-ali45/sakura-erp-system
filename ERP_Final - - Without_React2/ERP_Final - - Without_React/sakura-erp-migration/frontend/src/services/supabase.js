@@ -87,7 +87,7 @@ export async function getUsers() {
 
 function getUsersFromLocalStorage() {
   try {
-    const users = JSON.parse(localStorage.getItem('nexora_users') || '[]');
+    const users = JSON.parse(localStorage.getItem('sakura_users') || '[]');
     console.log('getUsers() from localStorage - Found users:', users.length);
     return users;
   } catch (error) {
@@ -396,7 +396,7 @@ export async function loginWithSupabase(email, password) {
       });
       if (sessionId) {
         try {
-          localStorage.setItem('nexora_session_id', sessionId);
+          localStorage.setItem('sakura_session_id', sessionId);
         } catch (_) { }
       }
       const { logActivity } = await import('@/services/userManagementService.js');
@@ -466,7 +466,7 @@ export async function loadItemsFromSupabase(opts = {}) {
   const companyCtx = safeUUID(getCurrentCompanyId());
 
   // RPC accepts optional p_company_id: used when users.company_id is NULL in DB, or when
-  // getCurrentUserUUID() is null (legacy session) but nexora_company_id / login context exists.
+  // getCurrentUserUUID() is null (legacy session) but sakura_company_id / login context exists.
   if (uid || companyCtx) {
     try {
       const { data: rpcRows, error: rpcError } = await supabaseClient.rpc('fn_app_list_inventory_items', {
@@ -511,7 +511,7 @@ export async function loadItemsFromSupabase(opts = {}) {
 
 function getItemsFromLocalStorage() {
   try {
-    return JSON.parse(localStorage.getItem('nexora_inventory_items') || '[]');
+    return JSON.parse(localStorage.getItem('sakura_inventory_items') || '[]');
   } catch (error) {
     console.error('Error reading items from localStorage:', error);
     return [];
@@ -653,7 +653,7 @@ export async function saveItemToSupabase(item) {
 
 function saveItemToLocalStorage(item) {
   try {
-    const items = JSON.parse(localStorage.getItem('nexora_inventory_items') || '[]');
+    const items = JSON.parse(localStorage.getItem('sakura_inventory_items') || '[]');
     const newItem = {
       ...item,
       id: item.id || Date.now().toString(),
@@ -661,7 +661,7 @@ function saveItemToLocalStorage(item) {
       updated_at: new Date().toISOString()
     };
     items.push(newItem);
-    localStorage.setItem('nexora_inventory_items', JSON.stringify(items));
+    localStorage.setItem('sakura_inventory_items', JSON.stringify(items));
     return { success: true, data: newItem };
   } catch (error) {
     console.error('Error saving item to localStorage:', error);
@@ -705,11 +705,11 @@ export async function updateItemInSupabase(itemId, updates) {
 
 function updateItemInLocalStorage(itemId, updates) {
   try {
-    const items = JSON.parse(localStorage.getItem('nexora_inventory_items') || '[]');
+    const items = JSON.parse(localStorage.getItem('sakura_inventory_items') || '[]');
     const index = items.findIndex(item => item.id === itemId);
     if (index !== -1) {
       items[index] = { ...items[index], ...updates, updated_at: new Date().toISOString() };
-      localStorage.setItem('nexora_inventory_items', JSON.stringify(items));
+      localStorage.setItem('sakura_inventory_items', JSON.stringify(items));
       return { success: true, data: items[index] };
     }
     return { success: false, error: 'Item not found' };
@@ -748,9 +748,9 @@ export async function deleteItemFromSupabase(itemId) {
 
 function deleteItemFromLocalStorage(itemId) {
   try {
-    const items = JSON.parse(localStorage.getItem('nexora_inventory_items') || '[]');
+    const items = JSON.parse(localStorage.getItem('sakura_inventory_items') || '[]');
     const filtered = items.filter(item => item.id !== itemId);
-    localStorage.setItem('nexora_inventory_items', JSON.stringify(filtered));
+    localStorage.setItem('sakura_inventory_items', JSON.stringify(filtered));
     return { success: true };
   } catch (error) {
     console.error('Error deleting item from localStorage:', error);
@@ -793,11 +793,11 @@ export async function restoreItemFromSupabase(itemId) {
 
 function restoreItemFromLocalStorage(itemId) {
   try {
-    const items = JSON.parse(localStorage.getItem('nexora_inventory_items') || '[]');
+    const items = JSON.parse(localStorage.getItem('sakura_inventory_items') || '[]');
     const index = items.findIndex(item => item.id === itemId);
     if (index !== -1) {
       items[index] = { ...items[index], deleted: false, deleted_at: null, updated_at: new Date().toISOString() };
-      localStorage.setItem('nexora_inventory_items', JSON.stringify(items));
+      localStorage.setItem('sakura_inventory_items', JSON.stringify(items));
       return { success: true, data: items[index] };
     }
     return { success: false, error: 'Item not found' };
@@ -838,7 +838,7 @@ export async function loadCategoriesFromSupabase() {
 
 function getCategoriesFromLocalStorage() {
   try {
-    return JSON.parse(localStorage.getItem('nexora_inventory_categories') || '[]');
+    return JSON.parse(localStorage.getItem('sakura_inventory_categories') || '[]');
   } catch (error) {
     console.error('Error reading categories from localStorage:', error);
     return [];
@@ -881,7 +881,7 @@ export async function saveCategoryToSupabase(category) {
 
 function saveCategoryToLocalStorage(category) {
   try {
-    const categories = JSON.parse(localStorage.getItem('nexora_inventory_categories') || '[]');
+    const categories = JSON.parse(localStorage.getItem('sakura_inventory_categories') || '[]');
     const newCategory = {
       ...category,
       id: category.id || Date.now().toString(),
@@ -889,7 +889,7 @@ function saveCategoryToLocalStorage(category) {
       updated_at: new Date().toISOString()
     };
     categories.push(newCategory);
-    localStorage.setItem('nexora_inventory_categories', JSON.stringify(categories));
+    localStorage.setItem('sakura_inventory_categories', JSON.stringify(categories));
     return { success: true, data: newCategory };
   } catch (error) {
     console.error('Error saving category to localStorage:', error);
@@ -933,11 +933,11 @@ export async function updateCategoryInSupabase(categoryId, updates) {
 
 function updateCategoryInLocalStorage(categoryId, updates) {
   try {
-    const categories = JSON.parse(localStorage.getItem('nexora_inventory_categories') || '[]');
+    const categories = JSON.parse(localStorage.getItem('sakura_inventory_categories') || '[]');
     const index = categories.findIndex(cat => cat.id === categoryId);
     if (index !== -1) {
       categories[index] = { ...categories[index], ...updates, updated_at: new Date().toISOString() };
-      localStorage.setItem('nexora_inventory_categories', JSON.stringify(categories));
+      localStorage.setItem('sakura_inventory_categories', JSON.stringify(categories));
       return { success: true, data: categories[index] };
     }
     return { success: false, error: 'Category not found' };
@@ -980,9 +980,9 @@ export async function deleteCategoryFromSupabase(categoryId) {
 
 function deleteCategoryFromLocalStorage(categoryId) {
   try {
-    const categories = JSON.parse(localStorage.getItem('nexora_inventory_categories') || '[]');
+    const categories = JSON.parse(localStorage.getItem('sakura_inventory_categories') || '[]');
     const filtered = categories.filter(cat => cat.id !== categoryId);
-    localStorage.setItem('nexora_inventory_categories', JSON.stringify(filtered));
+    localStorage.setItem('sakura_inventory_categories', JSON.stringify(filtered));
     return { success: true };
   } catch (error) {
     console.error('Error deleting category from localStorage:', error);
@@ -1022,12 +1022,12 @@ export async function restoreCategoryFromSupabase(categoryId) {
 
 function restoreCategoryFromLocalStorage(categoryId) {
   try {
-    const categories = JSON.parse(localStorage.getItem('nexora_inventory_categories') || '[]');
+    const categories = JSON.parse(localStorage.getItem('sakura_inventory_categories') || '[]');
     const category = categories.find(cat => cat.id === categoryId);
     if (category) {
       category.deleted = false;
       category.deleted_at = null;
-      localStorage.setItem('nexora_inventory_categories', JSON.stringify(categories));
+      localStorage.setItem('sakura_inventory_categories', JSON.stringify(categories));
       return { success: true };
     }
     return { success: false, error: 'Category not found' };
@@ -1072,7 +1072,7 @@ export async function loadDepartmentsFromSupabase() {
 
 function getDepartmentsFromLocalStorage() {
   try {
-    const stored = localStorage.getItem('nexora_departments');
+    const stored = localStorage.getItem('sakura_departments');
     if (stored) return JSON.parse(stored);
     return [
       { id: null, code: 'PROC', name: 'Procurement' },
@@ -1213,7 +1213,7 @@ export async function loadSuppliersFromSupabase(opts = {}) {
 
 function getSuppliersFromLocalStorage() {
   try {
-    const stored = localStorage.getItem('nexora_suppliers') || localStorage.getItem('suppliers');
+    const stored = localStorage.getItem('sakura_suppliers') || localStorage.getItem('suppliers');
     return stored ? JSON.parse(stored) : [];
   } catch (error) {
     console.error('Error loading suppliers from localStorage:', error);
@@ -3136,7 +3136,7 @@ export async function loadGRNsFromSupabase() {
 
 function getGRNsFromLocalStorage() {
   try {
-    const grns = JSON.parse(localStorage.getItem('nexora_grns') || '[]');
+    const grns = JSON.parse(localStorage.getItem('sakura_grns') || '[]');
     return grns;
   } catch (error) {
     console.error('Error reading GRNs from localStorage:', error);
@@ -3541,7 +3541,7 @@ export async function saveGRNToSupabase(grn) {
     const status = (grnFields.status || '').toLowerCase();
     if (status && status !== 'draft') {
       try {
-        const u = localStorage.getItem('nexora_current_user');
+        const u = localStorage.getItem('sakura_current_user');
         const uid = u ? (JSON.parse(u)?.id) : null;
         if (uid) {
           const { logActivity } = await import('@/services/userManagementService.js');
@@ -3561,7 +3561,7 @@ export async function saveGRNToSupabase(grn) {
 
 function saveGRNToLocalStorage(grn) {
   try {
-    const grns = JSON.parse(localStorage.getItem('nexora_grns') || '[]');
+    const grns = JSON.parse(localStorage.getItem('sakura_grns') || '[]');
     const newGRN = {
       ...grn,
       id: grn.id || `grn_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
@@ -3569,7 +3569,7 @@ function saveGRNToLocalStorage(grn) {
       updated_at: new Date().toISOString()
     };
     grns.push(newGRN);
-    localStorage.setItem('nexora_grns', JSON.stringify(grns));
+    localStorage.setItem('sakura_grns', JSON.stringify(grns));
     return { success: true, data: newGRN };
   } catch (error) {
     console.error('Error saving GRN to localStorage:', error);
@@ -3940,11 +3940,11 @@ export async function updateGRNInSupabase(grnId, updates) {
 
 function updateGRNInLocalStorage(grnId, updates) {
   try {
-    const grns = JSON.parse(localStorage.getItem('nexora_grns') || '[]');
+    const grns = JSON.parse(localStorage.getItem('sakura_grns') || '[]');
     const index = grns.findIndex(g => g.id === grnId);
     if (index !== -1) {
       grns[index] = { ...grns[index], ...updates, updated_at: new Date().toISOString() };
-      localStorage.setItem('nexora_grns', JSON.stringify(grns));
+      localStorage.setItem('sakura_grns', JSON.stringify(grns));
       return { success: true, data: grns[index] };
     }
     return { success: false, error: 'GRN not found' };
@@ -3988,9 +3988,9 @@ export async function deleteGRNFromSupabase(grnId) {
 
 function deleteGRNFromLocalStorage(grnId) {
   try {
-    const grns = JSON.parse(localStorage.getItem('nexora_grns') || '[]');
+    const grns = JSON.parse(localStorage.getItem('sakura_grns') || '[]');
     const filtered = grns.filter(g => g.id !== grnId);
-    localStorage.setItem('nexora_grns', JSON.stringify(filtered));
+    localStorage.setItem('sakura_grns', JSON.stringify(filtered));
     return { success: true };
   } catch (error) {
     console.error('Error deleting GRN from localStorage:', error);
@@ -4111,7 +4111,7 @@ export async function getGRNById(grnId) {
 
 function getGRNByIdFromLocalStorage(grnId) {
   try {
-    const grns = JSON.parse(localStorage.getItem('nexora_grns') || '[]');
+    const grns = JSON.parse(localStorage.getItem('sakura_grns') || '[]');
     const grn = grns.find(g => g.id === grnId);
     if (grn) {
       grn.batches = []; // Batches only from Supabase, never localStorage
@@ -4155,7 +4155,7 @@ export async function generateGRNNumber() {
 
     // Fallback to localStorage
     // Exclude draft GRNs and DRAFT- numbers - only count GRNs that have been submitted
-    const grns = JSON.parse(localStorage.getItem('nexora_grns') || '[]');
+    const grns = JSON.parse(localStorage.getItem('sakura_grns') || '[]');
     const numbers = grns
       .filter(g => {
         const status = (g.status || '').toLowerCase();
@@ -4494,7 +4494,7 @@ export async function saveBatchToSupabase(batch) {
 
 function saveBatchToLocalStorage(batch) {
   try {
-    const batches = JSON.parse(localStorage.getItem('nexora_grn_batches') || '[]');
+    const batches = JSON.parse(localStorage.getItem('sakura_grn_batches') || '[]');
     const newBatch = {
       ...batch,
       id: batch.id || `batch_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
@@ -4502,7 +4502,7 @@ function saveBatchToLocalStorage(batch) {
       updated_at: new Date().toISOString()
     };
     batches.push(newBatch);
-    localStorage.setItem('nexora_grn_batches', JSON.stringify(batches));
+    localStorage.setItem('sakura_grn_batches', JSON.stringify(batches));
     return { success: true, data: newBatch };
   } catch (error) {
     console.error('Error saving batch to localStorage:', error);
@@ -4539,9 +4539,9 @@ export async function deleteBatchFromSupabase(batchId) {
   }
   // Non-UUID (e.g. localStorage batch_xxx) or no Supabase: localStorage only
   try {
-    const batches = JSON.parse(localStorage.getItem('nexora_grn_batches') || '[]');
+    const batches = JSON.parse(localStorage.getItem('sakura_grn_batches') || '[]');
     const filtered = batches.filter(b => b.id !== batchId);
-    localStorage.setItem('nexora_grn_batches', JSON.stringify(filtered));
+    localStorage.setItem('sakura_grn_batches', JSON.stringify(filtered));
     return { success: true };
   } catch (error) {
     return { success: false, error: error.message };
@@ -4621,11 +4621,11 @@ export async function updateBatchInSupabase(batchId, updates) {
 
 function updateBatchInLocalStorage(batchId, updates) {
   try {
-    const batches = JSON.parse(localStorage.getItem('nexora_grn_batches') || '[]');
+    const batches = JSON.parse(localStorage.getItem('sakura_grn_batches') || '[]');
     const index = batches.findIndex(b => b.id === batchId);
     if (index !== -1) {
       batches[index] = { ...batches[index], ...updates, updated_at: new Date().toISOString() };
-      localStorage.setItem('nexora_grn_batches', JSON.stringify(batches));
+      localStorage.setItem('sakura_grn_batches', JSON.stringify(batches));
       return { success: true, data: batches[index] };
     }
     return { success: false, error: 'Batch not found' };
@@ -4723,7 +4723,7 @@ export async function loadBatchesForGRN(grnId) {
     }
     if (!data || data.length === 0) {
       try {
-        const stored = JSON.parse(typeof localStorage !== 'undefined' ? localStorage.getItem('nexora_grn_batches') || '[]' : '[]');
+        const stored = JSON.parse(typeof localStorage !== 'undefined' ? localStorage.getItem('sakura_grn_batches') || '[]' : '[]');
         const forGrn = (stored || []).filter(b => (b.grnId || b.grn_id) === grnId);
         if (forGrn.length > 0) return forGrn.map(b => ({ ...b, item_id: b.item_id || b.itemId, qty_received: b.qty_received ?? b.quantity ?? b.batchQuantity ?? 0, remaining_qty: 0 }));
       } catch (_) {}
@@ -4810,7 +4810,7 @@ export async function loadPurchasingInvoicesFromSupabase() {
 
 function getPurchasingInvoicesFromLocalStorage() {
   try {
-    return JSON.parse(localStorage.getItem('nexora_purchasing_invoices') || '[]');
+    return JSON.parse(localStorage.getItem('sakura_purchasing_invoices') || '[]');
   } catch (error) {
     return [];
   }
@@ -4864,7 +4864,7 @@ export async function getPurchasingInvoiceById(invoiceId) {
 
 function getPurchasingInvoiceByIdFromLocalStorage(invoiceId) {
   try {
-    const invoices = JSON.parse(localStorage.getItem('nexora_purchasing_invoices') || '[]');
+    const invoices = JSON.parse(localStorage.getItem('sakura_purchasing_invoices') || '[]');
     const invoice = invoices.find(inv => inv.id === invoiceId);
     return invoice ? { success: true, data: invoice } : { success: false, error: 'Invoice not found' };
   } catch (error) {
@@ -4900,14 +4900,14 @@ export async function savePurchasingInvoiceToSupabase(invoiceData) {
 
 function savePurchasingInvoiceToLocalStorage(invoiceData) {
   try {
-    const invoices = JSON.parse(localStorage.getItem('nexora_purchasing_invoices') || '[]');
+    const invoices = JSON.parse(localStorage.getItem('sakura_purchasing_invoices') || '[]');
     const newInvoice = {
       ...invoiceData,
       id: invoiceData.id || crypto.randomUUID(),
       created_at: new Date().toISOString()
     };
     invoices.push(newInvoice);
-    localStorage.setItem('nexora_purchasing_invoices', JSON.stringify(invoices));
+    localStorage.setItem('sakura_purchasing_invoices', JSON.stringify(invoices));
     return { success: true, data: newInvoice };
   } catch (error) {
     return { success: false, error: error.message };
@@ -4935,13 +4935,13 @@ export async function updatePurchasingInvoiceInSupabase(invoiceId, updates) {
 
 function updatePurchasingInvoiceInLocalStorage(invoiceId, updates) {
   try {
-    const invoices = JSON.parse(localStorage.getItem('nexora_purchasing_invoices') || '[]');
+    const invoices = JSON.parse(localStorage.getItem('sakura_purchasing_invoices') || '[]');
     const index = invoices.findIndex(inv => inv.id === invoiceId);
     if (index === -1) {
       return { success: false, error: 'Invoice not found' };
     }
     invoices[index] = { ...invoices[index], ...updates, updated_at: new Date().toISOString() };
-    localStorage.setItem('nexora_purchasing_invoices', JSON.stringify(invoices));
+    localStorage.setItem('sakura_purchasing_invoices', JSON.stringify(invoices));
     return { success: true, data: invoices[index] };
   } catch (error) {
     return { success: false, error: error.message };

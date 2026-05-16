@@ -414,7 +414,7 @@
     </main>
 
     <!-- Sakura AI Assistant Chatbot -->
-    <NexoraAIAssistant />
+    <AIAssistant />
 
     <!-- Settings Modal (Complete - Original Structure) -->
     <div 
@@ -649,7 +649,7 @@ import { usePermissions } from '@/composables/usePermissions';
 import { formatDateTime } from '@/utils/dateFormat';
 import { formatNumber } from '@/utils/numberFormat';
 import { updateUserInSupabase, initSupabase, USE_SUPABASE, supabaseClient, getUsers } from '@/services/supabase';
-import NexoraAIAssistant from '@/components/NexoraAIAssistant.vue';
+import AIAssistant from '@/components/AIAssistant.vue';
 // Advanced ERP Features - lazy loaded for performance
 // import { 
 //   AuditLogger, 

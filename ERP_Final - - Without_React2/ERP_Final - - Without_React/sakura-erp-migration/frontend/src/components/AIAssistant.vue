@@ -1,7 +1,7 @@
-<template>
+﻿<template>
   <div
     :class="[
-      'nexora-ai-assistant',
+      'sakura-ai-assistant',
       isOpen ? 'open' : '',
       isRTL ? 'rtl' : 'ltr'
     ]"
@@ -172,10 +172,10 @@ const sendMessage = async () => {
 
     const fallbackResponse = isGenericResponseError
       ? (locale.value === 'ar'
-          ? 'خطأ في النظام: تم اكتشاف استجابة عامة محظورة. يرجى التواصل مع فريق الدعم التقني.'
+          ? 'Ø®Ø·Ø£ ÙÙŠ Ø§Ù„Ù†Ø¸Ø§Ù…: ØªÙ… Ø§ÙƒØªØ´Ø§Ù Ø§Ø³ØªØ¬Ø§Ø¨Ø© Ø¹Ø§Ù…Ø© Ù…Ø­Ø¸ÙˆØ±Ø©. ÙŠØ±Ø¬Ù‰ Ø§Ù„ØªÙˆØ§ØµÙ„ Ù…Ø¹ ÙØ±ÙŠÙ‚ Ø§Ù„Ø¯Ø¹Ù… Ø§Ù„ØªÙ‚Ù†ÙŠ.'
           : 'System error: Forbidden generic response detected. Please contact technical support.')
       : (locale.value === 'ar'
-          ? 'عذراً، حدث خطأ أثناء معالجة طلبك. يرجى المحاولة مرة أخرى.'
+          ? 'Ø¹Ø°Ø±Ø§Ù‹ØŒ Ø­Ø¯Ø« Ø®Ø·Ø£ Ø£Ø«Ù†Ø§Ø¡ Ù…Ø¹Ø§Ù„Ø¬Ø© Ø·Ù„Ø¨Ùƒ. ÙŠØ±Ø¬Ù‰ Ø§Ù„Ù…Ø­Ø§ÙˆÙ„Ø© Ù…Ø±Ø© Ø£Ø®Ø±Ù‰.'
           : "I apologize, an error occurred while processing your request. Please try again.");
 
     messages.value.push({
@@ -195,7 +195,7 @@ watch(() => messages.value.length, () => {
 </script>
 
 <style scoped>
-.nexora-ai-assistant {
+.sakura-ai-assistant {
   position: fixed;
   z-index: 1000;
   font-family: inherit;
@@ -418,3 +418,4 @@ watch(() => messages.value.length, () => {
   }
 }
 </style>
+

@@ -373,6 +373,10 @@ const routes = [
         name: 'FoodQualityTraceability',
         component: () => import('../views/reports/FoodQualityTraceability.vue'),
         meta: { requiresAuth: true }
+      },
+      {
+        path: 'platform/:pathMatch(.*)*',
+        redirect: { name: 'HomePortal' }
       }
     ]
   },
