@@ -114,15 +114,17 @@
           <!-- Approve GRN Button (QA Manager) - Show when GRN is submitted for approval -->
           <button 
             v-else-if="isSubmittedForApproval"
-            @click="approveGRN" 
+            @click="approveGRN"
+            :disabled="approvingGRN"
             :class="[
-              'px-6 py-2 text-white rounded-lg flex items-center gap-2 font-semibold transition-all duration-300 relative overflow-hidden shadow-lg hover:shadow-xl transform hover:scale-105'
+              'px-6 py-2 text-white rounded-lg flex items-center gap-2 font-semibold transition-all duration-300 relative overflow-hidden shadow-lg hover:shadow-xl transform hover:scale-105',
+              approvingGRN ? 'opacity-60 cursor-not-allowed' : ''
             ]"
             :style="'background: linear-gradient(135deg, #1e3a34 0%, #284b44 50%, #2d5a4f 100%); color: white;'"
             :title="t('inventory.grn.grnSubmittedForApproval')"
           >
-            <i class="fas fa-check-circle"></i>
-            <span>{{ t('inventory.grn.approveGRN') }}</span>
+            <i :class="approvingGRN ? 'fas fa-spinner fa-spin' : 'fas fa-check-circle'"></i>
+            <span>{{ approvingGRN ? 'Approving…' : t('inventory.grn.approveGRN') }}</span>
           </button>
           
           <!-- Show message if batches not all approved yet -->
@@ -1161,6 +1163,7 @@ const inventoryItems = ref([]);
 const existingBatchWarning = ref(false);
 const showEditModal = ref(false);
 const saving = ref(false);
+const approvingGRN = ref(false);
 const editingItems = ref({}); // Track which item is being edited
 const itemEditForm = ref({}); // Store edited item values
 const canCreatePurchase = ref(false); // DB-driven: fn_can_create_next_document('GRN', grn_id)
@@ -1818,7 +1821,7 @@ const loadCreatedByNameMap = async (batches, grnData) => {
     grnData.approved_by,
     grnData.submitted_for_approval_by
   ].filter(Boolean) : [];
-  const ids = [...new Set([...batchIds, ...grnIds])];
+  const ids = [...new Set([...batchIds, ...grnIds])].map((id) => safeUUID(id)).filter(Boolean);
   if (ids.length === 0) {
     createdByNameMap.value = {};
     return;
@@ -2821,6 +2824,9 @@ const approveGRN = async () => {
   });
   
   if (!confirmed) return;
+
+  if (approvingGRN.value) return;
+  approvingGRN.value = true;
   
   try {
     console.log('💾 Saving all GRN data to Supabase before approving...');
@@ -2933,6 +2939,8 @@ const approveGRN = async () => {
   } catch (error) {
     console.error('Error approving GRN:', error);
     showNotification('Error approving GRN: ' + (error.message || 'Unknown error'), 'error');
+  } finally {
+    approvingGRN.value = false;
   }
 };
 
@@ -3081,7 +3089,7 @@ const createPurchasing = async () => {
       .from('purchasing_invoices')
       .select('id, invoice_number')
       .eq('grn_id', grn.value.id)
-      .single();
+      .maybeSingle();
     
     if (existingInvoice) {
       showNotification(`Purchasing Invoice already exists for this GRN. Redirecting...`, 'info');
@@ -3283,13 +3291,14 @@ const createPurchasing = async () => {
     
     // If still no name, try to fetch from suppliers table
     const supplierId = grn.value.supplierId || grn.value.supplier_id;
-    if ((supplierName === 'N/A' || supplierName.startsWith('{')) && supplierId) {
-      console.log('📋 Fetching supplier from DB, supplier_id:', supplierId);
+    const supplierUuid = safeUUID(supplierId);
+    if ((supplierName === 'N/A' || supplierName.startsWith('{')) && supplierUuid) {
+      console.log('📋 Fetching supplier from DB, supplier_id:', supplierUuid);
       const { data: supplierData } = await supabaseClient
         .from('suppliers')
         .select('name, name_localized')
-        .eq('id', supplierId)
-        .single();
+        .eq('id', supplierUuid)
+        .maybeSingle();
       
       if (supplierData) {
         supplierName = supplierData.name || supplierData.name_localized || 'N/A';

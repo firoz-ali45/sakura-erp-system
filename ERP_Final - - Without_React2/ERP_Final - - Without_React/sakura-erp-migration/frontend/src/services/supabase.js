@@ -3596,12 +3596,8 @@ export async function updateGRNInSupabase(grnId, updates) {
     const purchaseOrderIdValue = grnFields.purchaseOrderId || grnFields.purchase_order_id;
     if (!purchaseOrderNumber && purchaseOrderIdValue) {
       try {
-        const { data: po } = await supabaseClient
-          .from('purchase_orders')
-          .select('po_number')
-          .eq('id', purchaseOrderIdValue)
-          .single();
-
+        const poRes = await getPurchaseOrderById(purchaseOrderIdValue);
+        const po = poRes?.data;
         if (po && po.po_number) {
           purchaseOrderNumber = po.po_number;
         }
@@ -3614,11 +3610,14 @@ export async function updateGRNInSupabase(grnId, updates) {
     const supplierIdValue = grnFields.supplierId || grnFields.supplier_id;
     if (!supplierName && supplierIdValue) {
       try {
-        const { data: supplier } = await supabaseClient
-          .from('suppliers')
-          .select('name, name_localized')
-          .eq('id', supplierIdValue)
-          .single();
+        const supplierUuid = safeUUID(supplierIdValue);
+        const { data: supplier } = supplierUuid
+          ? await supabaseClient
+            .from('suppliers')
+            .select('name, name_localized')
+            .eq('id', supplierUuid)
+            .maybeSingle()
+          : { data: null };
 
         if (supplier) {
           supplierName = supplier.name || supplier.name_localized || undefined;
@@ -3675,22 +3674,16 @@ export async function updateGRNInSupabase(grnId, updates) {
         .from('grn_inspections')
         .select('purchase_order_id, status')
         .eq('id', grnId)
-        .single();
+        .maybeSingle();
 
       if (currentGRN && currentGRN.purchase_order_id) {
         const poId = currentGRN.purchase_order_id;
 
         try {
           // Load PO to validate quantities
-          const { data: poData, error: poError } = await supabaseClient
-            .from('purchase_orders')
-            .select(`
-              id,
-              status,
-              items:purchase_order_items(*)
-            `)
-            .eq('id', poId)
-            .single();
+          const poRes = await getPurchaseOrderById(poId);
+          const poData = poRes?.success ? poRes.data : null;
+          const poError = poRes?.success ? null : { message: poRes?.error || 'PO not found' };
 
           if (!poError && poData) {
             // Check if PO is closed
@@ -3775,13 +3768,40 @@ export async function updateGRNInSupabase(grnId, updates) {
       }
     });
 
+    // Header-only approval/status updates via SECURITY DEFINER RPC (fires ledger trigger)
+    const uid = getCurrentUserUUID();
+    const companyCtx = safeUUID(getCurrentCompanyId());
+    const isHeaderOnly = !items || items.length === 0;
+    const hasRpcFields =
+      updateData.status !== undefined ||
+      updateData.approved_by !== undefined ||
+      updateData.submitted_for_approval !== undefined;
+
+    if (isHeaderOnly && (uid || companyCtx) && hasRpcFields) {
+      try {
+        const { updateGrnHeaderViaRpc } = await import('./supabaseFetch.js');
+        const rpcRow = await updateGrnHeaderViaRpc(grnId, {
+          status: updateData.status,
+          approved_by: updateData.approved_by,
+          approval_date: updateData.approval_date,
+          received_by: updateData.received_by,
+          submitted_for_approval: updateData.submitted_for_approval
+        });
+        if (rpcRow) {
+          return { success: true, data: rpcRow };
+        }
+      } catch (rpcErr) {
+        console.warn('fn_app_update_grn failed, falling back to direct update:', rpcErr);
+      }
+    }
+
     // Update GRN
     const { data, error } = await supabaseClient
       .from('grn_inspections')
       .update(updateData)
       .eq('id', grnId)
       .select()
-      .single();
+      .maybeSingle();
 
     if (error) {
       console.error('❌ Error updating GRN in Supabase:', error);
@@ -4007,16 +4027,36 @@ export async function getGRNById(grnId) {
   }
 
   try {
-    // Load GRN with supplier (simplified query)
-    const { data: grnData, error: grnError } = await supabaseClient
-      .from('grn_inspections')
-      .select(`
-        *,
-        supplier:suppliers(*)
-      `)
-      .eq('id', grnId)
-      .eq('deleted', false)
-      .single();
+    const uid = getCurrentUserUUID();
+    const companyCtx = safeUUID(getCurrentCompanyId());
+    let grnData = null;
+    let grnError = null;
+
+    if (uid || companyCtx) {
+      const { data: rpcRow, error: rpcErr } = await supabaseClient.rpc('fn_app_get_grn', {
+        p_user_id: uid || null,
+        p_grn_id: grnId,
+        p_company_id: companyCtx || null
+      }).maybeSingle();
+      const row = Array.isArray(rpcRow) ? rpcRow[0] : rpcRow;
+      if (!rpcErr && row) {
+        grnData = row;
+        console.log('✅ GRN loaded via fn_app_get_grn:', grnId);
+      } else if (rpcErr && rpcErr.code !== 'PGRST202') {
+        grnError = rpcErr;
+      }
+    }
+
+    if (!grnData) {
+      const { data, error } = await supabaseClient
+        .from('grn_inspections')
+        .select('*')
+        .eq('id', grnId)
+        .eq('deleted', false)
+        .maybeSingle();
+      grnData = data;
+      grnError = error;
+    }
 
     if (grnError) {
       console.error('❌ Error loading GRN from Supabase:', grnError);
@@ -4058,17 +4098,20 @@ export async function getGRNById(grnId) {
       }
     }
 
-    // If supplier relationship didn't load, try to load it manually
-    if (!grnData.supplier && grnData.supplier_id) {
+    // Load supplier only when supplier_id is a valid UUID (avoids 406 on numeric legacy ids)
+    const supplierUuid = safeUUID(grnData.supplier_id);
+    if (!grnData.supplier && supplierUuid) {
       const { data: supplierData, error: supplierError } = await supabaseClient
         .from('suppliers')
         .select('*')
-        .eq('id', grnData.supplier_id)
-        .single();
+        .eq('id', supplierUuid)
+        .maybeSingle();
 
       if (!supplierError && supplierData) {
         grnData.supplier = supplierData;
       }
+    } else if (grnData.supplier_name && !grnData.supplier) {
+      grnData.supplier = { name: grnData.supplier_name };
     }
 
     // Extract deliveryNoteNumber from notes if it exists
